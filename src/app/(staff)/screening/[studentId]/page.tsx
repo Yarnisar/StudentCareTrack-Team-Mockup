@@ -3,14 +3,13 @@
 import { use, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, Info } from "lucide-react";
+import { Check, ChevronLeft, Info, X } from "lucide-react";
+import { cn } from "cn";
 import { PageHeader } from "@/components/layout/page-header";
 import { RiskBadge } from "@/components/shared/risk-badge";
 import { Button } from "@/components/ui/button";
 import { LinkButton } from "@/components/ui/link-button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
 import { CURRENT_TERM } from "@/lib/mock-data";
 import { classifyDimension, overallRisk, SCREENING_ITEMS } from "@/lib/rules";
 import { useStore } from "@/lib/store";
@@ -33,6 +32,15 @@ export default function ScreeningFormPage({
 
   const toggle = (id: string) =>
     setChecked((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+
+  const idsOf = (dimension: ScreeningDimension) =>
+    SCREENING_ITEMS.filter((i) => i.dimension === dimension).map((i) => i.id);
+  const selectedIn = (dimension: ScreeningDimension) =>
+    idsOf(dimension).filter((id) => checked.includes(id)).length;
+  const clearDimension = (dimension: ScreeningDimension) => {
+    const ids = idsOf(dimension);
+    setChecked((prev) => prev.filter((id) => !ids.includes(id)));
+  };
 
   /** จัดกลุ่มรายมิติแบบเรียลไทม์ตามรายการที่ติ๊ก */
   const groups = useMemo(
@@ -113,8 +121,8 @@ export default function ScreeningFormPage({
         <div className="mb-4 flex items-center gap-3 rounded-xl border border-blue-200 bg-accent px-4 py-3">
           <Info className="size-5 shrink-0 text-primary" />
           <p className="text-[13.5px] text-accent-foreground">
-            เกณฑ์จัดกลุ่ม: ไม่พบรายการใด = <b>เขียว (ปกติ)</b> · พบรายการเกณฑ์เสี่ยง ={" "}
-            <b>เหลือง</b> · พบรายการเกณฑ์มีปัญหา = <b>แดง</b> — ผลจะคำนวณทันทีเมื่อเลือกรายการ
+            แตะที่รายการที่พบในนักเรียน (แตะซ้ำเพื่อยกเลิก) · ไม่พบรายการใด = <b>ปกติ</b> ·
+            พบเกณฑ์เสี่ยง = <b>เสี่ยง</b> · พบเกณฑ์มีปัญหา = <b>มีปัญหา</b> — ผลคำนวณทันที
           </p>
         </div>
 
@@ -129,32 +137,70 @@ export default function ScreeningFormPage({
                     <RiskBadge group={groups[dimension]} short />
                   </div>
 
-                  <div className="space-y-1">
-                    {items.map((item) => (
-                      <div key={item.id} className="flex items-start gap-3 py-1.5">
-                        <Checkbox
-                          id={item.id}
-                          checked={checked.includes(item.id)}
-                          onCheckedChange={() => toggle(item.id)}
-                          className="mt-0.5"
-                        />
-                        <Label
-                          htmlFor={item.id}
-                          className="text-[13.5px] leading-relaxed font-normal"
+                  <div className="space-y-2">
+                    {items.map((item) => {
+                      const active = checked.includes(item.id);
+                      const problem = item.severity === "problem";
+                      return (
+                        <button
+                          key={item.id}
+                          type="button"
+                          role="checkbox"
+                          aria-checked={active}
+                          onClick={() => toggle(item.id)}
+                          className={cn(
+                            "flex min-h-12 w-full items-center gap-3 rounded-xl border px-3.5 py-2.5 text-left text-[14px] leading-snug transition-colors",
+                            "focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
+                            active
+                              ? problem
+                                ? "border-risk-red/50 bg-risk-red-bg font-semibold"
+                                : "border-risk-amber/50 bg-risk-amber-bg font-semibold"
+                              : "border-border bg-card hover:border-primary/40 hover:bg-muted/60"
+                          )}
                         >
-                          {item.label}
                           <span
-                            className={
-                              item.severity === "problem"
-                                ? "ml-1.5 rounded bg-risk-red-bg px-1.5 py-0.5 text-[10.5px] font-semibold text-risk-red"
-                                : "ml-1.5 rounded bg-risk-amber-bg px-1.5 py-0.5 text-[10.5px] font-semibold text-risk-amber"
-                            }
+                            className={cn(
+                              "flex size-6 shrink-0 items-center justify-center rounded-md border-2",
+                              active
+                                ? problem
+                                  ? "border-risk-red bg-risk-red"
+                                  : "border-risk-amber bg-risk-amber"
+                                : "border-input bg-card"
+                            )}
                           >
-                            {item.severity === "problem" ? "เกณฑ์มีปัญหา" : "เกณฑ์เสี่ยง"}
+                            {active && <Check className="size-4 text-white" strokeWidth={3} />}
                           </span>
-                        </Label>
-                      </div>
-                    ))}
+                          <span className="flex-1">{item.label}</span>
+                          <span
+                            className={cn(
+                              "shrink-0 rounded-md px-2 py-0.5 text-[11.5px] font-semibold",
+                              problem
+                                ? "bg-risk-red-bg text-risk-red"
+                                : "bg-risk-amber-bg text-risk-amber"
+                            )}
+                          >
+                            {problem ? "เกณฑ์มีปัญหา" : "เกณฑ์เสี่ยง"}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div className="mt-3 flex items-center justify-between text-[12.5px] text-muted-foreground">
+                    <span>
+                      {selectedIn(dimension) === 0
+                        ? "ยังไม่พบรายการ"
+                        : `พบ ${selectedIn(dimension)} รายการ`}
+                    </span>
+                    {selectedIn(dimension) > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => clearDimension(dimension)}
+                        className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 font-medium hover:bg-muted hover:text-foreground"
+                      >
+                        <X className="size-3.5" /> ล้างมิตินี้
+                      </button>
+                    )}
                   </div>
                 </CardContent>
               </Card>
