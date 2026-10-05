@@ -58,6 +58,8 @@ export type { RecipientGroup } from "./notifications";
 export type { OperatingWindowInput, SaveWindowResult, SchoolSettingsPatch } from "./settings";
 export type { ConsentStatus, RecordConsentResult } from "./consent";
 export type { CreateAppointmentInput, HomeVisitResult } from "./home-visit";
+export type { DcOverrides, DcResult, DcScoreEntry, DcSummaryReadiness } from "./dc";
+export type { DocumentReadiness, GenerateDocumentResult } from "./documents";
 export { auditSummary } from "./audit";
 
 const StoreContext = createContext<StoreValue | null>(null);
@@ -80,7 +82,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const assessment = useAssessmentSlice(base);
   const homeVisit = useHomeVisitSlice(base);
   const dc = useDcSlice(base);
-  const documents = useDocumentsSlice(base);
+  const documents = useDocumentsSlice(base, dc);
 
   const value = useMemo<StoreValue>(
     () => ({
