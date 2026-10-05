@@ -162,12 +162,26 @@ export const seedAuditLogs: AuditLog[] = [
   ),
   ...screenings.map((s) => audit(s.screenedBy, "CREATE", "screenings", s.screeningId, atTime(s.screenedAt, "10:00:00"))),
   ...careCases.flatMap((c) => [
-    audit(SYSTEM_USER_ID, "CREATE", "care_cases", c.caseId, atTime(c.openedAt, "09:00:00"), {
-      note: c.triggerSource,
+    audit(c.openedBy ?? SYSTEM_USER_ID, "CREATE", "care_cases", c.caseId, atTime(c.openedAt, "09:00:00"), {
+      after: { studentId: c.studentId },
     }),
+    ...c.triggers.map((t) =>
+      audit(c.openedBy ?? SYSTEM_USER_ID, "CREATE", "care_case_triggers", t.triggerId, t.detectedAt, {
+        after: { caseId: c.caseId, source: t.source, sourceRefId: t.sourceRefId },
+      })
+    ),
+    ...c.plans.map((p) => audit(p.createdBy, "CREATE", "care_plans", p.planId, p.createdAt, { after: { caseId: c.caseId } })),
     ...c.followups.map((f) =>
       audit(f.recordedBy, "CREATE", "care_followups", f.followupId, atTime(f.followupDate, "15:00:00"))
     ),
+    ...(c.closedAt
+      ? [
+          audit(c.closedBy ?? SYSTEM_USER_ID, "UPDATE", "care_cases", c.caseId, atTime(c.closedAt, "16:00:00"), {
+            before: { status: "active" },
+            after: { status: "closed", closeReason: c.closeReason },
+          }),
+        ]
+      : []),
   ]),
   ...checkinLogs.map((c) => audit(c.scannedBy, "CREATE", "checkin_logs", c.logId, c.scannedAt)),
   ...behaviorRecords.map((b) => audit(b.recordedBy, "CREATE", "behavior_records", b.recordId, b.occurredAt)),

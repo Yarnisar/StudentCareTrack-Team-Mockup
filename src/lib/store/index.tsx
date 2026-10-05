@@ -68,7 +68,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const behavior = useBehaviorSlice(base);
   const checkin = useCheckinSlice(base, behavior);
-  const care = useCareSlice(base);
+  const care = useCareSlice(base, behavior);
   const screening = useScreeningSlice(base);
   const assessment = useAssessmentSlice(base);
   const homeVisit = useHomeVisitSlice(base);
