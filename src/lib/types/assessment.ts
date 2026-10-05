@@ -64,10 +64,19 @@ export const SDQ_LEVEL_LABEL: Record<SdqLevel, string> = {
   problem: "มีปัญหา",
 };
 
+export type SdqStatus = "pending" | "submitted";
+
+export const SDQ_STATUS_LABEL: Record<SdqStatus, string> = {
+  pending: "รอทำแบบประเมิน",
+  submitted: "ส่งแล้ว",
+};
+
+/** sdq_assessments — UNIQUE (studentId, termId, round, rater) ส่งแล้วแก้ไม่ได้ */
 export interface SdqAssessment {
   id: string;
   studentId: string;
   termId: string;
+  /** ครั้งที่ 1 (ภาคเรียนที่ 1) / ครั้งที่ 2 (ภาคเรียนที่ 2) */
   round: 1 | 2;
   rater: SdqRater;
   /**
@@ -75,12 +84,71 @@ export interface SdqAssessment {
    * (ฉบับผู้ปกครอง: ผู้ปกครองคนที่ส่งก่อนเป็นผู้ประเมิน)
    */
   raterUserId: string | null;
+  /** คำตอบรายข้อ — เปิดดูได้เฉพาะฉบับที่ผลเป็นมีปัญหา และบันทึก VIEW_SENSITIVE ทุกครั้ง */
   answers: Record<number, 0 | 1 | 2>;
   totalDifficulties: number | null;
   scaleScores: Record<SdqScale, number> | null;
+  /** ผลตามเกณฑ์ของฉบับนั้น (result_level) */
   level: SdqLevel | null;
-  status: "pending" | "completed";
-  assessedAt: string | null;
+  status: SdqStatus;
+  /** วันเวลาที่เปิดแบบประเมิน (ส่งคำขอ) */
+  requestedAt: string;
+  submittedAt: string | null;
+}
+
+/**
+ * ผล SDQ รวม — ผลที่รุนแรงที่สุดจากฉบับที่ส่งแล้ว คำนวณทุกครั้งที่ใช้ ไม่เก็บ
+ * มีผลก็ต่อเมื่อฉบับครูส่งแล้ว และต้องแสดงเสมอว่าอิงจากกี่ฉบับ
+ */
+export interface CombinedSdqResult {
+  studentId: string;
+  termId: string;
+  round: 1 | 2;
+  /** null = ยังไม่มีผล (ฉบับครูยังไม่ส่ง) */
+  level: SdqLevel | null;
+  /** จำนวนฉบับที่ส่งแล้ว */
+  basedOn: number;
+  /** จำนวนฉบับทั้งชุด (ประถมไม่มีฉบับนักเรียน) */
+  total: number;
+  teacherSubmitted: boolean;
+}
+
+/**
+ * ขั้นถัดไปของนักเรียนในภาคเรียนปัจจุบัน
+ * - red_flag / nine_s: ต้องทำแบบคัดกรอง (ภาคเรียนที่ 2 เฉพาะคนที่ยังไม่เคยประเมินในปีนี้)
+ * - open_sdq: ต้องทำ SDQ รอบนี้ แต่ยังไม่ได้เปิดแบบประเมิน
+ * - sdq: เปิดแล้ว รอฉบับใดฉบับหนึ่ง
+ * - done: ครบทุกฉบับของรอบนี้แล้ว
+ * - not_required: ผลปกติ ไม่ต้องทำ SDQ รอบนี้
+ */
+export type AssessmentNextStep = "red_flag" | "nine_s" | "open_sdq" | "sdq" | "done" | "not_required";
+
+export const ASSESSMENT_NEXT_STEP_LABEL: Record<AssessmentNextStep, string> = {
+  red_flag: "รอทำ Red Flag",
+  nine_s: "รอทำ 9S",
+  open_sdq: "รอเปิด SDQ",
+  sdq: "รอส่ง SDQ",
+  done: "ครบแล้ว",
+  not_required: "ไม่ต้องทำ SDQ รอบนี้",
+};
+
+/** สถานะการประเมินของนักเรียน 1 คนในภาคเรียนปัจจุบัน (คำนวณจากข้อมูลทั้งปีการศึกษา) */
+export interface AssessmentPlan {
+  studentId: string;
+  termId: string;
+  round: 1 | 2;
+  /** Red Flag / 9S ล่าสุดของปีการศึกษานี้ */
+  redFlag: RedFlagAssessment | undefined;
+  nineS: NineSAssessment | undefined;
+  /** ผล Red Flag หรือ 9S เป็นควรดูแล (null = ยังประเมินไม่ครบ) */
+  needsCare: boolean | null;
+  /** ผล Red Flag/9S มาจากภาคเรียนก่อน (ภาคเรียนที่ 2 ไม่ต้องทำซ้ำ) */
+  carriedFromEarlierTerm: boolean;
+  sdqRequired: boolean;
+  /** ฉบับ SDQ ของรอบนี้ */
+  sdqForms: SdqAssessment[];
+  combined: CombinedSdqResult | null;
+  next: AssessmentNextStep;
 }
 
 export interface EqAssessment {

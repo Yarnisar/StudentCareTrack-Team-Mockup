@@ -106,7 +106,7 @@ export const careCases: CareCase[] = [
         sourceRefId: "SC-002",
         detectedAt: "2570-02-13T09:00:00",
         planId: "PLAN-2570-015-1",
-        summary: "ผลคัดกรองมีปัญหา มิติสุขภาพจิต",
+        summary: "ผลคัดกรองมีปัญหา มิติพฤติกรรม",
       },
     ],
     plans: [
@@ -180,6 +180,16 @@ export const careCases: CareCase[] = [
         planId: "PLAN-2569-008-1",
         summary: "ขาดความมั่นใจในการเข้าร่วมกิจกรรมกลุ่ม",
       },
+      {
+        // ฉบับครูของ SDQ ครั้งที่ 1 ส่งหลังเปิด case → ผล SDQ รวมมีปัญหา ระบบเพิ่มเหตุเข้า case เดิม
+        triggerId: "TRG-2569-009",
+        caseId: "CASE-2569-008",
+        source: "sdq",
+        sourceRefId: "SDQSET-T2569-1-R1-30140",
+        detectedAt: "2569-07-08T11:00:00",
+        planId: "PLAN-2569-008-1",
+        summary: "ผล SDQ รวมมีปัญหา (ครั้งที่ 1)",
+      },
     ],
     plans: [
       {
@@ -225,7 +235,7 @@ export const caseSuggestions: CaseSuggestion[] = [
     source: "screening",
     sourceRefId: "SC-004",
     detectedAt: "2570-02-11T10:00:00",
-    summary: "ผลคัดกรองเสี่ยง มิติสวัสดิภาพและความปลอดภัย",
+    summary: "ผลคัดกรองเสี่ยง มิติสวัสดิภาพและความปลอดภัย / สุขภาพจิต",
     status: "pending",
   },
   {

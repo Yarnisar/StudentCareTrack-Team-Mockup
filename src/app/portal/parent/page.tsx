@@ -19,11 +19,9 @@ export default function ParentHomePage() {
     (a) => a.studentId === portalStudentId && a.status !== "completed"
   );
   const parentSdq = store
-    .sdqOf(portalStudentId)
-    .find((s) => s.rater === "parent" && s.round === 1);
+    .sdqFormFor(portalStudentId, "parent");
   const teacherSdq = store
-    .sdqOf(portalStudentId)
-    .find((s) => s.rater === "teacher" && s.round === 1);
+    .sdqFormFor(portalStudentId, "teacher");
   const dc = store.dcSummaryOf(portalStudentId);
   const guardian =
     store.currentUser.role === "parent" ? store.currentUser : store.guardiansOf(portalStudentId)[0]?.user;

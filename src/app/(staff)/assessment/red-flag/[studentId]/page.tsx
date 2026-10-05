@@ -4,7 +4,10 @@ import { use, useState } from "react";
 import { redFlagAnswersFor } from "@/lib/demo/assessment-autofill";
 import { useDemoPageTool } from "@/lib/demo/page-tools";
 import { useRouter } from "next/navigation";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Lock } from "lucide-react";
+import { CaseTriggerOutcome } from "@/components/assessment/trigger-outcome";
+import { WindowNotice } from "@/components/shared/window-notice";
+import { LinkButton } from "@/components/ui/link-button";
 import { PageHeader } from "@/components/layout/page-header";
 import { StepIndicator } from "@/components/assessment/step-indicator";
 import {
@@ -18,9 +21,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { CURRENT_TERM } from "@/lib/mock-data";
 import { RED_FLAG_QUESTIONS } from "@/lib/rules";
-import { useStore } from "@/lib/store";
+import { useStore, type SaveRedFlagResult } from "@/lib/store";
 
 export default function RedFlagPage({ params }: { params: Promise<{ studentId: string }> }) {
   const { studentId } = use(params);
@@ -28,10 +30,16 @@ export default function RedFlagPage({ params }: { params: Promise<{ studentId: s
   const store = useStore();
   const student = store.getStudent(studentId);
 
-  const [answers, setAnswers] = useState<Record<string, boolean>>({});
+  const existing = store.redFlagOf(studentId);
+  const plan = store.assessmentPlanOf(studentId);
+  const blocked = store.redFlagBlockReason(studentId);
+  const [answers, setAnswers] = useState<Record<string, boolean>>(() => existing?.answers ?? {});
+  const [saved, setSaved] = useState<Extract<SaveRedFlagResult, { ok: true }> | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const missing = useMissingAnswers();
 
   const autofill = (target: "normal" | "needs_care") => {
+    if (blocked || saved) return;
     setAnswers(redFlagAnswersFor(target));
     missing.reset();
   };
@@ -45,6 +53,7 @@ export default function RedFlagPage({ params }: { params: Promise<{ studentId: s
   if (!student) return <p className="p-8 text-sm text-muted-foreground">ไม่พบข้อมูลนักเรียน</p>;
 
   const answer = (id: string, value: boolean) => {
+    if (blocked) return;
     setAnswers((prev) => ({ ...prev, [id]: value }));
     missing.resolve(id);
   };
@@ -54,26 +63,26 @@ export default function RedFlagPage({ params }: { params: Promise<{ studentId: s
       missing.report(unanswered.map(({ q, index }) => ({ key: q.id, label: `ข้อ ${index + 1}` })));
       return;
     }
-    const result = store.saveRedFlag(studentId, answers);
-    // ควรดูแล -> ระบบเปิด SDQ ทั้ง 3 ฉบับอัตโนมัติแล้วพาไปทำฉบับครู
-    // ปกติ    -> ไปทำแบบประเมิน 9S ต่อ
-    router.push(
-      result === "needs_care"
-        ? `/assessment/sdq/${studentId}?from=red-flag`
-        : `/assessment/nine-s/${studentId}`
-    );
+    const res = store.saveRedFlag(studentId, answers);
+    if (!res.ok) return setError(res.error);
+    // ควรดูแล -> ระบบเปิด case อัตโนมัติ + เปิด SDQ แล้วพาไปทำฉบับครู · ปกติ -> ทำ 9S ต่อ
+    setSaved(res);
   };
+
+  // ภาคเรียนที่ 2 ที่มีผลจากภาคเรียนที่ 1 แล้ว: แสดงผลเดิม ไม่ต้องทำซ้ำ
+  const carried = !existing && plan.carriedFromEarlierTerm ? plan.redFlag : undefined;
 
   return (
     <>
       <PageHeader
         title="แบบคัดกรอง Red Flag"
-        subtitle={`ขั้นที่ 1 ของการประเมินด้านสุขภาพจิต · ${CURRENT_TERM.label}`}
+        subtitle={`ขั้นที่ 1 ของการประเมินด้านสุขภาพจิต · ${store.currentTerm.label}`}
       />
 
       <div className="flex-1 overflow-y-auto p-8">
         <div className="mx-auto max-w-3xl">
-          <StepIndicator current={1} />
+          <StepIndicator current={1} round={plan.round} />
+          <WindowNotice activity="screening" className="mb-4" />
 
           <Card className="mb-4">
             <CardContent className="p-5">
@@ -84,10 +93,63 @@ export default function RedFlagPage({ params }: { params: Promise<{ studentId: s
             </CardContent>
           </Card>
 
+          {saved ? (
+            <Card>
+              <CardContent className="space-y-4 p-6">
+                <div className="text-center">
+                  <h2 className="text-lg font-bold">
+                    ผล Red Flag: {saved.record.result === "needs_care" ? "ควรดูแล" : "ปกติ"}
+                  </h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {saved.record.result === "needs_care"
+                      ? `ข้าม 9S · ${saved.sdqOpened > 0 ? `ระบบเปิดแบบ SDQ ครั้งที่ ${plan.round} ให้ ${saved.sdqOpened} ฉบับ และแจ้งผู้ปกครอง/นักเรียนแล้ว` : `แบบ SDQ ครั้งที่ ${plan.round} เปิดไว้แล้ว`}`
+                      : "ทำแบบประเมิน 9S ต่อ"}
+                  </p>
+                </div>
+                <CaseTriggerOutcome studentId={studentId} result={saved.trigger} />
+                <div className="flex justify-center gap-3">
+                  <Button variant="outline" onClick={() => setSaved(null)}>
+                    แก้ไขคำตอบ
+                  </Button>
+                  <LinkButton
+                    href={
+                      saved.record.result === "needs_care"
+                        ? `/assessment/sdq/${studentId}?from=red-flag`
+                        : `/assessment/nine-s/${studentId}`
+                    }
+                  >
+                    {saved.record.result === "needs_care" ? "ทำ SDQ ฉบับครู" : "ทำแบบประเมิน 9S"}
+                  </LinkButton>
+                </div>
+              </CardContent>
+            </Card>
+          ) : carried ? (
+            <div className="flex items-center gap-3 rounded-xl border border-green-200 bg-risk-green-bg px-4 py-3 text-[13.5px] text-risk-green">
+              <CheckCircle2 className="size-5 shrink-0" />
+              <span className="flex-1">
+                ประเมิน Red Flag แล้วในภาคเรียนที่ 1 — ผล{carried.result === "needs_care" ? "ควรดูแล" : "ปกติ"} · ภาคเรียนที่ 2 ไม่ต้องทำซ้ำ
+              </span>
+              <LinkButton size="sm" variant="outline" href={`/assessment/sdq/${studentId}`}>
+                ไปที่ SDQ ครั้งที่ {plan.round}
+              </LinkButton>
+            </div>
+          ) : (
+          <>
+          {blocked && (
+            <div className="mb-4 flex items-center gap-3 rounded-xl border border-border bg-muted px-4 py-3 text-[13px] text-muted-foreground">
+              <Lock className="size-4 shrink-0" />
+              {blocked}
+            </div>
+          )}
+          {existing && !blocked && (
+            <p className="mb-4 text-[12.5px] text-muted-foreground">
+              บันทึกไว้แล้วเมื่อ {existing.assessedAt.split("T")[0]} — แก้ไขได้จนปิดช่วงดำเนินงานคัดกรอง
+            </p>
+          )}
           <div className="mb-4 flex items-center gap-3 rounded-xl border border-amber-200 bg-risk-amber-bg px-4 py-3">
             <AlertTriangle className="size-5 shrink-0 text-risk-amber" />
             <p className="text-[13.5px] text-risk-amber">
-              หากตอบ &quot;ใช่&quot; แม้เพียงข้อเดียว ระบบจะเปิดแบบประเมิน SDQ
+              หากตอบ &quot;ใช่&quot; แม้เพียงข้อเดียว ระบบจะเปิด care case และเปิดแบบประเมิน SDQ
               ทั้งฉบับครู นักเรียน และผู้ปกครองโดยอัตโนมัติ
             </p>
           </div>
@@ -118,6 +180,7 @@ export default function RedFlagPage({ params }: { params: Promise<{ studentId: s
                     <RadioGroup
                       value={answers[q.id] === undefined ? "" : answers[q.id] ? "yes" : "no"}
                       onValueChange={(v) => answer(q.id, v === "yes")}
+                      disabled={!!blocked}
                       className="ml-9 flex gap-3"
                     >
                       {[
@@ -146,11 +209,14 @@ export default function RedFlagPage({ params }: { params: Promise<{ studentId: s
                 ยังไม่ได้ตอบ {unanswered.length} ข้อ
               </span>
             )}
-            <Button variant="outline" onClick={() => router.push(`/students/${studentId}`)}>
-              บันทึกร่าง
+            {error && <span className="mr-auto text-[13px] text-risk-red">{error}</span>}
+            <Button variant="outline" onClick={() => router.push(`/assessment`)}>
+              กลับ
             </Button>
-            <Button onClick={handleSubmit}>ประมวลผล Red Flag</Button>
+            {!blocked && <Button onClick={handleSubmit}>บันทึกและประมวลผล Red Flag</Button>}
           </div>
+          </>
+          )}
         </div>
       </div>
     </>

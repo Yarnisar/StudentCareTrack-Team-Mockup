@@ -29,20 +29,32 @@ const missingItem = (no: number): MissingItem => ({
   page: pageOf(no),
 });
 
+/**
+ * แบบประเมิน SDQ 25 ข้อ
+ * - readOnly + initialAnswers: แสดงฉบับที่ส่งแล้ว (เช่น ผู้ปกครองคนอื่นเห็นฉบับที่ส่งก่อน) แก้ไม่ได้
+ * - แปลผลเบื้องต้นแสดงเฉพาะฉบับครู (นักเรียนไม่เห็นผลของตัวเอง ผู้ปกครองเห็นเฉพาะผลรวม)
+ */
 export function SdqForm({
   rater,
   onSubmit,
   layout = "desktop",
+  readOnly = false,
+  initialAnswers,
+  submitLabel = "บันทึกผลการประเมิน",
 }: {
   rater: SdqRater;
   onSubmit: (answers: Record<number, 0 | 1 | 2>) => void;
   layout?: "desktop" | "mobile";
+  readOnly?: boolean;
+  initialAnswers?: Record<number, 0 | 1 | 2>;
+  submitLabel?: string;
 }) {
-  const [answers, setAnswers] = useState<Record<number, 0 | 1 | 2>>({});
+  const [answers, setAnswers] = useState<Record<number, 0 | 1 | 2>>(() => initialAnswers ?? {});
   const [page, setPage] = useState(0);
   const missing = useMissingAnswers(setPage);
 
   const autofill = (target: "normal" | "risk" | "problem") => {
+    if (readOnly) return;
     setAnswers(sdqAnswersFor(target));
     missing.reset();
   };
@@ -52,7 +64,8 @@ export function SdqForm({
 
   const answeredCount = Object.keys(answers).length;
   const complete = answeredCount === SDQ_QUESTIONS.length;
-  const preview = useMemo(() => scoreSdq(answers), [answers]);
+  const preview = useMemo(() => scoreSdq(answers, rater), [answers, rater]);
+  const showPreview = rater === "teacher" && !readOnly;
 
   const totalPages = Math.ceil(SDQ_QUESTIONS.length / PAGE_SIZE);
   const questions = SDQ_QUESTIONS.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
@@ -62,6 +75,7 @@ export function SdqForm({
   const mobile = layout === "mobile";
 
   const answer = (no: number, value: 0 | 1 | 2) => {
+    if (readOnly) return;
     setAnswers((prev) => ({ ...prev, [no]: value }));
     missing.resolve(`q${no}`);
   };
@@ -94,7 +108,7 @@ export function SdqForm({
             </span>
           </div>
           <Progress value={(answeredCount / SDQ_QUESTIONS.length) * 100} />
-          {!mobile && complete && (
+          {!mobile && complete && showPreview && (
             <div className="mt-4 grid grid-cols-5 gap-2">
               {(Object.keys(SDQ_SCALE_LABEL) as SdqScale[]).map((scale) => (
                 <div key={scale} className="rounded-lg bg-surface p-2.5 text-center">
@@ -104,7 +118,7 @@ export function SdqForm({
               ))}
             </div>
           )}
-          {complete && (
+          {complete && showPreview && (
             <p className="mt-3 text-[12.5px] text-muted-foreground">
               คะแนนรวมพฤติกรรมที่เป็นปัญหา{" "}
               <b className="text-foreground">{preview.totalDifficulties}</b> คะแนน · แปลผลเบื้องต้น:{" "}
@@ -138,6 +152,7 @@ export function SdqForm({
                 <RadioGroup
                   value={answers[q.no]?.toString() ?? ""}
                   onValueChange={(v) => answer(q.no, Number(v) as 0 | 1 | 2)}
+                  disabled={readOnly}
                   className={mobile ? "space-y-2" : "ml-9 flex flex-wrap gap-2.5"}
                 >
                   {SDQ_CHOICES.map((choice) => (
@@ -167,7 +182,7 @@ export function SdqForm({
       <div className="flex flex-wrap items-center justify-between gap-3 pb-4">
         <span className="text-[13px] text-muted-foreground">
           หน้า {page + 1} จาก {totalPages}
-          {missingAll.length > 0 && (
+          {!readOnly && missingAll.length > 0 && (
             <span className="ml-2 text-risk-red">· ยังไม่ได้ตอบ {missingAll.length} ข้อ</span>
           )}
         </span>
@@ -177,7 +192,7 @@ export function SdqForm({
               ย้อนกลับ
             </Button>
           )}
-          {missingOnPage.length > 0 && page < totalPages - 1 && (
+          {!readOnly && missingOnPage.length > 0 && page < totalPages - 1 && (
             <button
               type="button"
               onClick={() => {
@@ -190,11 +205,11 @@ export function SdqForm({
             </button>
           )}
           {page < totalPages - 1 ? (
-            <Button onClick={handleNext}>
+            <Button onClick={readOnly ? () => setPage((p) => p + 1) : handleNext}>
               ข้อถัดไป <ArrowRight className="size-4" />
             </Button>
           ) : (
-            <Button onClick={handleSubmit}>บันทึกผลการประเมิน</Button>
+            !readOnly && <Button onClick={handleSubmit}>{submitLabel}</Button>
           )}
         </div>
       </div>

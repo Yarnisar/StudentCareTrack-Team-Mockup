@@ -51,7 +51,7 @@ export default function StudentDetailPage({
     : [];
   const risk = store.overallRiskOf(studentId);
   const screening = store.latestScreening(studentId);
-  const sdqSet = store.sdqOf(studentId).filter((s) => s.round === 1);
+  const sdqSet = store.currentSdqOf(studentId);
   const behaviors = store.behaviorOf(studentId).slice(0, 5);
   const behaviorScore = store.behaviorScoreOf(studentId);
   const careCase = store.caseOf(studentId);
@@ -216,7 +216,7 @@ export default function StudentDetailPage({
                     <div className="grid gap-3 sm:grid-cols-3">
                       {(["teacher", "student", "parent"] as SdqRater[]).map((rater) => {
                         const rec = sdqSet.find((s) => s.rater === rater);
-                        const done = rec?.status === "completed";
+                        const done = rec?.status === "submitted";
                         return (
                           <div
                             key={rater}

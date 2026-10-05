@@ -25,7 +25,7 @@ function ParentResultsPageContent() {
   const [takingSdq, setTakingSdq] = useState(false);
 
   const student = store.getStudent(portalStudentId);
-  const sdqSet = store.sdqOf(portalStudentId).filter((s) => s.round === 1);
+  const sdqSet = store.currentSdqOf(portalStudentId);
   const parentSdq = sdqSet.find((s) => s.rater === "parent");
   const dc = store.dcSummaryOf(portalStudentId);
   const behaviors = store.behaviorOf(portalStudentId).slice(0, 4);
@@ -72,7 +72,7 @@ function ParentResultsPageContent() {
             <div className="flex gap-2.5">
               {(["teacher", "student", "parent"] as SdqRater[]).map((rater) => {
                 const rec = sdqSet.find((s) => s.rater === rater);
-                const done = rec?.status === "completed";
+                const done = rec?.status === "submitted";
                 const label =
                   rater === "teacher" ? "ครูประเมิน" : rater === "student" ? "นักเรียน" : "ผู้ปกครอง";
                 return (

@@ -52,7 +52,10 @@ export default function StudentSdqPage() {
           <SdqForm
             rater="student"
             layout="mobile"
-            onSubmit={(answers) => setSaved(store.saveSdq(portalStudentId, "student", answers))}
+            onSubmit={(answers) => {
+              const res = store.saveSdq(portalStudentId, "student", answers);
+              if (res.ok) setSaved(res.form);
+            }}
           />
         )}
       </div>

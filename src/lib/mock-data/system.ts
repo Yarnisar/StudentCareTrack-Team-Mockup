@@ -23,6 +23,7 @@ import { careCases } from "./care";
 import { CURRENT_TERM, PREVIOUS_TERM, students, SYSTEM_USER_ID, USER, users } from "./core";
 import { appointments } from "./home-visit";
 import { screenings } from "./screening";
+import { nineSAssessments, redFlagAssessments, sdqAssessments } from "./assessment";
 
 export const initialSchoolSettings: SchoolSettings = {
   schoolStartTime: "07:30",
@@ -164,7 +165,38 @@ export const seedAuditLogs: AuditLog[] = [
       after: { academicYear: c.academicYear, granted: c.granted },
     })
   ),
-  ...screenings.map((s) => audit(s.screenedBy, "CREATE", "screenings", s.screeningId, atTime(s.screenedAt, "10:00:00"))),
+  ...screenings.flatMap((s) => [
+    audit(s.screenedBy, "CREATE", "screenings", s.screeningId, atTime(s.screenedAt, "10:00:00"), {
+      after: { studentId: s.studentId, termId: s.termId, status: "draft" },
+    }),
+    ...(s.certifiedBy && s.certifiedAt
+      ? [
+          audit(s.certifiedBy, "UPDATE", "screenings", s.screeningId, s.certifiedAt, {
+            before: { status: "draft" },
+            after: { status: "certified" },
+          }),
+        ]
+      : []),
+  ]),
+  ...redFlagAssessments.map((r) =>
+    audit(r.assessedBy, "CREATE", "red_flag_assessments", r.id, r.assessedAt, { after: { studentId: r.studentId, termId: r.termId, result: r.result } })
+  ),
+  ...nineSAssessments.map((n) =>
+    audit(n.assessedBy, "CREATE", "nine_s_assessments", n.id, n.assessedAt, { after: { studentId: n.studentId, termId: n.termId, result: n.result } })
+  ),
+  ...sdqAssessments.flatMap((f) => [
+    audit(SYSTEM_USER_ID, "CREATE", "sdq_assessments", f.id, f.requestedAt, {
+      after: { studentId: f.studentId, rater: f.rater, round: f.round, status: "pending" },
+    }),
+    ...(f.status === "submitted" && f.raterUserId && f.submittedAt
+      ? [
+          audit(f.raterUserId, "UPDATE", "sdq_assessments", f.id, f.submittedAt, {
+            before: { status: "pending" },
+            after: { status: "submitted" },
+          }),
+        ]
+      : []),
+  ]),
   ...careCases.flatMap((c) => [
     audit(c.openedBy ?? SYSTEM_USER_ID, "CREATE", "care_cases", c.caseId, atTime(c.openedAt, "09:00:00"), {
       after: { studentId: c.studentId },

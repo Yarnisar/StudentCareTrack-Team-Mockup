@@ -40,7 +40,7 @@ export default function StudentsPage() {
               const risk = sensitive ? store.overallRiskOf(student.studentId) : null;
               const screening = sensitive ? store.latestScreening(student.studentId) : undefined;
               const flagged = screening?.results
-                .filter((r) => r.group !== "green")
+                .filter((r) => r.group === "amber" || r.group === "red")
                 .map((r) => DIMENSION_LABEL[r.dimension])
                 .join(", ");
 

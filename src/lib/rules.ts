@@ -5,13 +5,19 @@
 
 import { addDaysThai, compareThaiDate, thaiDateOf } from "./format";
 import {
+  AcademicTerm,
   AssessmentOutcome,
+  CombinedSdqResult,
+  DimensionResult,
   OperatingWindow,
   NineSCluster,
+  RISK_ORDER,
   RiskGroup,
   ScreeningDimension,
   ScreeningItem,
+  SdqAssessment,
   SdqLevel,
+  SdqRater,
   SdqScale,
   WindowStatus,
 } from "./types";
@@ -45,7 +51,8 @@ export const SCREENING_ITEMS: ScreeningItem[] = [
   { id: "wf4", dimension: "welfare", label: "ถูกทอดทิ้งหรือไม่มีผู้ดูแล", severity: "problem" },
 
   // พฤติกรรม
-  { id: "bh1", dimension: "behavior", label: "มาสายเกิน 5 ครั้งต่อเดือน", severity: "risk" },
+  // ข้อความจริงใช้ screeningItemLabel() เพื่ออ่านเกณฑ์จาก school_settings.late_alert_threshold
+  { id: "bh1", dimension: "behavior", label: "มาสายตั้งแต่ {n} ครั้งในเดือนนี้", severity: "risk", derived: "late_count" },
   { id: "bh2", dimension: "behavior", label: "ใช้เวลากับเกมหรือสื่อออนไลน์มากกว่า 4 ชั่วโมงต่อวัน", severity: "risk" },
   { id: "bh3", dimension: "behavior", label: "มีพฤติกรรมความรุนแรงหรือทะเลาะวิวาท", severity: "problem" },
   { id: "bh4", dimension: "behavior", label: "พบการใช้สารเสพติด", severity: "problem" },
@@ -53,15 +60,20 @@ export const SCREENING_ITEMS: ScreeningItem[] = [
   // สุขภาพจิต
   { id: "mt1", dimension: "mental", label: "แยกตัวจากเพื่อนหรือครู", severity: "risk" },
   { id: "mt2", dimension: "mental", label: "อารมณ์แปรปรวน หงุดหงิดง่ายผิดปกติ", severity: "risk" },
-  { id: "mt3", dimension: "mental", label: "ผลแบบประเมิน 9S ระบุว่าควรดูแล", severity: "risk" },
-  { id: "mt4", dimension: "mental", label: "ผลแบบคัดกรอง Red Flag ระบุว่าควรดูแล", severity: "problem" },
+  { id: "mt3", dimension: "mental", label: "ผลแบบประเมิน 9S ระบุว่าควรดูแล", severity: "risk", derived: "nine_s" },
+  { id: "mt4", dimension: "mental", label: "ผลแบบคัดกรอง Red Flag ระบุว่าควรดูแล", severity: "problem", derived: "red_flag" },
 ];
+
+/** ข้อความของรายการ (แทนค่าเกณฑ์ที่ตั้งได้ เช่น จำนวนครั้งที่มาสาย) */
+export function screeningItemLabel(item: ScreeningItem, opts: { lateAlertThreshold: number }): string {
+  return item.label.replace("{n}", String(opts.lateAlertThreshold));
+}
 
 /**
  * เกณฑ์จัดกลุ่มรายมิติ
- * - ไม่พบรายการใด                       -> กลุ่มปกติ (เขียว)
- * - พบรายการเกณฑ์เสี่ยง แต่ไม่พบเกณฑ์มีปัญหา -> กลุ่มเสี่ยง (เหลือง)
- * - พบรายการเกณฑ์มีปัญหาอย่างน้อย 1 รายการ   -> กลุ่มมีปัญหา (แดง)
+ * - ไม่พบรายการใด                       -> ปกติ
+ * - พบรายการเกณฑ์เสี่ยง แต่ไม่พบเกณฑ์มีปัญหา -> เสี่ยง
+ * - พบรายการเกณฑ์มีปัญหาอย่างน้อย 1 รายการ   -> มีปัญหา
  */
 export function classifyDimension(
   dimension: ScreeningDimension,
@@ -75,11 +87,79 @@ export function classifyDimension(
   return "green";
 }
 
-/** ผลรวมของนักเรียน = กลุ่มที่รุนแรงที่สุดในบรรดา 6 มิติ */
-export function overallRisk(groups: RiskGroup[]): RiskGroup {
+/** ข้อมูลจากโมดูลอื่นที่ใช้กำหนดรายการอัตโนมัติ */
+export interface DerivedFacts {
+  /** ผล Red Flag / 9S ล่าสุดของปีการศึกษานี้ (null = ยังไม่ได้ประเมิน) */
+  redFlag: AssessmentOutcome | null;
+  nineS: AssessmentOutcome | null;
+  /** จำนวนครั้งที่มาสาย (ยืนยันแล้ว) เดือนนี้ */
+  confirmedLateCount: number;
+  lateAlertThreshold: number;
+}
+
+/** รายการอัตโนมัติที่พบ */
+export function derivedItemIds(facts: DerivedFacts): string[] {
+  return SCREENING_ITEMS.filter((item) => {
+    if (item.derived === "red_flag") return facts.redFlag === "needs_care";
+    if (item.derived === "nine_s") return facts.nineS === "needs_care";
+    if (item.derived === "late_count") return facts.confirmedLateCount >= facts.lateAlertThreshold;
+    return false;
+  }).map((i) => i.id);
+}
+
+/**
+ * มิติสุขภาพจิตยัง "รอผลประเมิน" หรือไม่
+ * ต้องมีผล Red Flag ก่อน ถ้า Red Flag ปกติต้องมีผล 9S ด้วย (ถ้า Red Flag ควรดูแล ข้าม 9S)
+ */
+export function isMentalPending(facts: Pick<DerivedFacts, "redFlag" | "nineS">): boolean {
+  if (facts.redFlag === null) return true;
+  return facts.redFlag === "normal" && facts.nineS === null;
+}
+
+/** ผลที่ระบบคำนวณของมิติหนึ่ง (รวมรายการอัตโนมัติ) */
+export function computeDimensionResult(
+  dimension: ScreeningDimension,
+  itemIds: string[],
+  mentalPending: boolean
+): DimensionResult {
+  if (dimension === "mental" && mentalPending) return "pending";
+  return classifyDimension(dimension, itemIds);
+}
+
+/** ผลรวมของนักเรียน = ผลที่รุนแรงที่สุดใน 6 มิติ (ถ้าไม่มีปัญหา/เสี่ยง แต่ยังรอผลบางมิติ = รอผลประเมิน) */
+export function overallRisk(groups: DimensionResult[]): DimensionResult {
   if (groups.includes("red")) return "red";
   if (groups.includes("amber")) return "amber";
+  if (groups.includes("pending")) return "pending";
   return "green";
+}
+
+/** ระดับที่ครูเลือกแทนผลที่คำนวณได้ (ต่างไม่เกิน 1 ระดับ ไม่รวมค่าเดิม) */
+export function adjustmentOptions(computed: DimensionResult): RiskGroup[] {
+  if (computed === "pending") return [];
+  const i = RISK_ORDER.indexOf(computed);
+  return RISK_ORDER.filter((_, j) => j !== i && Math.abs(j - i) === 1);
+}
+
+/** ตรวจการปรับผลของครู — คืนข้อความผิดพลาด หรือ null เมื่อถูกต้อง */
+export function adjustmentError(
+  computed: DimensionResult,
+  teacherGroup: RiskGroup | null,
+  reason: string | null
+): string | null {
+  if (teacherGroup === null) return null;
+  if (computed === "pending") return "มิติที่รอผลประเมินปรับผลไม่ได้";
+  if (!adjustmentOptions(computed).includes(teacherGroup)) return "ปรับผลได้ไม่เกิน 1 ระดับจากผลที่ระบบคำนวณ";
+  if (!reason?.trim()) return "ต้องระบุเหตุผลการปรับผล";
+  return null;
+}
+
+export function isValidAdjustment(
+  computed: DimensionResult,
+  teacherGroup: RiskGroup | null,
+  reason: string | null
+): boolean {
+  return adjustmentError(computed, teacherGroup, reason) === null;
 }
 
 /* ------------------------------------------------------------------ */
@@ -190,7 +270,17 @@ export const SDQ_CHOICES: { value: 0 | 1 | 2; label: string }[] = [
   { value: 2, label: "จริงแน่นอน" },
 ];
 
-export function scoreSdq(answers: Record<number, 0 | 1 | 2>) {
+/**
+ * เกณฑ์แปลผลคะแนนรวมพฤติกรรมที่เป็นปัญหา แยกตามผู้ประเมิน (แต่ละฉบับใช้เกณฑ์ของตัวเอง)
+ * TODO: รอยืนยันเกณฑ์จากคู่มือกรมสุขภาพจิต — ตอนนี้ใช้ 16/20 เท่ากันทั้ง 3 ฉบับไว้ก่อน ห้ามเดาตัวเลข
+ */
+export const SDQ_CUTOFFS: Record<SdqRater, { risk: number; problem: number }> = {
+  teacher: { risk: 16, problem: 20 }, // รอยืนยันเกณฑ์จากคู่มือกรมสุขภาพจิต
+  student: { risk: 16, problem: 20 }, // รอยืนยันเกณฑ์จากคู่มือกรมสุขภาพจิต
+  parent: { risk: 16, problem: 20 }, // รอยืนยันเกณฑ์จากคู่มือกรมสุขภาพจิต
+};
+
+export function scoreSdq(answers: Record<number, 0 | 1 | 2>, rater: SdqRater = "teacher") {
   const scaleScores: Record<SdqScale, number> = {
     emotional: 0,
     conduct: 0,
@@ -213,11 +303,102 @@ export function scoreSdq(answers: Record<number, 0 | 1 | 2>) {
     scaleScores.hyperactivity +
     scaleScores.peer;
 
+  const cut = SDQ_CUTOFFS[rater];
   let level: SdqLevel = "normal";
-  if (totalDifficulties >= 20) level = "problem";
-  else if (totalDifficulties >= 16) level = "risk";
+  if (totalDifficulties >= cut.problem) level = "problem";
+  else if (totalDifficulties >= cut.risk) level = "risk";
 
   return { scaleScores, totalDifficulties, level };
+}
+
+const SDQ_LEVEL_ORDER: SdqLevel[] = ["normal", "risk", "problem"];
+
+/** ระดับ SDQ → ผลแบบเดียวกับผลรายมิติ (ใช้กับ triggerModeForGroup) */
+export const SDQ_LEVEL_TO_GROUP: Record<SdqLevel, RiskGroup> = {
+  normal: "green",
+  risk: "amber",
+  problem: "red",
+};
+
+/** ชั้นประถม (ป.1–ป.6) ไม่มีฉบับนักเรียนประเมินตนเอง */
+export function isPrimaryGrade(gradeLevel: string): boolean {
+  return gradeLevel.startsWith("ป.");
+}
+
+export function sdqRatersFor(gradeLevel: string): SdqRater[] {
+  return isPrimaryGrade(gradeLevel) ? ["teacher", "parent"] : ["teacher", "student", "parent"];
+}
+
+/**
+ * ผล SDQ รวมของชุดเดียวกัน (นักเรียน + ภาคเรียน + ครั้ง) = ระดับที่รุนแรงที่สุดของฉบับที่ส่งแล้ว
+ * มีผลก็ต่อเมื่อฉบับครูส่งแล้ว (ก่อนนั้น level = null) — แสดง basedOn/total กำกับเสมอ
+ */
+export function combineSdq(forms: SdqAssessment[]): CombinedSdqResult | null {
+  const first = forms[0];
+  if (!first) return null;
+  const submitted = forms.filter((f) => f.status === "submitted" && f.level);
+  const teacherSubmitted = submitted.some((f) => f.rater === "teacher");
+  const worst = submitted.reduce<SdqLevel | null>((acc, f) => {
+    const lv = f.level as SdqLevel;
+    return acc === null || SDQ_LEVEL_ORDER.indexOf(lv) > SDQ_LEVEL_ORDER.indexOf(acc) ? lv : acc;
+  }, null);
+  return {
+    studentId: first.studentId,
+    termId: first.termId,
+    round: first.round,
+    level: teacherSubmitted ? worst : null,
+    basedOn: submitted.length,
+    total: forms.length,
+    teacherSubmitted,
+  };
+}
+
+/** รหัสชุด SDQ (นักเรียน + ภาคเรียน + ครั้ง) ใช้เป็น sourceRefId ของเหตุเปิด case จาก SDQ */
+export function sdqSetRef(studentId: string, termId: string, round: 1 | 2): string {
+  return `SDQSET-${termId}-R${round}-${studentId}`;
+}
+
+/** "อิงจาก 2 จาก 3 ฉบับ" */
+export function combinedSdqBasisLabel(c: Pick<CombinedSdqResult, "basedOn" | "total">): string {
+  return `อิงจาก ${c.basedOn} จาก ${c.total} ฉบับ`;
+}
+
+/* ------------------------------------------------------------------ */
+/* 4.1 ลำดับการประเมินตามภาคเรียน (HERO OBEC CARE 2568)                 */
+/* ------------------------------------------------------------------ */
+
+/** SDQ ครั้งที่ 1 = ภาคเรียนที่ 1, ครั้งที่ 2 = ภาคเรียนที่ 2 */
+export function sdqRoundFor(term: Pick<AcademicTerm, "semester">): 1 | 2 {
+  return term.semester;
+}
+
+/**
+ * ต้องทำ Red Flag ในภาคเรียนนี้หรือไม่
+ * - ภาคเรียนที่ 1: ทุกคน (จนกว่าจะทำในภาคเรียนนี้แล้ว)
+ * - ภาคเรียนที่ 2: เฉพาะคนที่ยังไม่เคยประเมินในปีการศึกษานี้
+ * @param assessedTerms ภาคเรียนที่นักเรียนเคยทำ Red Flag
+ */
+export function needsRedFlag(
+  assessedTerms: Pick<AcademicTerm, "termId" | "academicYear">[],
+  term: Pick<AcademicTerm, "termId" | "academicYear" | "semester">
+): boolean {
+  if (term.semester === 1) return !assessedTerms.some((t) => t.termId === term.termId);
+  return !assessedTerms.some((t) => t.academicYear === term.academicYear);
+}
+
+/**
+ * ต้องทำ SDQ ในรอบนี้หรือไม่
+ * - ครั้งที่ 1: เฉพาะคนที่ผล Red Flag/9S ควรดูแล
+ * - ครั้งที่ 2: คนที่ควรดูแล + คนที่ปกติเมื่อโรงเรียนเปิด sdq2_for_normal_students
+ */
+export function sdqRequiredFor(
+  round: 1 | 2,
+  needsCare: boolean | null,
+  sdq2ForNormalStudents: boolean
+): boolean {
+  if (needsCare === null) return false;
+  if (needsCare) return true;
+  return round === 2 && sdq2ForNormalStudents;
 }
 
 /* ------------------------------------------------------------------ */

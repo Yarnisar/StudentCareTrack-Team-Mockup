@@ -10,7 +10,8 @@
  * แล้วรวมเป็นค่าเดียว — หน้าจอใช้ useStore() เหมือนเดิม
  *
  * ลำดับ: core → audit → notifications → settings → consent  (รวมเป็น base: PlatformSlice)
- *        → behavior → checkin → care → screening → assessment → home-visit → dc → documents
+ *        → behavior → checkin → care → assessment → screening → home-visit → dc → documents
+ * (assessment ส่งเหตุเปิด case ผ่าน care; screening อ่านผล Red Flag/9S จาก assessment และมาสายจาก behavior)
  * slice ของโมดูลรับ base เป็นอาร์กิวเมนต์แรก (base.logAudit / base.notify / base.isWindowOpen /
  * base.schoolSettings / base.consentOf) slice ที่ต้องเรียก slice โมดูลอื่น (เช่น เปิด case อัตโนมัติ)
  * ให้รับ slice นั้นเป็นอาร์กิวเมนต์เพิ่ม และต้องอยู่หลัง slice นั้นในลำดับ
@@ -60,6 +61,15 @@ export type { ConsentStatus, RecordConsentResult } from "./consent";
 export type { CreateAppointmentInput, HomeVisitResult } from "./home-visit";
 export type { DcOverrides, DcResult, DcScoreEntry, DcSummaryReadiness } from "./dc";
 export type { DocumentReadiness, GenerateDocumentResult } from "./documents";
+export type {
+  AssessmentResult,
+  OpenSdqSetResult,
+  SaveNineSResult,
+  SaveRedFlagResult,
+  SaveSdqResult,
+} from "./assessment";
+export type { ScreeningActionResult, ScreeningInputs } from "./screening";
+export type { RaiseTriggerResult } from "./care";
 export { auditSummary } from "./audit";
 
 const StoreContext = createContext<StoreValue | null>(null);
@@ -78,8 +88,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const behavior = useBehaviorSlice(base);
   const checkin = useCheckinSlice(base, behavior);
   const care = useCareSlice(base, behavior);
-  const screening = useScreeningSlice(base);
-  const assessment = useAssessmentSlice(base);
+  const assessment = useAssessmentSlice(base, care);
+  const screening = useScreeningSlice(base, behavior, care, assessment);
   const homeVisit = useHomeVisitSlice(base);
   const dc = useDcSlice(base);
   const documents = useDocumentsSlice(base, dc);
