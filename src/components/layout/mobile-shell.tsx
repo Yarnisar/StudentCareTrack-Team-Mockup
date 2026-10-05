@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronLeft, Heart, Home, LayoutGrid, QrCode, User, ClipboardList } from "lucide-react";
 import type { ReactNode } from "react";
+import { NotificationBell } from "@/components/notifications/notification-bell";
 
 const STUDENT_TABS = [
   { href: "/portal/student", label: "หน้าหลัก", icon: LayoutGrid },
@@ -38,9 +39,12 @@ export function MobileShell({
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-[420px] flex-col border-x border-border bg-surface">
       {brand ? (
-        <header className="bg-primary px-5 py-5">
-          <h1 className="text-[18.5px] font-bold text-primary-foreground">{title}</h1>
-          {subtitle && <p className="mt-0.5 text-[12.5px] text-blue-100">{subtitle}</p>}
+        <header className="flex items-start gap-2 bg-primary px-5 py-5">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-[18.5px] font-bold text-primary-foreground">{title}</h1>
+            {subtitle && <p className="mt-0.5 text-[12.5px] text-blue-100">{subtitle}</p>}
+          </div>
+          <NotificationBell allHref="/portal/notifications" tone="inverse" />
         </header>
       ) : (
         <header className="flex items-center gap-2.5 border-b border-border bg-card px-5 py-4">
@@ -49,10 +53,11 @@ export function MobileShell({
               <ChevronLeft className="size-5" />
             </Link>
           )}
-          <div>
+          <div className="min-w-0 flex-1">
             <h1 className="text-[17px] font-bold">{title}</h1>
             {subtitle && <p className="text-xs text-muted-foreground">{subtitle}</p>}
           </div>
+          <NotificationBell allHref="/portal/notifications" />
         </header>
       )}
 

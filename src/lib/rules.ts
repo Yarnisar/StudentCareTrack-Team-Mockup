@@ -3,14 +3,17 @@
  * อ้างอิงเกณฑ์จากคู่มือการดำเนินงานระบบ HERO OBEC CARE ปี 2568
  */
 
+import { addDaysThai, compareThaiDate, thaiDateOf } from "./format";
 import {
   AssessmentOutcome,
+  OperatingWindow,
   NineSCluster,
   RiskGroup,
   ScreeningDimension,
   ScreeningItem,
   SdqLevel,
   SdqScale,
+  WindowStatus,
 } from "./types";
 
 /* ------------------------------------------------------------------ */
@@ -218,15 +221,35 @@ export function scoreSdq(answers: Record<number, 0 | 1 | 2>) {
 }
 
 /* ------------------------------------------------------------------ */
-/* 5. เกณฑ์การมาสาย                                                    */
+/* 5. เกณฑ์การมาสาย (ค่าจาก school_settings ในสโตร์)                    */
 /* ------------------------------------------------------------------ */
 
-/** เวลาเข้าเรียน 07:30 น. */
-export const SCHOOL_START_MINUTES = 7 * 60 + 30;
+/** "HH:MM" → นาทีนับจากเที่ยงคืน */
+export function timeToMinutes(time: string): number {
+  const [h, m] = time.split(":").map(Number);
+  return (h || 0) * 60 + (m || 0);
+}
 
-/** จำนวนครั้งที่มาสายต่อเดือนที่ระบบจะแจ้งเตือนครูประจำชั้น */
-export const LATE_ALERT_THRESHOLD = 5;
+/** มาสาย = เช็คอินหลังเวลาเข้าเรียนครบ 1 นาทีขึ้นไป (schoolStartTime จาก useStore().schoolSettings) */
+export function isLateArrival(date: Date, schoolStartTime: string): boolean {
+  return date.getHours() * 60 + date.getMinutes() > timeToMinutes(schoolStartTime);
+}
 
-export function isLateArrival(date: Date): boolean {
-  return date.getHours() * 60 + date.getMinutes() > SCHOOL_START_MINUTES;
+/* ------------------------------------------------------------------ */
+/* 6. ช่วงดำเนินงาน (operating windows)                                 */
+/* ------------------------------------------------------------------ */
+
+/** สถานะของช่วงดำเนินงาน ณ วันที่ (พ.ศ.) — ปิดแล้วล็อกเสมอ */
+export function windowStatusAt(window: OperatingWindow | undefined, at: string): WindowStatus {
+  if (!window) return "none";
+  const day = thaiDateOf(at);
+  if (compareThaiDate(day, window.opensAt) < 0) return "upcoming";
+  if (compareThaiDate(day, window.closesAt) > 0) return "closed";
+  return "open";
+}
+
+/** เปิดอยู่และเหลือไม่เกิน remindDaysBefore วันก่อนปิด */
+export function isWindowClosingSoon(window: OperatingWindow | undefined, at: string): boolean {
+  if (!window || windowStatusAt(window, at) !== "open") return false;
+  return compareThaiDate(thaiDateOf(at), addDaysThai(window.closesAt, -window.remindDaysBefore)) >= 0;
 }

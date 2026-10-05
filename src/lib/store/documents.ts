@@ -3,17 +3,17 @@
 import { useMemo, useState } from "react";
 import { educationDocuments as seedDocuments } from "../mock-data";
 import type { EducationDocument } from "../types";
-import type { CoreSlice } from "./core";
+import type { PlatformSlice } from "./platform";
 
 export interface DocumentsSlice {
   educationDocuments: EducationDocument[];
 }
 
-export function useDocumentsSlice(core: CoreSlice): DocumentsSlice {
+export function useDocumentsSlice(base: PlatformSlice): DocumentsSlice {
   const [educationDocuments] = useState<EducationDocument[]>(seedDocuments);
 
   return useMemo<DocumentsSlice>(() => {
-    void core;
+    void base;
     return { educationDocuments };
-  }, [core, educationDocuments]);
+  }, [base, educationDocuments]);
 }

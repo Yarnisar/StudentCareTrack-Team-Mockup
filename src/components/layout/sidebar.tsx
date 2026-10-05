@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { cn } from "cn";
 import {
   AlertTriangle,
+  Bell,
   ClipboardCheck,
   FileText,
   Flag,
@@ -38,7 +39,7 @@ const ICONS: Record<string, LucideIcon> = {
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { currentUser } = useStore();
+  const { currentUser, myUnreadCount } = useStore();
   const nav = navForRole(currentUser.role);
   const canOpenSettings = SETTINGS_NAV.roles.includes(currentUser.role);
 
@@ -77,6 +78,23 @@ export function Sidebar() {
       </nav>
 
       <div className="border-t border-border p-3">
+        <Link
+          href="/notifications"
+          className={cn(
+            "mb-2 flex items-center gap-3 rounded-lg px-3 py-2 text-[14px] transition-colors",
+            isActivePath(pathname, "/notifications")
+              ? "bg-accent font-semibold text-primary"
+              : "font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
+          )}
+        >
+          <Bell className="size-[18px]" />
+          <span className="flex-1">การแจ้งเตือน</span>
+          {myUnreadCount > 0 && (
+            <span className="rounded-full bg-risk-red px-2 py-0.5 text-[11px] font-bold text-white">
+              {myUnreadCount}
+            </span>
+          )}
+        </Link>
         <div className="flex items-center gap-2.5 rounded-[10px] bg-surface p-2.5">
           <div className="flex size-9 items-center justify-center rounded-full bg-muted text-xs font-bold text-muted-foreground">
             {initialOf(currentUser.name.replace(/^ครู/, ""))}

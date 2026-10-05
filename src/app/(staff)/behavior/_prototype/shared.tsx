@@ -36,11 +36,13 @@ export function useBehaviorForm() {
   const [ruleId, setRuleId] = useState("");
   const [description, setDescription] = useState("");
   const [saved, setSaved] = useState(false);
+  const [notifiedGuardians, setNotifiedGuardians] = useState(0);
 
   const canSave = studentId !== "" && ruleId !== "";
 
   const save = () => {
-    store.addBehaviorRecord(studentId, ruleId, description || "-");
+    const result = store.addBehaviorRecord(studentId, ruleId, description || "-");
+    setNotifiedGuardians(result.notifiedGuardians.length);
     setDescription("");
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
@@ -54,6 +56,7 @@ export function useBehaviorForm() {
     description,
     setDescription,
     saved,
+    notifiedGuardians,
     canSave,
     save,
   };
@@ -92,7 +95,7 @@ export function NewRecordFields({ form }: { form: BehaviorForm }) {
           className="h-10 w-full rounded-lg border border-border bg-card px-3 text-sm"
         >
           <option value="">เลือกจากกฎความประพฤติ...</option>
-          {behaviorRules.map((r) => (
+          {store.behaviorRules.filter((r) => r.isActive).map((r) => (
             <option key={r.ruleId} value={r.ruleId}>
               {r.name} ({r.scoreDelta > 0 ? `+${r.scoreDelta}` : r.scoreDelta})
             </option>
@@ -117,7 +120,9 @@ export function NewRecordFields({ form }: { form: BehaviorForm }) {
 
       {form.saved && (
         <p className="rounded-lg bg-risk-green-bg px-3 py-2 text-center text-[12.5px] font-semibold text-risk-green">
-          บันทึกเรียบร้อย · แจ้งเตือนครูประจำชั้นแล้ว
+          {form.notifiedGuardians > 0
+            ? `บันทึกเรียบร้อย · แจ้งผู้ปกครองแล้ว ${form.notifiedGuardians} คน`
+            : "บันทึกเรียบร้อย"}
         </p>
       )}
     </div>
@@ -125,9 +130,10 @@ export function NewRecordFields({ form }: { form: BehaviorForm }) {
 }
 
 export function RulesList() {
+  const store = useStore();
   return (
     <div className="divide-y divide-border">
-      {behaviorRules.map((rule) => (
+      {store.behaviorRules.filter((r) => r.isActive).map((rule) => (
         <div key={rule.ruleId} className="flex items-center justify-between py-2.5">
           <div>
             <div className="text-[13.5px] font-medium">{rule.name}</div>

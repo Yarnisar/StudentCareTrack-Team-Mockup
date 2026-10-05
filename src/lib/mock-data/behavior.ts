@@ -4,13 +4,13 @@ import type { BehaviorRecord, BehaviorRule, CheckinLog } from "../types";
 import { SYSTEM_USER_ID, USER } from "./core";
 
 export const behaviorRules: BehaviorRule[] = [
-  { ruleId: "BR-01", name: "มาสาย", severity: "minor", scoreDelta: -2, isActive: true },
-  { ruleId: "BR-02", name: "แต่งกายไม่ถูกระเบียบ", severity: "minor", scoreDelta: -1, isActive: true },
-  { ruleId: "BR-03", name: "ไม่ส่งงาน / การบ้าน", severity: "moderate", scoreDelta: -3, isActive: true },
-  { ruleId: "BR-04", name: "ใช้โทรศัพท์ในเวลาเรียน", severity: "moderate", scoreDelta: -3, isActive: true },
-  { ruleId: "BR-05", name: "ทะเลาะวิวาท", severity: "severe", scoreDelta: -10, isActive: true },
-  { ruleId: "BR-06", name: "ช่วยเหลือกิจกรรมโรงเรียน", severity: "positive", scoreDelta: 5, isActive: true },
-  { ruleId: "BR-07", name: "ช่วยเหลือครูหรือเพื่อน", severity: "positive", scoreDelta: 3, isActive: true },
+  { ruleId: "BR-01", name: "มาสาย", severity: "minor", scoreDelta: -2, notifyGuardian: false, isActive: true },
+  { ruleId: "BR-02", name: "แต่งกายไม่ถูกระเบียบ", severity: "minor", scoreDelta: -1, notifyGuardian: false, isActive: true },
+  { ruleId: "BR-03", name: "ไม่ส่งงาน / การบ้าน", severity: "moderate", scoreDelta: -3, notifyGuardian: true, isActive: true },
+  { ruleId: "BR-04", name: "ใช้โทรศัพท์ในเวลาเรียน", severity: "moderate", scoreDelta: -3, notifyGuardian: true, isActive: true },
+  { ruleId: "BR-05", name: "ทะเลาะวิวาท", severity: "severe", scoreDelta: -10, notifyGuardian: true, isActive: true },
+  { ruleId: "BR-06", name: "ช่วยเหลือกิจกรรมโรงเรียน", severity: "positive", scoreDelta: 5, notifyGuardian: true, isActive: true },
+  { ruleId: "BR-07", name: "ช่วยเหลือครูหรือเพื่อน", severity: "positive", scoreDelta: 3, notifyGuardian: true, isActive: true },
 ];
 
 export const behaviorRecords: BehaviorRecord[] = [

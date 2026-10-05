@@ -4,26 +4,30 @@
  * คำถามที่ต้นแบบนี้ตอบ: "หน้าตั้งค่าที่ให้แอดมิน (1) กำหนดช่วงเวลาทำแบบประเมิน
  * และ (2) เพิ่ม/แก้ไข/ลบกฎความประพฤติ ควรมีหน้าตาแบบไหน"
  *
- * เก็บในหน่วยความจำล้วน ไม่มีการบันทึกลงที่ใด กดรีเฟรชแล้วค่ากลับไปตั้งต้น
+ * อ่าน/เขียนสโตร์โดยตรง (useStore: operatingWindows, behaviorRules) — แก้แล้วมีผลทุกหน้าทันที
+ * และบันทึก audit log ทุกครั้ง ช่วงดำเนินงานมีได้ 1 ช่วงต่อกิจกรรมต่อภาคเรียน และล็อกหลังปิดเสมอ
+ * ดังนั้นสวิตช์ "เปิดใช้งาน" / "ล็อกหลังปิด" และปุ่มลบช่วงเวลาในต้นแบบไม่มีผล
+ * การลบกฎ = ยกเลิกการใช้งาน (ไม่ลบจริง)
  */
 
-import { useCallback, useMemo, useState } from "react";
-import { DEMO_TODAY, behaviorRules as seedRules } from "@/lib/mock-data";
-import type { BehaviorRule, SdqRater } from "@/lib/types";
+import { DEMO_TODAY } from "@/lib/mock-data";
+import { useStore } from "@/lib/store";
+import {
+  OPERATING_ACTIVITIES,
+  OPERATING_ACTIVITY_LABEL,
+  type BehaviorRule,
+  type OperatingActivity,
+  type OperatingWindow,
+  type SdqRater,
+} from "@/lib/types";
 
 /** ขอบเขตภาคเรียนที่ 2/2569 ใช้เป็นแกนเวลาของทุก variant */
 export const TERM_START = "2569-11-01";
 export const TERM_END = "2570-03-31";
 
-export type AssessmentKind = "screening" | "red_flag" | "nine_s" | "sdq" | "eq";
+export type AssessmentKind = OperatingActivity;
 
-export const KIND_LABEL: Record<AssessmentKind, string> = {
-  screening: "คัดกรอง 6 มิติ",
-  red_flag: "Red Flag",
-  nine_s: "9S",
-  sdq: "SDQ",
-  eq: "EQ",
-};
+export const KIND_LABEL: Record<AssessmentKind, string> = OPERATING_ACTIVITY_LABEL;
 
 export interface AssessmentWindow {
   id: string;
@@ -49,76 +53,20 @@ export const RATER_LABEL: Record<SdqRater, string> = {
   parent: "ผู้ปกครอง",
 };
 
-export const INITIAL_WINDOWS: AssessmentWindow[] = [
-  {
-    id: "W1",
-    kind: "screening",
-    label: "คัดกรองนักเรียน 6 มิติ",
-    openDate: "2569-11-01",
-    closeDate: "2569-11-30",
+/** ค่าเริ่มต้นจากข้อมูลตัวอย่างในสโตร์ (คงชื่อไว้ให้ไฟล์ต้นแบบอื่นคอมไพล์ได้) */
+function toProtoWindow(w: OperatingWindow): AssessmentWindow {
+  return {
+    id: w.windowId,
+    kind: w.activity,
+    label: OPERATING_ACTIVITY_LABEL[w.activity],
+    openDate: w.opensAt,
+    closeDate: w.closesAt,
     enabled: true,
     lockAfterClose: true,
-    remindDaysBefore: 7,
-    raters: ["teacher"],
-  },
-  {
-    id: "W2",
-    kind: "red_flag",
-    label: "ประเมิน Red Flag (กลุ่มเสี่ยง/มีปัญหา)",
-    openDate: "2569-12-01",
-    closeDate: "2569-12-15",
-    enabled: true,
-    lockAfterClose: true,
-    remindDaysBefore: 3,
-    raters: ["teacher"],
-  },
-  {
-    id: "W3",
-    kind: "nine_s",
-    label: "ประเมิน 9S",
-    openDate: "2569-12-16",
-    closeDate: "2569-12-31",
-    enabled: true,
-    lockAfterClose: false,
-    remindDaysBefore: 3,
-    raters: ["teacher"],
-  },
-  {
-    id: "W4",
-    kind: "sdq",
-    label: "SDQ รอบที่ 1",
-    round: 1,
-    openDate: "2570-01-05",
-    closeDate: "2570-01-31",
-    enabled: true,
-    lockAfterClose: true,
-    remindDaysBefore: 7,
-    raters: ["teacher", "student", "parent"],
-  },
-  {
-    id: "W5",
-    kind: "sdq",
-    label: "SDQ รอบที่ 2",
-    round: 2,
-    openDate: "2570-02-10",
-    closeDate: "2570-02-28",
-    enabled: true,
-    lockAfterClose: true,
-    remindDaysBefore: 7,
-    raters: ["teacher", "student", "parent"],
-  },
-  {
-    id: "W6",
-    kind: "eq",
-    label: "ประเมิน EQ ปลายภาค",
-    openDate: "2570-03-01",
-    closeDate: "2570-03-15",
-    enabled: false,
-    lockAfterClose: false,
-    remindDaysBefore: 5,
-    raters: ["teacher", "student"],
-  },
-];
+    remindDaysBefore: w.remindDaysBefore,
+    raters: w.activity === "sdq" ? ["teacher", "student", "parent"] : ["teacher"],
+  };
+}
 
 export type WindowStatus = "disabled" | "upcoming" | "open" | "closed";
 
@@ -191,74 +139,61 @@ export const DEFAULT_DELTA: Record<BehaviorRule["severity"], number> = {
   positive: 3,
 };
 
-let ruleSeq = 100;
-let windowSeq = 100;
-
 export function useSettingsPrototype() {
-  const [windows, setWindows] = useState<AssessmentWindow[]>(INITIAL_WINDOWS);
-  const [rules, setRules] = useState<BehaviorRule[]>(seedRules);
+  const store = useStore();
+  const termId = store.currentTerm.termId;
 
-  const updateWindow = useCallback((id: string, patch: Partial<AssessmentWindow>) => {
-    setWindows((prev) => prev.map((w) => (w.id === id ? { ...w, ...patch } : w)));
-  }, []);
+  const windows = store.operatingWindows
+    .filter((w) => w.termId === termId)
+    .sort((a, b) => a.opensAt.localeCompare(b.opensAt))
+    .map(toProtoWindow);
+  const rules = store.behaviorRules;
 
-  const addWindow = useCallback(() => {
-    const id = `W-NEW-${++windowSeq}`;
-    setWindows((prev) => [
-      ...prev,
+  /** เฉพาะวันเปิด/วันปิด/แจ้งล่วงหน้าที่มีในตาราง operating_windows ฟิลด์อื่นของต้นแบบไม่มีผล */
+  const updateWindow = (id: string, patch: Partial<AssessmentWindow>) => {
+    const w = store.operatingWindows.find((x) => x.windowId === id);
+    if (!w) return;
+    if (patch.openDate === undefined && patch.closeDate === undefined && patch.remindDaysBefore === undefined)
+      return;
+    store.saveOperatingWindow(
+      w.activity,
       {
-        id,
-        kind: "sdq",
-        label: "ช่วงเวลาใหม่",
-        openDate: DEMO_TODAY,
-        closeDate: shiftDate(DEMO_TODAY, 14),
-        enabled: true,
-        lockAfterClose: true,
-        remindDaysBefore: 7,
-        raters: ["teacher"],
+        opensAt: patch.openDate ?? w.opensAt,
+        closesAt: patch.closeDate ?? w.closesAt,
+        remindDaysBefore: patch.remindDaysBefore ?? w.remindDaysBefore,
       },
-    ]);
-    return id;
-  }, []);
+      w.termId
+    );
+  };
 
-  const removeWindow = useCallback((id: string) => {
-    setWindows((prev) => prev.filter((w) => w.id !== id));
-  }, []);
+  /** เพิ่มช่วงของกิจกรรมที่ยังไม่มีในภาคเรียนนี้ (1 ช่วงต่อกิจกรรม) */
+  const addWindow = () => {
+    const missing = OPERATING_ACTIVITIES.find((a) => !store.windowOf(a, termId));
+    if (!missing) return windows[0]?.id ?? "";
+    const result = store.saveOperatingWindow(missing, {
+      opensAt: DEMO_TODAY,
+      closesAt: shiftDate(DEMO_TODAY, 14),
+      remindDaysBefore: 7,
+    });
+    return result.ok ? result.window.windowId : "";
+  };
 
-  const updateRule = useCallback((ruleId: string, patch: Partial<BehaviorRule>) => {
-    setRules((prev) => prev.map((r) => (r.ruleId === ruleId ? { ...r, ...patch } : r)));
-  }, []);
+  /** ไม่มีการลบช่วงดำเนินงาน (ข้อมูลไม่ถูกลบจริง) */
+  const removeWindow = (id: string) => {
+    void id;
+  };
 
-  const addRule = useCallback((severity: BehaviorRule["severity"] = "minor") => {
-    const ruleId = `BR-NEW-${++ruleSeq}`;
-    setRules((prev) => [
-      ...prev,
-      {
-        ruleId,
-        name: "",
-        severity,
-        scoreDelta: DEFAULT_DELTA[severity],
-        isActive: true,
-      },
-    ]);
-    return ruleId;
-  }, []);
+  const updateRule = (ruleId: string, patch: Partial<BehaviorRule>) => store.updateBehaviorRule(ruleId, patch);
 
-  const removeRule = useCallback((ruleId: string) => {
-    setRules((prev) => prev.filter((r) => r.ruleId !== ruleId));
-  }, []);
+  const addRule = (severity: BehaviorRule["severity"] = "minor") =>
+    store.addBehaviorRule({ name: "", severity, scoreDelta: DEFAULT_DELTA[severity] })?.ruleId ?? "";
 
-  const reset = useCallback(() => {
-    setWindows(INITIAL_WINDOWS);
-    setRules(seedRules);
-  }, []);
+  /** ไม่ลบจริง — ยกเลิกการใช้งาน เพราะบันทึกเดิมอ้างอิงกฎอยู่ */
+  const removeRule = (ruleId: string) => store.setBehaviorRuleActive(ruleId, false);
 
-  const dirty = useMemo(
-    () =>
-      JSON.stringify(windows) !== JSON.stringify(INITIAL_WINDOWS) ||
-      JSON.stringify(rules) !== JSON.stringify(seedRules),
-    [windows, rules]
-  );
+  /** บันทึกลงสโตร์ทันทีทุกครั้งที่แก้ จึงไม่มีสถานะ "ยังไม่ได้บันทึก" */
+  const dirty = false;
+  const reset = () => {};
 
   return {
     windows,

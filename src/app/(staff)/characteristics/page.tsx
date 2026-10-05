@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { AlertTriangle } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,7 @@ export default function CharacteristicsPage() {
   const roomNames = [...new Set(store.students.map((s) => s.roomName))].join(", ");
   const pending = subjectSubmissions.filter((s) => !s.submitted);
   const submitted = subjectSubmissions.length - pending.length;
+  const [notifiedCount, setNotifiedCount] = useState<number | null>(null);
 
   return (
     <>
@@ -37,9 +39,15 @@ export default function CharacteristicsPage() {
               ยังมี <b>{pending.length} รายวิชา</b> ที่ครูประจำวิชายังไม่ส่งผลการประเมิน (ปพ.5) —
               ไม่สามารถสรุปเป็น ปพ.6 ได้จนกว่าข้อมูลจะครบ
             </p>
-            <Button size="sm" variant="outline">
-              ส่งการแจ้งเตือน
-            </Button>
+            {notifiedCount === null ? (
+              <Button size="sm" variant="outline" onClick={() => setNotifiedCount(store.requestPendingDcScores())}>
+                ส่งการแจ้งเตือน
+              </Button>
+            ) : (
+              <span className="text-[12.5px] font-semibold text-risk-amber">
+                แจ้งเตือนครูประจำวิชาแล้ว {notifiedCount} คน
+              </span>
+            )}
           </div>
         )}
 

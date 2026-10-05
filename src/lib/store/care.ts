@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { careCases as seedCareCases } from "../mock-data";
 import { nowThaiIso } from "../format";
 import type { CareCase, CareMethod, SupportType } from "../types";
-import type { CoreSlice } from "./core";
+import type { PlatformSlice } from "./platform";
 import { nextId } from "./ids";
 
 export interface CareSlice {
@@ -15,7 +15,7 @@ export interface CareSlice {
   closeCase: (caseId: string) => void;
 }
 
-export function useCareSlice(core: CoreSlice): CareSlice {
+export function useCareSlice(base: PlatformSlice): CareSlice {
   const [careCases, setCareCases] = useState<CareCase[]>(seedCareCases);
 
   return useMemo<CareSlice>(() => {
@@ -38,10 +38,21 @@ export function useCareSlice(core: CoreSlice): CareSlice {
         followups: [],
       };
       setCareCases((prev) => [record, ...prev]);
+      base.logAudit("CREATE", "care_cases", record.caseId, {
+        after: { studentId, supportType, careMethods: methods },
+      });
+      // แจ้งครูประจำชั้นอีกคนของห้อง (ผู้เปิดรู้อยู่แล้ว)
+      base.notify(
+        "case_opened",
+        base.recipientsOf(studentId, ["homeroom"]).filter((id) => id !== base.currentUser.userId),
+        studentId
+      );
       return record;
     };
 
     const addFollowup: CareSlice["addFollowup"] = (caseId, actionTaken, result) => {
+      const followupId = nextId("FU");
+      base.logAudit("CREATE", "care_followups", followupId, { after: { caseId } });
       setCareCases((prev) =>
         prev.map((c) =>
           c.caseId === caseId
@@ -49,11 +60,11 @@ export function useCareSlice(core: CoreSlice): CareSlice {
                 ...c,
                 followups: [
                   {
-                    followupId: nextId("FU"),
+                    followupId,
                     actionTaken,
                     result,
                     followupDate: nowThaiIso().split("T")[0],
-                    recordedBy: core.currentUser.userId,
+                    recordedBy: base.currentUser.userId,
                   },
                   ...c.followups,
                 ],
@@ -64,6 +75,12 @@ export function useCareSlice(core: CoreSlice): CareSlice {
     };
 
     const closeCase: CareSlice["closeCase"] = (caseId) => {
+      const existing = careCases.find((c) => c.caseId === caseId);
+      if (!existing || existing.status === "closed") return;
+      base.logAudit("UPDATE", "care_cases", caseId, {
+        before: { status: existing.status },
+        after: { status: "closed" },
+      });
       setCareCases((prev) =>
         prev.map((c) =>
           c.caseId === caseId ? { ...c, status: "closed", closedAt: nowThaiIso().split("T")[0] } : c
@@ -72,5 +89,5 @@ export function useCareSlice(core: CoreSlice): CareSlice {
     };
 
     return { careCases, caseOf, openCase, addFollowup, closeCase };
-  }, [core, careCases]);
+  }, [base, careCases]);
 }

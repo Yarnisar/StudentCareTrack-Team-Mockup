@@ -1,6 +1,6 @@
 "use client";
 
-import { use } from "react";
+import { use, useEffect } from "react";
 import Link from "next/link";
 import { ChevronLeft, Download } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
@@ -27,6 +27,16 @@ export default function StudentDetailPage({
   const { studentId } = use(params);
   const store = useStore();
   const student = store.getStudent(studentId);
+  const { logSensitiveView } = store;
+  const viewerId = store.currentUser.userId;
+  const exists = Boolean(student);
+
+  // แอดมิน/ผู้บริหารเปิดข้อมูลรายคน → VIEW_SENSITIVE (logSensitiveView ข้ามเองถ้าไม่ใช่แอดมิน และกันบันทึกซ้ำ)
+  useEffect(() => {
+    if (exists) logSensitiveView("students", studentId, { note: "เปิดหน้าข้อมูลนักเรียนรายคน" });
+    // บันทึกครั้งเดียวต่อการเปิดหน้า/สลับผู้ใช้ ไม่ใช่ทุกครั้งที่สโตร์เปลี่ยน
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [studentId, viewerId, exists]);
 
   if (!student) return <p className="p-8 text-sm text-muted-foreground">ไม่พบข้อมูลนักเรียน</p>;
 
