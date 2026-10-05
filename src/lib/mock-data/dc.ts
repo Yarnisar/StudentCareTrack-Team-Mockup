@@ -1,37 +1,180 @@
 /** ข้อมูลตัวอย่าง: คุณลักษณะอันพึงประสงค์ (ปพ.5 / ปพ.6) */
 
-import type { DcCriteria, DcSummary, SubjectSubmission } from "../types";
+import type {
+  DcCriteria,
+  DcIndicator,
+  DcLevel,
+  DcScore,
+  DcSubmissionDeadline,
+  DcSummaryRow,
+  Subject,
+  SubjectTeaching,
+} from "../types";
 import { USER } from "./core";
 
 export const dcCriteria: DcCriteria[] = [
-  { criteriaId: 1, name: "รักชาติ ศาสน์ กษัตริย์", shortName: "รักชาติฯ" },
-  { criteriaId: 2, name: "ซื่อสัตย์สุจริต", shortName: "ซื่อสัตย์" },
-  { criteriaId: 3, name: "มีวินัย", shortName: "มีวินัย" },
-  { criteriaId: 4, name: "ใฝ่เรียนรู้", shortName: "ใฝ่เรียนรู้" },
-  { criteriaId: 5, name: "อยู่อย่างพอเพียง", shortName: "พอเพียง" },
-  { criteriaId: 6, name: "มุ่งมั่นในการทำงาน", shortName: "มุ่งมั่น" },
-  { criteriaId: 7, name: "รักความเป็นไทย", shortName: "รักไทย" },
-  { criteriaId: 8, name: "มีจิตสาธารณะ", shortName: "จิตสาธารณะ" },
+  { criteriaId: 1, name: "รักชาติ ศาสน์ กษัตริย์", shortName: "รักชาติฯ", description: "" },
+  { criteriaId: 2, name: "ซื่อสัตย์สุจริต", shortName: "ซื่อสัตย์", description: "" },
+  { criteriaId: 3, name: "มีวินัย", shortName: "มีวินัย", description: "" },
+  { criteriaId: 4, name: "ใฝ่เรียนรู้", shortName: "ใฝ่เรียนรู้", description: "" },
+  { criteriaId: 5, name: "อยู่อย่างพอเพียง", shortName: "พอเพียง", description: "" },
+  { criteriaId: 6, name: "มุ่งมั่นในการทำงาน", shortName: "มุ่งมั่น", description: "" },
+  { criteriaId: 7, name: "รักความเป็นไทย", shortName: "รักไทย", description: "" },
+  { criteriaId: 8, name: "มีจิตสาธารณะ", shortName: "จิตสาธารณะ", description: "" },
 ];
 
-export const dcSummaries: DcSummary[] = [
-  { studentId: "30118", levels: { 1: 3, 2: 2, 3: 1, 4: 2, 5: 3, 6: 1, 7: 2, 8: 3 } },
-  { studentId: "30171", levels: { 1: 3, 2: 3, 3: 2, 4: 3, 5: 3, 6: 2, 7: 3, 8: 3 } },
-  { studentId: "30125", levels: { 1: 3, 2: 3, 3: 2, 4: 2, 5: 3, 6: 1, 7: 2, 8: 3 } },
-  { studentId: "30160", levels: { 1: 3, 2: 3, 3: 3, 4: 3, 5: 3, 6: 3, 7: 3, 8: 3 } },
-  { studentId: "30131", levels: { 1: 2, 2: 2, 3: 0, 4: 1, 5: 2, 6: null, 7: 2, 8: 2 } },
-  { studentId: "30140", levels: { 1: 3, 2: 3, 3: 3, 4: 2, 5: 3, 6: 2, 7: 3, 8: 3 } },
-  { studentId: "30152", levels: { 1: 3, 2: 2, 3: 2, 4: 3, 5: 2, 6: 2, 7: 3, 8: null } },
-  { studentId: "30183", levels: { 1: 3, 2: 3, 3: 3, 4: 3, 5: 2, 6: 3, 7: 3, 8: 3 } },
+/**
+ * ตัวชี้วัดตามหลักสูตรแกนกลางฯ 2551 (ต้องตรวจถ้อยคำกับเอกสารหลักสูตรอีกครั้ง)
+ * ต้นแบบใช้ชุดเดียวกันสำหรับ ม.1-3
+ */
+const indicator = (criteriaId: number, n: number, description: string): DcIndicator => ({
+  indicatorId: `IND-${criteriaId}.${n}`,
+  criteriaId,
+  code: `${criteriaId}.${n}`,
+  description,
+  gradeRange: "ม.1-3",
+});
+
+export const dcIndicators: DcIndicator[] = [
+  indicator(1, 1, "เป็นพลเมืองดีของชาติ"),
+  indicator(1, 2, "ธำรงไว้ซึ่งความเป็นชาติไทย"),
+  indicator(1, 3, "ศรัทธา ยึดมั่น และปฏิบัติตนตามหลักของศาสนา"),
+  indicator(1, 4, "เคารพเทิดทูนสถาบันพระมหากษัตริย์"),
+  indicator(2, 1, "ประพฤติตรงตามความเป็นจริงต่อตนเองทั้งทางกาย วาจา ใจ"),
+  indicator(2, 2, "ประพฤติตรงตามความเป็นจริงต่อผู้อื่นทั้งทางกาย วาจา ใจ"),
+  indicator(3, 1, "ปฏิบัติตามข้อตกลง กฎเกณฑ์ ระเบียบ ข้อบังคับของครอบครัว โรงเรียน และสังคม"),
+  indicator(4, 1, "ตั้งใจ เพียรพยายามในการเรียนและเข้าร่วมกิจกรรมการเรียนรู้"),
+  indicator(4, 2, "แสวงหาความรู้จากแหล่งเรียนรู้ต่าง ๆ และนำไปใช้ในชีวิตประจำวันได้"),
+  indicator(5, 1, "ดำเนินชีวิตอย่างพอประมาณ มีเหตุผล รอบคอบ มีคุณธรรม"),
+  indicator(5, 2, "มีภูมิคุ้มกันในตัวที่ดี ปรับตัวเพื่ออยู่ในสังคมได้อย่างมีความสุข"),
+  indicator(6, 1, "ตั้งใจและรับผิดชอบในการปฏิบัติหน้าที่การงาน"),
+  indicator(6, 2, "ทำงานด้วยความเพียรพยายามและอดทนเพื่อให้งานสำเร็จตามเป้าหมาย"),
+  indicator(7, 1, "ภาคภูมิใจในขนบธรรมเนียมประเพณี ศิลปวัฒนธรรมไทย และมีความกตัญญูกตเวที"),
+  indicator(7, 2, "เห็นคุณค่าและใช้ภาษาไทยในการสื่อสารได้อย่างถูกต้องเหมาะสม"),
+  indicator(7, 3, "อนุรักษ์และสืบทอดภูมิปัญญาไทย"),
+  indicator(8, 1, "ช่วยเหลือผู้อื่นด้วยความเต็มใจโดยไม่หวังผลตอบแทน"),
+  indicator(8, 2, "เข้าร่วมกิจกรรมที่เป็นประโยชน์ต่อโรงเรียน ชุมชน และสังคม"),
 ];
 
-export const subjectSubmissions: SubjectSubmission[] = [
-  { subject: "ภาษาไทย", teacherId: USER.wimon, submitted: true },
-  { subject: "คณิตศาสตร์", teacherId: USER.wichai, submitted: true },
-  { subject: "วิทยาศาสตร์", teacherId: USER.napa, submitted: true },
-  { subject: "สังคมศึกษา", teacherId: USER.prayong, submitted: true },
-  { subject: "ภาษาอังกฤษ", teacherId: USER.anna, submitted: true },
-  { subject: "สุขศึกษาและพลศึกษา", teacherId: USER.somchaiK, submitted: true },
-  { subject: "ศิลปะ", teacherId: USER.malee, submitted: false },
-  { subject: "การงานอาชีพ", teacherId: USER.arun, submitted: false },
+/** รายวิชา ม.3 ภาคเรียนที่ 2 (Team A) */
+export const subjects: Subject[] = [
+  { subjectId: "SUB-TH", subjectCode: "ท23102", name: "ภาษาไทย" },
+  { subjectId: "SUB-MA", subjectCode: "ค23102", name: "คณิตศาสตร์" },
+  { subjectId: "SUB-SC", subjectCode: "ว23102", name: "วิทยาศาสตร์" },
+  { subjectId: "SUB-SO", subjectCode: "ส23102", name: "สังคมศึกษา" },
+  { subjectId: "SUB-EN", subjectCode: "อ23102", name: "ภาษาอังกฤษ" },
+  { subjectId: "SUB-PE", subjectCode: "พ23102", name: "สุขศึกษาและพลศึกษา" },
+  { subjectId: "SUB-AR", subjectCode: "ศ23102", name: "ศิลปะ" },
+  { subjectId: "SUB-CT", subjectCode: "ง23102", name: "การงานอาชีพ" },
 ];
+
+const TEACHER_OF: Record<string, string> = {
+  "SUB-TH": USER.wimon,
+  "SUB-MA": USER.wichai,
+  "SUB-SC": USER.napa,
+  "SUB-SO": USER.prayong,
+  "SUB-EN": USER.anna,
+  "SUB-PE": USER.somchaiK,
+  "SUB-AR": USER.malee,
+  "SUB-CT": USER.arun,
+};
+
+/** ห้อง ม.3/1 เรียนครบ 8 รายวิชาในทั้งสองภาคเรียนของปี 2569 */
+export const subjectTeachings: SubjectTeaching[] = ["T2569-1", "T2569-2"].flatMap((termId) =>
+  subjects.map((s) => ({
+    teachingId: `TCH-${termId}-${s.subjectId}-R-301`,
+    subjectId: s.subjectId,
+    roomId: "R-301",
+    termId,
+    teacherId: TEACHER_OF[s.subjectId],
+  }))
+);
+
+/**
+ * กำหนดส่งคะแนน ปพ.5 จากงานวิชาการ (Team A) — ค่าจำลอง
+ * ภาคเรียนปัจจุบันเลยกำหนดแล้ว (DEMO_TODAY 2570-02-16) จึงสรุปได้แม้ยังมีรายวิชาที่ไม่ส่ง
+ */
+export const DC_SUBMISSION_DEADLINE = "2570-02-13";
+
+export const dcSubmissionDeadlines: DcSubmissionDeadline[] = [
+  { termId: "T2569-1", date: "2569-09-30", source: "team_a_academic" },
+  { termId: "T2569-2", date: DC_SUBMISSION_DEADLINE, source: "team_a_academic" },
+];
+
+/** ระดับที่ตั้งใจให้เป็นฐานนิยมของนักเรียนแต่ละคนต่อคุณลักษณะ (ใช้สร้างคะแนนตัวอย่าง) */
+const PROFILE: Record<string, DcLevel[]> = {
+  "30118": [3, 2, 1, 2, 3, 1, 2, 3],
+  "30171": [3, 3, 2, 3, 3, 2, 3, 3],
+  "30125": [3, 3, 2, 2, 3, 1, 2, 3],
+  "30160": [3, 3, 3, 3, 3, 3, 3, 3],
+  "30131": [2, 2, 0, 1, 2, 1, 2, 2],
+  "30140": [3, 3, 3, 2, 3, 2, 3, 3],
+  "30152": [3, 2, 2, 3, 2, 2, 3, 2],
+  "30183": [3, 3, 3, 3, 2, 3, 3, 3],
+};
+
+/** ค่าสุ่มแบบคงที่จากข้อความ (ให้ข้อมูลตัวอย่างเหมือนเดิมทุกครั้ง) */
+const hash = (text: string) => [...text].reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) % 9973, 7);
+
+const levelFor = (studentId: string, ind: DcIndicator, subjectId: string): DcLevel => {
+  const base = PROFILE[studentId][ind.criteriaId - 1];
+  const h = hash(`${studentId}|${ind.indicatorId}|${subjectId}`) % 10;
+  // ราว 1 ใน 5 ของคะแนนต่างจากฐาน 1 ระดับ ฐานนิยมจึงยังเป็นค่าเดิม
+  const shifted = h === 0 ? base - 1 : h === 1 ? base + 1 : base;
+  return Math.max(0, Math.min(3, shifted)) as DcLevel;
+};
+
+/**
+ * ภาคเรียนปัจจุบัน: 6 วิชาส่งครบ, คณิตศาสตร์ (ครูวิชัย — อยู่ในตัวสลับผู้ใช้) ให้คะแนนแล้ว 5 คน,
+ * การงานอาชีพยังไม่ให้คะแนน
+ * (ภาคเรียนที่ 1 สรุปไปแล้ว — ต้นแบบเก็บเฉพาะ dc_summary ของภาคนั้น)
+ */
+const MATH_FILLED = ["30118", "30125", "30131", "30140", "30152"];
+
+export const dcScores: DcScore[] = Object.keys(PROFILE).flatMap((studentId) =>
+  subjects.flatMap((s) => {
+    if (s.subjectId === "SUB-CT") return [];
+    if (s.subjectId === "SUB-MA" && !MATH_FILLED.includes(studentId)) return [];
+    return dcIndicators.map(
+      (ind): DcScore => ({
+        scoreId: `DCS-${studentId}-${s.subjectId}-${ind.code}`,
+        studentId,
+        indicatorId: ind.indicatorId,
+        subjectId: s.subjectId,
+        subjectTeacherId: TEACHER_OF[s.subjectId],
+        termId: "T2569-2",
+        level: levelFor(studentId, ind, s.subjectId),
+        updatedAt: s.subjectId === "SUB-MA" ? "2570-02-15T16:20:00" : "2570-02-11T15:30:00",
+      })
+    );
+  })
+);
+
+/** สรุป ปพ.6 ภาคเรียนที่ 1/2569 (สรุปครบแล้ว) */
+const PREVIOUS: Record<string, DcLevel[]> = {
+  "30118": [3, 2, 1, 2, 3, 1, 2, 3],
+  "30171": [3, 3, 2, 3, 3, 2, 3, 3],
+  "30125": [3, 3, 2, 2, 3, 2, 2, 3],
+  "30160": [3, 3, 3, 3, 3, 3, 3, 3],
+  "30131": [2, 2, 1, 1, 2, 1, 2, 2],
+  "30140": [3, 3, 3, 2, 3, 2, 3, 3],
+  "30152": [3, 2, 2, 3, 2, 2, 3, 2],
+  "30183": [3, 3, 3, 3, 2, 3, 3, 3],
+};
+
+export const dcSummaryRows: DcSummaryRow[] = Object.entries(PREVIOUS).flatMap(([studentId, levels]) =>
+  levels.map(
+    (level, i): DcSummaryRow => ({
+      summaryId: `DSM-${studentId}-T2569-1-${i + 1}`,
+      studentId,
+      criteriaId: i + 1,
+      termId: "T2569-1",
+      suggestedLevel: level,
+      level,
+      adjustReason: null,
+      missingSubjects: [],
+      summarizedBy: USER.somying,
+      summarizedAt: "2569-10-05T15:00:00",
+    })
+  )
+);
