@@ -13,6 +13,7 @@ import { Suspense, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import { PageHeader } from "@/components/layout/page-header";
 import { PrototypeSwitcher } from "@/components/prototype/prototype-switcher";
+import { SchoolSettingsCard } from "@/components/settings/school-settings-card";
 import { useStore } from "@/lib/store";
 import { CURRENT_TERM, SCHOOL_NAME } from "@/lib/mock-data";
 import { CONFIRM_VARIANTS, ConfirmProvider, type ConfirmStyle } from "./_prototype/confirm";
@@ -71,6 +72,8 @@ function SettingsContent() {
         title="ตั้งค่าระบบ"
         subtitle={`${SCHOOL_NAME} · ${CURRENT_TERM.label} · เปิดให้ทำอยู่ ${openNow} รอบ · กฎที่ใช้งาน ${activeRules} จาก ${proto.rules.length} ข้อ`}
       />
+
+      <SchoolSettingsCard />
 
       {variant === "A" && <VariantA proto={proto} ruleUsage={ruleUsage} impact={impact} />}
       {variant === "B" && <VariantB proto={proto} ruleUsage={ruleUsage} impact={impact} />}

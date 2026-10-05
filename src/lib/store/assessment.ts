@@ -16,7 +16,7 @@ import type {
   SdqAssessment,
   SdqRater,
 } from "../types";
-import type { CoreSlice } from "./core";
+import type { PlatformSlice } from "./platform";
 import { nextId } from "./ids";
 
 export interface AssessmentSlice {
@@ -33,13 +33,13 @@ export interface AssessmentSlice {
 
 const RATERS: SdqRater[] = ["teacher", "student", "parent"];
 
-export function useAssessmentSlice(core: CoreSlice): AssessmentSlice {
+export function useAssessmentSlice(base: PlatformSlice): AssessmentSlice {
   const [redFlags, setRedFlags] = useState<RedFlagAssessment[]>(seedRedFlags);
   const [nineS, setNineS] = useState<NineSAssessment[]>(seedNineS);
   const [sdq, setSdq] = useState<SdqAssessment[]>(seedSdq);
 
   return useMemo<AssessmentSlice>(() => {
-    const termId = core.currentTerm.termId;
+    const termId = base.currentTerm.termId;
 
     const blankSdq = (studentId: string, rater: SdqRater): SdqAssessment => ({
       id: nextId("SDQ"),
@@ -58,11 +58,11 @@ export function useAssessmentSlice(core: CoreSlice): AssessmentSlice {
 
     /** userId ของผู้ส่งแบบ SDQ ฉบับนี้ */
     const raterUserIdFor = (studentId: string, rater: SdqRater): string | null => {
-      const user = core.currentUser;
+      const user = base.currentUser;
       if (rater === "student") return studentUserId(studentId);
       if (rater === "parent") {
         if (user.role === "parent") return user.userId;
-        return core.guardiansOf(studentId)[0]?.user.userId ?? null;
+        return base.guardiansOf(studentId)[0]?.user.userId ?? null;
       }
       return user.userId;
     };
@@ -70,14 +70,22 @@ export function useAssessmentSlice(core: CoreSlice): AssessmentSlice {
     const sdqOf = (studentId: string) => sdq.filter((s) => s.studentId === studentId);
 
     const openSdqSet = (studentId: string) => {
-      if (!core.getStudent(studentId)) return;
-      setSdq((prev) => {
-        const existing = new Set(
-          prev.filter((s) => s.studentId === studentId && s.round === 1).map((s) => s.rater)
-        );
-        const created = RATERS.filter((r) => !existing.has(r)).map((r) => blankSdq(studentId, r));
-        return [...prev, ...created];
-      });
+      if (!base.getStudent(studentId)) return;
+      const existing = new Set(
+        sdq.filter((s) => s.studentId === studentId && s.round === 1).map((s) => s.rater)
+      );
+      const created = RATERS.filter((r) => !existing.has(r)).map((r) => blankSdq(studentId, r));
+      if (created.length === 0) return;
+      setSdq((prev) => [...prev, ...created]);
+      for (const form of created) {
+        base.logAudit("CREATE", "sdq_assessments", form.id, { after: { studentId, rater: form.rater, round: form.round } });
+      }
+      // ขอให้ผู้ปกครองทุกคน (ฉบับผู้ปกครอง) และนักเรียน (ฉบับประเมินตนเอง) ทำแบบประเมิน
+      const recipients = [
+        ...(created.some((f) => f.rater === "parent") ? base.recipientsOf(studentId, ["guardians"]) : []),
+        ...(created.some((f) => f.rater === "student") ? [studentUserId(studentId)] : []),
+      ];
+      base.notify("sdq_requested", recipients, studentId);
     };
 
     const saveRedFlag: AssessmentSlice["saveRedFlag"] = (studentId, answers) => {
@@ -88,10 +96,11 @@ export function useAssessmentSlice(core: CoreSlice): AssessmentSlice {
         termId,
         answers,
         result,
-        assessedBy: core.currentUser.userId,
+        assessedBy: base.currentUser.userId,
         assessedAt: nowThaiIso(),
       };
       setRedFlags((prev) => [record, ...prev]);
+      base.logAudit("CREATE", "red_flag_assessments", record.id, { after: { studentId, termId, result } });
       if (result === "needs_care") openSdqSet(studentId);
       return result;
     };
@@ -105,10 +114,11 @@ export function useAssessmentSlice(core: CoreSlice): AssessmentSlice {
         clusterScores,
         clusterResults,
         result,
-        assessedBy: core.currentUser.userId,
+        assessedBy: base.currentUser.userId,
         assessedAt: nowThaiIso(),
       };
       setNineS((prev) => [record, ...prev]);
+      base.logAudit("CREATE", "nine_s_assessments", record.id, { after: { studentId, termId, result } });
       if (result === "needs_care") openSdqSet(studentId);
       return result;
     };
@@ -116,9 +126,9 @@ export function useAssessmentSlice(core: CoreSlice): AssessmentSlice {
     const saveSdq: AssessmentSlice["saveSdq"] = (studentId, rater, answers) => {
       const { scaleScores, totalDifficulties, level } = scoreSdq(answers);
       const idx = sdq.findIndex((s) => s.studentId === studentId && s.rater === rater && s.round === 1);
-      const base = idx >= 0 ? sdq[idx] : blankSdq(studentId, rater);
+      const form = idx >= 0 ? sdq[idx] : blankSdq(studentId, rater);
       const updated: SdqAssessment = {
-        ...base,
+        ...form,
         raterUserId: raterUserIdFor(studentId, rater),
         answers,
         scaleScores,
@@ -127,6 +137,10 @@ export function useAssessmentSlice(core: CoreSlice): AssessmentSlice {
         status: "completed",
         assessedAt: nowThaiIso(),
       };
+      base.logAudit(idx >= 0 ? "UPDATE" : "CREATE", "sdq_assessments", updated.id, {
+        ...(idx >= 0 ? { before: { status: form.status, level: form.level } } : {}),
+        after: { studentId, rater, status: updated.status, level },
+      });
       setSdq((prev) => {
         const i = prev.findIndex((s) => s.id === updated.id);
         if (i < 0) return [...prev, updated];
@@ -138,5 +152,5 @@ export function useAssessmentSlice(core: CoreSlice): AssessmentSlice {
     };
 
     return { redFlags, nineS, sdq, sdqOf, saveRedFlag, saveNineS, saveSdq, openSdqSet };
-  }, [core, redFlags, nineS, sdq]);
+  }, [base, redFlags, nineS, sdq]);
 }

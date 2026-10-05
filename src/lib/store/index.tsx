@@ -9,13 +9,19 @@
  * และรับ slice ที่ต้องพึ่งเป็นอาร์กิวเมนต์ StoreProvider เรียกทุก slice ตามลำดับการพึ่งพา
  * แล้วรวมเป็นค่าเดียว — หน้าจอใช้ useStore() เหมือนเดิม
  *
- * ลำดับ: core → (audit / notifications / settings / consent) → behavior → checkin → care
- *        → screening → assessment → home-visit → dc → documents
- * slice ที่ต้องการเรียก slice อื่น (เช่น เปิด case อัตโนมัติ) ให้รับ slice นั้นเป็นอาร์กิวเมนต์
- * และต้องอยู่หลัง slice นั้นในลำดับ
+ * ลำดับ: core → audit → notifications → settings → consent  (รวมเป็น base: PlatformSlice)
+ *        → behavior → checkin → care → screening → assessment → home-visit → dc → documents
+ * slice ของโมดูลรับ base เป็นอาร์กิวเมนต์แรก (base.logAudit / base.notify / base.isWindowOpen /
+ * base.schoolSettings / base.consentOf) slice ที่ต้องเรียก slice โมดูลอื่น (เช่น เปิด case อัตโนมัติ)
+ * ให้รับ slice นั้นเป็นอาร์กิวเมนต์เพิ่ม และต้องอยู่หลัง slice นั้นในลำดับ
  */
 
 import { createContext, useContext, useMemo, type ReactNode } from "react";
+import { useAuditSlice, type AuditSlice } from "./audit";
+import { useConsentSlice, type ConsentSlice } from "./consent";
+import { useNotificationsSlice, type NotificationsSlice } from "./notifications";
+import type { PlatformSlice } from "./platform";
+import { useSettingsSlice, type SettingsSlice } from "./settings";
 import { useAssessmentSlice, type AssessmentSlice } from "./assessment";
 import { useBehaviorSlice, type BehaviorSlice } from "./behavior";
 import { useCareSlice, type CareSlice } from "./care";
@@ -27,6 +33,10 @@ import { useHomeVisitSlice, type HomeVisitSlice } from "./home-visit";
 import { useScreeningSlice, type ScreeningSlice } from "./screening";
 
 export type StoreValue = CoreSlice &
+  AuditSlice &
+  NotificationsSlice &
+  SettingsSlice &
+  ConsentSlice &
   BehaviorSlice &
   CheckinSlice &
   CareSlice &
@@ -37,23 +47,37 @@ export type StoreValue = CoreSlice &
   DocumentsSlice;
 
 export type { CheckinOutcome } from "./checkin";
+export type { PlatformSlice } from "./platform";
+export type { RecipientGroup } from "./notifications";
+export type { OperatingWindowInput, SaveWindowResult, SchoolSettingsPatch } from "./settings";
+export type { ConsentStatus, RecordConsentResult } from "./consent";
+export { auditSummary } from "./audit";
 
 const StoreContext = createContext<StoreValue | null>(null);
 
 export function StoreProvider({ children }: { children: ReactNode }) {
   const core = useCoreSlice();
-  const behavior = useBehaviorSlice(core);
-  const checkin = useCheckinSlice(core, behavior);
-  const care = useCareSlice(core);
-  const screening = useScreeningSlice(core);
-  const assessment = useAssessmentSlice(core);
-  const homeVisit = useHomeVisitSlice(core);
-  const dc = useDcSlice(core);
-  const documents = useDocumentsSlice(core);
+  const audit = useAuditSlice(core);
+  const notifications = useNotificationsSlice(core, audit);
+  const settings = useSettingsSlice(core, audit, notifications);
+  const consent = useConsentSlice(core, audit);
+  const base = useMemo<PlatformSlice>(
+    () => ({ ...core, ...audit, ...notifications, ...settings, ...consent }),
+    [core, audit, notifications, settings, consent]
+  );
+
+  const behavior = useBehaviorSlice(base);
+  const checkin = useCheckinSlice(base, behavior);
+  const care = useCareSlice(base);
+  const screening = useScreeningSlice(base);
+  const assessment = useAssessmentSlice(base);
+  const homeVisit = useHomeVisitSlice(base);
+  const dc = useDcSlice(base);
+  const documents = useDocumentsSlice(base);
 
   const value = useMemo<StoreValue>(
     () => ({
-      ...core,
+      ...base,
       ...behavior,
       ...checkin,
       ...care,
@@ -63,7 +87,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       ...dc,
       ...documents,
     }),
-    [core, behavior, checkin, care, screening, assessment, homeVisit, dc, documents]
+    [base, behavior, checkin, care, screening, assessment, homeVisit, dc, documents]
   );
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;

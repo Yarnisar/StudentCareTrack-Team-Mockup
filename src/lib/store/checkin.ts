@@ -2,11 +2,11 @@
 
 import { useMemo, useState } from "react";
 import { checkinLogs as seedCheckins, SYSTEM_USER_ID } from "../mock-data";
-import { isLateArrival, LATE_ALERT_THRESHOLD } from "../rules";
+import { isLateArrival } from "../rules";
 import { nowThaiIso } from "../format";
 import type { CheckinLog, Student } from "../types";
 import type { BehaviorSlice } from "./behavior";
-import type { CoreSlice } from "./core";
+import type { PlatformSlice } from "./platform";
 import { nextId } from "./ids";
 
 export interface CheckinOutcome {
@@ -15,6 +15,8 @@ export interface CheckinOutcome {
   isLate: boolean;
   lateCountThisMonth: number;
   exceededThreshold: boolean;
+  /** userId ของครูประจำชั้นที่ได้รับแจ้ง late_threshold จากการสแกนครั้งนี้ */
+  notifiedHomeroom: string[];
 }
 
 export interface CheckinSlice {
@@ -22,12 +24,12 @@ export interface CheckinSlice {
   checkIn: (studentId: string, simulatedTime?: string) => CheckinOutcome | null;
 }
 
-export function useCheckinSlice(core: CoreSlice, behavior: BehaviorSlice): CheckinSlice {
+export function useCheckinSlice(base: PlatformSlice, behavior: BehaviorSlice): CheckinSlice {
   const [checkins, setCheckins] = useState<CheckinLog[]>(seedCheckins);
 
   return useMemo<CheckinSlice>(() => {
     const checkIn: CheckinSlice["checkIn"] = (studentId, simulatedTime) => {
-      const student = core.getStudent(studentId);
+      const student = base.getStudent(studentId);
       if (!student) return null;
 
       const now = new Date();
@@ -36,7 +38,7 @@ export function useCheckinSlice(core: CoreSlice, behavior: BehaviorSlice): Check
         const [h, m] = simulatedTime.split(":").map(Number);
         now.setHours(h, m, 0, 0);
       }
-      const late = isLateArrival(now);
+      const late = isLateArrival(now, base.schoolSettings.schoolStartTime);
       const pad = (n: number) => String(n).padStart(2, "0");
       const stamp = nowThaiIso(`${pad(now.getHours())}:${pad(now.getMinutes())}`);
       const log: CheckinLog = {
@@ -44,7 +46,7 @@ export function useCheckinSlice(core: CoreSlice, behavior: BehaviorSlice): Check
         studentId,
         scannedAt: stamp,
         isLate: late,
-        scannedBy: core.currentUser.userId,
+        scannedBy: base.currentUser.userId,
       };
 
       const month = stamp.slice(0, 7);
@@ -53,6 +55,7 @@ export function useCheckinSlice(core: CoreSlice, behavior: BehaviorSlice): Check
           .length + (late ? 1 : 0);
 
       setCheckins((prev) => [log, ...prev]);
+      base.logAudit("CREATE", "checkin_logs", log.logId, { after: { studentId, isLate: late } });
 
       // มาสาย -> สร้างบันทึกความประพฤติอัตโนมัติ (เชื่อมกับโมดูลความประพฤติ)
       if (late) {
@@ -66,15 +69,28 @@ export function useCheckinSlice(core: CoreSlice, behavior: BehaviorSlice): Check
         });
       }
 
+      const threshold = base.schoolSettings.lateAlertThreshold;
+      const exceededThreshold = late && lateCountThisMonth >= threshold;
+      // แจ้งครูประจำชั้นทั้ง 2 คนครั้งเดียวเมื่อครบเกณฑ์ของเดือน
+      const notifiedHomeroom =
+        late && lateCountThisMonth === threshold
+          ? base
+              .notify("late_threshold", base.recipientsOf(studentId, ["homeroom"]), studentId, {
+                count: lateCountThisMonth,
+              })
+              .map((n) => n.recipientUserId)
+          : [];
+
       return {
         student,
         log,
         isLate: late,
         lateCountThisMonth,
-        exceededThreshold: late && lateCountThisMonth >= LATE_ALERT_THRESHOLD,
+        exceededThreshold,
+        notifiedHomeroom,
       };
     };
 
     return { checkins, checkIn };
-  }, [core, behavior, checkins]);
+  }, [base, behavior, checkins]);
 }

@@ -100,7 +100,7 @@ export function VariantB({ records, form }: { records: BehaviorRecord[]; form: B
               <h2 className="mb-4 text-[15.5px] font-bold">บันทึกพฤติกรรมใหม่</h2>
               <NewRecordFields form={form} />
               <p className="mt-3 text-[11.5px] leading-relaxed text-muted-foreground">
-                ระบบจะแจ้งเตือนครูประจำชั้นของนักเรียนคนนั้นโดยอัตโนมัติ
+                ความผิดระดับกลางขึ้นไปและการทำความดี ระบบแจ้งผู้ปกครองของนักเรียนทันที
               </p>
             </CardContent>
           </Card>

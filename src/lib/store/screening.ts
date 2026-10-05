@@ -5,7 +5,7 @@ import { screenings as seedScreenings } from "../mock-data";
 import { classifyDimension } from "../rules";
 import { nowThaiIso } from "../format";
 import { DIMENSION_ORDER, type RiskGroup, type Screening, type ScreeningDimension } from "../types";
-import type { CoreSlice } from "./core";
+import type { PlatformSlice } from "./platform";
 import { nextId } from "./ids";
 
 export interface ScreeningSlice {
@@ -15,7 +15,7 @@ export interface ScreeningSlice {
   saveScreening: (studentId: string, checked: Record<ScreeningDimension, string[]>) => Screening;
 }
 
-export function useScreeningSlice(core: CoreSlice): ScreeningSlice {
+export function useScreeningSlice(base: PlatformSlice): ScreeningSlice {
   const [screenings, setScreenings] = useState<Screening[]>(seedScreenings);
 
   return useMemo<ScreeningSlice>(() => {
@@ -34,12 +34,12 @@ export function useScreeningSlice(core: CoreSlice): ScreeningSlice {
     };
 
     const saveScreening: ScreeningSlice["saveScreening"] = (studentId, checked) => {
-      const termId = core.currentTerm.termId;
+      const termId = base.currentTerm.termId;
       const record: Screening = {
         screeningId: nextId("SC"),
         studentId,
         termId,
-        screenedBy: core.currentUser.userId,
+        screenedBy: base.currentUser.userId,
         screenedAt: nowThaiIso().split("T")[0],
         results: DIMENSION_ORDER.map((dimension) => ({
           dimension,
@@ -47,6 +47,11 @@ export function useScreeningSlice(core: CoreSlice): ScreeningSlice {
           checkedItemIds: checked[dimension] ?? [],
         })),
       };
+      const previous = screenings.find((s) => s.studentId === studentId && s.termId === termId);
+      base.logAudit(previous ? "UPDATE" : "CREATE", "screenings", record.screeningId, {
+        ...(previous ? { before: { screeningId: previous.screeningId, results: previous.results } } : {}),
+        after: { studentId, termId, results: record.results },
+      });
       // ภาคเรียนละ 1 ครั้ง: แทนที่เฉพาะของภาคเรียนนี้ ประวัติภาคเรียนก่อนยังอยู่
       setScreenings((prev) => [
         record,
@@ -56,5 +61,5 @@ export function useScreeningSlice(core: CoreSlice): ScreeningSlice {
     };
 
     return { screenings, latestScreening, overallRiskOf, saveScreening };
-  }, [core, screenings]);
+  }, [base, screenings]);
 }

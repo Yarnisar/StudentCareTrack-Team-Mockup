@@ -8,16 +8,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { LATE_ALERT_THRESHOLD, SCHOOL_START_MINUTES } from "@/lib/rules";
 import { CheckinOutcome, useStore } from "@/lib/store";
 import { formatThaiDate, formatThaiTime, initialOf } from "@/lib/format";
 
-const startTime = `${String(Math.floor(SCHOOL_START_MINUTES / 60)).padStart(2, "0")}:${String(
-  SCHOOL_START_MINUTES % 60
-).padStart(2, "0")}`;
-
 export default function CheckinPage() {
   const store = useStore();
+  const startTime = store.schoolSettings.schoolStartTime;
   const [code, setCode] = useState("");
   const [last, setLast] = useState<CheckinOutcome | null>(null);
   const [error, setError] = useState("");
@@ -163,7 +159,10 @@ export default function CheckinPage() {
                   {last.exceededThreshold && (
                     <p className="mt-2 flex items-center gap-2 rounded-lg bg-risk-red-bg px-3 py-2 text-[12.5px] font-semibold text-risk-red">
                       <AlertTriangle className="size-4" />
-                      มาสายเกินเกณฑ์ {LATE_ALERT_THRESHOLD} ครั้งต่อเดือน — แจ้งเตือนครูประจำชั้นแล้ว
+                      มาสายครบเกณฑ์ {store.schoolSettings.lateAlertThreshold} ครั้งต่อเดือน
+                      {last.notifiedHomeroom.length > 0
+                        ? ` — แจ้งเตือนครูประจำชั้นแล้ว ${last.notifiedHomeroom.length} คน`
+                        : " — แจ้งเตือนครูประจำชั้นไปแล้วเมื่อครบเกณฑ์"}
                     </p>
                   )}
                 </CardContent>

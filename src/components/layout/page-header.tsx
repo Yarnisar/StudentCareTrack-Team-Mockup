@@ -1,4 +1,5 @@
-import { Bell, Search } from "lucide-react";
+import { Search } from "lucide-react";
+import { NotificationBell } from "@/components/notifications/notification-bell";
 import type { ReactNode } from "react";
 
 export function PageHeader({
@@ -22,7 +23,7 @@ export function PageHeader({
           <Search className="size-4" />
           <span>ค้นหานักเรียน...</span>
         </div>
-        <Bell className="size-5 text-muted-foreground" />
+        <NotificationBell allHref="/notifications" />
       </div>
     </header>
   );
