@@ -1,9 +1,9 @@
 "use client";
 
-import { use, useMemo, useState } from "react";
+import { use, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Camera, ChevronLeft, Plus, Sparkles, Trash2 } from "lucide-react";
+import { Camera, Check, ChevronLeft, Lock, Plus, Sparkles, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import {
   AutoBadge,
@@ -25,10 +25,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { previousVisitForms, SCHOOL_NAME } from "@/lib/mock-data";
+import { WindowNotice } from "@/components/shared/window-notice";
+import { useDemoPageTool } from "@/lib/demo/page-tools";
+import { SCHOOL_NAME } from "@/lib/mock-data";
 import { useStore } from "@/lib/store";
-import { formatBaht, formatThaiDate } from "@/lib/format";
+import { formatBaht, formatThaiDate, formatThaiDateTime, nowThaiIso } from "@/lib/format";
 import {
+  buildDemoAutofill,
   CARETAKER_OPTIONS,
   DEPENDENCY_OPTIONS,
   DEVICE_OPTIONS,
@@ -45,8 +48,15 @@ import {
   INTERNET_OPTIONS,
   IncomeKey,
   HouseholdMemberRow,
+  emptyRecordInput,
+  inputFromPrevious,
+  LIVES_WITH_OPTIONS,
   memberTotal,
-  PHOTO_TYPE_OPTIONS,
+  mockPhoto,
+  perCapitaIncome,
+  PHOTO_SLOTS_HOME,
+  PHOTO_SLOTS_INACCESSIBLE,
+  signBlockers,
   RELATIONSHIP_LEVELS,
   SEXUAL_OPTIONS,
   SUBSTANCE_OPTIONS,
@@ -57,6 +67,18 @@ import {
   WELFARE_RECEIVED_OPTIONS,
   WELFARE_RISK_OPTIONS,
 } from "@/lib/home-visit-form";
+import {
+  PHOTO_TYPE_LABEL,
+  VISIT_TYPE_LABEL,
+  type HomeVisitForm,
+  type HomeVisitPhotoType,
+  type HomeVisitRecord,
+  type HomeVisitRecordInput,
+} from "@/lib/types";
+
+type ListKey = {
+  [K in keyof HomeVisitForm]: HomeVisitForm[K] extends string[] ? K : never;
+}[keyof HomeVisitForm];
 
 export default function HomeVisitRecordPage({
   params,
@@ -66,11 +88,14 @@ export default function HomeVisitRecordPage({
   const { appointmentId } = use(params);
   const router = useRouter();
   const store = useStore();
+  const { logSensitiveView } = store;
 
   const appointment = store.appointments.find((a) => a.appointmentId === appointmentId);
   const student = appointment ? store.getStudent(appointment.studentId) : undefined;
   const screening = appointment ? store.latestScreening(appointment.studentId) : undefined;
-  const previous = appointment ? previousVisitForms[appointment.studentId] : undefined;
+  const existing = store.recordOfAppointment(appointmentId);
+  const previous = appointment ? store.latestSignedVisitOf(appointment.studentId, appointmentId) : undefined;
+  const guardians = student ? store.guardiansOf(student.studentId) : [];
 
   /* ---------------- ค่าเริ่มต้นที่ระบบกรอกให้อัตโนมัติ ---------------- */
 
@@ -84,10 +109,10 @@ export default function HomeVisitRecordPage({
     );
     // จากข้อมูลที่ผู้ปกครองกรอกล่วงหน้าผ่านระบบ
     if (appointment?.guardianPhone) map.set("guardianPhone", "guardian");
-    if (appointment?.caretakerName) map.set("caretakerNote", "guardian");
+    if (appointment?.awayStayWith) map.set("awayStayWith", "guardian");
     if (appointment?.guardianNote) map.set("guardianConcern", "guardian");
     if (appointment?.guardianNote) map.set("supportRequests", "guardian");
-    // จากการเยี่ยมบ้านครั้งก่อน
+    // จากการเยี่ยมบ้านครั้งก่อน (ที่รับรองแล้ว)
     if (previous) {
       [
         "householdMembers",
@@ -101,6 +126,7 @@ export default function HomeVisitRecordPage({
         "travel",
         "duties",
         "internet",
+        "livesWith",
       ].forEach((k) => map.set(k, "previous"));
     }
     // จากผลการคัดกรอง 6 มิติ
@@ -113,55 +139,52 @@ export default function HomeVisitRecordPage({
     return map;
   }, [student, appointment, previous, screening]);
 
-  const guardians = student ? store.guardiansOf(student.studentId) : [];
-
-  const initialMembers: HouseholdMemberRow[] = previous
-    ? previous.householdMembers.map((m) => ({ ...m }))
-    : [
-        {
-          id: "m1",
-          relation: "",
-          age: "",
-          disability: false,
-          income: { wage: 0, agriculture: 0, business: 0, welfare: 0, other: 0 },
-        },
-      ];
-
-  const [members, setMembers] = useState<HouseholdMemberRow[]>(initialMembers);
-  const [dependencies, setDependencies] = useState<string[]>(previous?.dependencies ?? []);
-  const [housingType, setHousingType] = useState(previous?.housingType ?? "");
-  const [housingConditions, setHousingConditions] = useState<string[]>(
-    previous?.housingConditions ?? []
-  );
-  const [vehicles, setVehicles] = useState<Record<string, boolean | undefined>>(() =>
-    Object.fromEntries((previous?.vehicles ?? []).map((v) => [v, true]))
-  );
-  const [farmland, setFarmland] = useState(previous?.farmland ?? "");
-  const [hoursTogether, setHoursTogether] = useState(previous?.hoursTogether ?? "");
-  const [relations, setRelations] = useState<Record<string, string>>({});
-  const [caretakerWhenAway, setCaretakerWhenAway] = useState(previous?.caretakerWhenAway ?? "");
-  const [supportRequests, setSupportRequests] = useState<string[]>(
-    appointment?.guardianNote ? ["economic"] : []
-  );
-  const [welfareReceived, setWelfareReceived] = useState<string[]>([]);
-  const [guardianConcern, setGuardianConcern] = useState(appointment?.guardianNote ?? "");
-  const [healthRisks, setHealthRisks] = useState<string[]>([]);
-  const [welfareRisks, setWelfareRisks] = useState<string[]>([]);
-  const [travelKm, setTravelKm] = useState(previous?.travelKm ?? "");
-  const [travelHours, setTravelHours] = useState(previous?.travelHours ?? "");
-  const [travelMinutes, setTravelMinutes] = useState(previous?.travelMinutes ?? "");
-  const [travelMode, setTravelMode] = useState(previous?.travelMode ?? "");
-  const [duties, setDuties] = useState<string[]>(previous?.duties ?? []);
-  const [hobbies, setHobbies] = useState<string[]>([]);
-  const [substances, setSubstances] = useState<string[]>([]);
-  const [violence, setViolence] = useState<string[]>([]);
-  const [sexual, setSexual] = useState<string[]>([]);
-  const [gaming, setGaming] = useState<string[]>([]);
-  const [internet, setInternet] = useState(previous?.internet ?? "");
-  const [devices, setDevices] = useState<string[]>([]);
-  const [informant, setInformant] = useState("");
-  const [photoType, setPhotoType] = useState("");
+  const [input, setInput] = useState<HomeVisitRecordInput>(() => {
+    if (existing) return structuredClone(pickInput(existing));
+    const start = previous ? inputFromPrevious(previous) : emptyRecordInput();
+    if (appointment?.guardianNote) {
+      start.form.guardianConcern = appointment.guardianNote;
+      start.form.supportRequests = ["economic"];
+    }
+    return start;
+  });
   const [onlyEmpty, setOnlyEmpty] = useState(false);
+  const [confirmSign, setConfirmSign] = useState(false);
+  const [message, setMessage] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
+
+  const signed = !!existing?.signedAt;
+  const block = appointment ? store.homeVisitBlockReason(appointment.studentId) : null;
+  const notConfirmed = appointment ? appointment.status !== "confirmed" && !signed : true;
+  const readOnly = signed || !!block || notConfirmed;
+  const sensitive = appointment ? store.canSeeSensitive(appointment.studentId) : false;
+  const canOpen =
+    !!appointment &&
+    (sensitive || store.canViewRecord(appointment.studentId, existing?.recordedBy ?? appointment.teacherId));
+
+  // แอดมิน/ผู้บริหารเปิดผลเยี่ยมบ้านรายคน → VIEW_SENSITIVE
+  useEffect(() => {
+    if (canOpen) logSensitiveView("home_visit_records", appointmentId, { note: "เปิดแบบบันทึกการเยี่ยมบ้าน" });
+  }, [canOpen, appointmentId, logSensitiveView]);
+
+  // เครื่องมือสาธิต: กรอกข้อมูลอัตโนมัติ (ไม่รับรองให้ — ครูต้องตรวจและรับรองเอง)
+  useDemoPageTool(
+    "กรอกข้อมูลอัตโนมัติ",
+    () => {
+      if (!appointment || readOnly) return;
+      const g = guardians[0];
+      setInput(
+        buildDemoAutofill({
+          studentId: appointment.studentId,
+          now: nowThaiIso(),
+          previous,
+          informant: g ? { name: g.user.name, relation: g.relation } : undefined,
+        })
+      );
+      setConfirmSign(false);
+      setMessage({ tone: "ok", text: "กรอกข้อมูลตัวอย่างแล้ว — ตรวจสอบ แล้วบันทึกร่างหรือรับรองเอง" });
+    },
+    "เติมแบบบันทึกเยี่ยมบ้านของนักเรียนคนนี้ (จากผลเยี่ยมครั้งก่อนถ้ามี) ยังต้องกดรับรองเอง"
+  );
 
   if (!appointment || !student) {
     return (
@@ -170,15 +193,53 @@ export default function HomeVisitRecordPage({
       </div>
     );
   }
+  if (!canOpen) {
+    return (
+      <div className="p-8">
+        <p className="text-sm text-muted-foreground">
+          แบบบันทึกการเยี่ยมบ้านเป็นข้อมูลอ่อนไหว เปิดได้เฉพาะครูประจำชั้นของนักเรียนและแอดมิน
+        </p>
+      </div>
+    );
+  }
+
+  const f = input.form;
+  const setForm = <K extends keyof HomeVisitForm>(key: K, value: HomeVisitForm[K]) =>
+    setInput((prev) => ({ ...prev, form: { ...prev.form, [key]: value } }));
+  /** สลับค่าในรายการแบบ functional update — กันการกดติดกันเร็ว ๆ แล้วค่าหาย */
+  const toggleIn = (key: ListKey, id: string) =>
+    setInput((prev) => {
+      const cur = prev.form[key];
+      return {
+        ...prev,
+        form: { ...prev.form, [key]: cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id] },
+      };
+    });
+  const setTop = <K extends keyof HomeVisitRecordInput>(key: K, value: HomeVisitRecordInput[K]) =>
+    setInput((prev) => ({ ...prev, [key]: value }));
+  const setMembers = (fn: (prev: HouseholdMemberRow[]) => HouseholdMemberRow[]) =>
+    setInput((prev) => ({ ...prev, form: { ...prev.form, members: fn(prev.form.members) } }));
+  const members = f.members;
+
+  const photoSlots = input.cannotAccessHome ? PHOTO_SLOTS_INACCESSIBLE : PHOTO_SLOTS_HOME;
+  const hasPhoto = (t: HomeVisitPhotoType) => input.photos.some((p) => p.photoType === t);
+  const togglePhoto = (t: HomeVisitPhotoType) =>
+    setInput((prev) => ({
+      ...prev,
+      photos: prev.photos.some((p) => p.photoType === t)
+        ? prev.photos.filter((p) => p.photoType !== t)
+        : [...prev.photos, mockPhoto(t, nowThaiIso(), Date.now())],
+    }));
+
+  /** ข้อมูลที่จะบันทึก: เก็บเฉพาะภาพของกรณีที่เลือก (เข้าบ้านได้ / ไม่ได้) */
+  const collect = (): HomeVisitRecordInput => ({
+    ...input,
+    photos: input.photos.filter((p) => photoSlots.includes(p.photoType)),
+  });
+  const blockers = signBlockers(collect());
 
   const totalIncome = members.reduce((sum, m) => sum + memberTotal(m), 0);
-  const perCapita = members.length > 0 ? Math.round(totalIncome / members.length) : 0;
-
-  /** สลับค่าในรายการแบบ functional update — กันการกดติดกันเร็ว ๆ แล้วค่าหาย */
-  const toggle = (
-    set: React.Dispatch<React.SetStateAction<string[]>>,
-    id: string
-  ) => set((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  const perCapita = perCapitaIncome(members);
 
   const autoCount = autoFilled.size;
   const totalFields = 24;
@@ -187,9 +248,18 @@ export default function HomeVisitRecordPage({
   const bySource = (source: FillSource) =>
     [...autoFilled.values()].filter((v) => v === source).length;
 
-  const handleSave = () => {
-    store.setAppointmentStatus(appointmentId, "completed");
-    router.push("/home-visits");
+  const save = (sign: boolean) => {
+    const result = store.saveHomeVisitRecord(appointmentId, collect(), { sign });
+    if (!result.ok) {
+      setMessage({ tone: "error", text: result.error });
+      setConfirmSign(false);
+      return;
+    }
+    if (sign) {
+      router.push("/home-visits");
+      return;
+    }
+    setMessage({ tone: "ok", text: "บันทึกร่างแล้ว — กลับมากรอกต่อหรือรับรองภายหลังได้" });
   };
 
   return (
@@ -244,12 +314,52 @@ export default function HomeVisitRecordPage({
               })}
               {previous && (
                 <span className="rounded-md bg-card px-2.5 py-1 text-[11.5px] text-muted-foreground">
-                  ข้อมูลเดิมจากการเยี่ยมบ้านเมื่อ {formatThaiDate(previous.visitedAt)}
+                  ข้อมูลเดิมจากการเยี่ยมบ้านเมื่อ {formatThaiDate(previous.signedAt ?? previous.updatedAt)}
                 </span>
               )}
             </div>
           </div>
 
+          {/* ประเภทการเยี่ยม / สถานะการแก้ไข */}
+          <div className="flex flex-wrap items-center gap-2 text-[12.5px]">
+            <span className="rounded-md bg-surface px-2.5 py-1 font-semibold">
+              {VISIT_TYPE_LABEL[appointment.visitType]} · ปีการศึกษา {appointment.academicYear}
+            </span>
+            {appointment.caseId && (
+              <span className="rounded-md bg-accent px-2.5 py-1 font-semibold text-primary">
+                ติดตาม case {appointment.caseId}
+              </span>
+            )}
+            <span className="text-muted-foreground">
+              {student.fullName} · นัด {formatThaiDate(appointment.proposedDate)}
+            </span>
+          </div>
+          {signed && existing?.signedAt ? (
+            <div className="flex items-center gap-2.5 rounded-xl border border-border bg-muted px-4 py-3 text-[13px] text-muted-foreground">
+              <Lock className="size-4 shrink-0" />
+              รับรองแล้วโดย {store.nameOf(existing.signedBy)} เมื่อ {formatThaiDateTime(existing.signedAt)} —
+              แก้ไขไม่ได้
+            </div>
+          ) : (
+            <>
+              <WindowNotice activity="home_visit" />
+              {block && store.isWindowOpen("home_visit") && (
+                <p className="rounded-xl bg-muted px-4 py-3 text-[13px] text-muted-foreground">{block} — ดูได้อย่างเดียว</p>
+              )}
+              {!block && notConfirmed && (
+                <p className="rounded-xl bg-risk-amber-bg px-4 py-3 text-[13px] text-risk-amber">
+                  รอผู้ปกครองยืนยันนัดหมายก่อนจึงจะบันทึกผลได้
+                </p>
+              )}
+              {existing && !block && !notConfirmed && (
+                <p className="rounded-xl bg-risk-amber-bg px-4 py-3 text-[13px] text-risk-amber">
+                  กรอกต่อจากร่างที่บันทึกไว้เมื่อ {formatThaiDateTime(existing.updatedAt)}
+                </p>
+              )}
+            </>
+          )}
+
+          <fieldset disabled={readOnly} className="m-0 min-w-0 space-y-5 border-0 p-0">
           {/* หน้า 1 : ข้อมูลนักเรียนและผู้ปกครอง */}
           {!onlyEmpty && (
             <SectionCard no="1." title="ข้อมูลนักเรียนและผู้ปกครอง" description="หน้า 1 ของแบบฟอร์ม">
@@ -264,7 +374,7 @@ export default function HomeVisitRecordPage({
                   <ReadOnly value={`${student.roomName} เลขที่ ${student.classNo}`} />
                 </Field>
                 <Field label="เลขที่บัตรประชาชนนักเรียน" source="registry">
-                  <ReadOnly value={student.citizenId} />
+                  <ReadOnly value={sensitive ? student.citizenId : "—"} />
                 </Field>
                 <Field label="ชื่อผู้ปกครอง" source="registry">
                   <ReadOnly value={guardians.map((g) => g.user.name).join(", ") || "-"} />
@@ -276,16 +386,26 @@ export default function HomeVisitRecordPage({
                   label="เบอร์โทรศัพท์"
                   source={autoFilled.get("guardianPhone")}
                 >
-                  <ReadOnly value={appointment.guardianPhone ?? guardians[0]?.user.phone ?? "-"} />
+                  <ReadOnly value={sensitive ? (appointment.guardianPhone ?? guardians[0]?.user.phone ?? "-") : "—"} />
                 </Field>
                 <Field label="ที่อยู่" source="registry" className="md:col-span-2">
-                  <ReadOnly value={student.address} />
+                  <ReadOnly value={sensitive ? student.address : "—"} />
                 </Field>
                 <Field label="อาชีพผู้ปกครอง" htmlFor="occupation">
-                  <Input id="occupation" placeholder="สอบถามในวันเยี่ยมบ้าน" />
+                  <Input
+                    id="occupation"
+                    value={f.guardianOccupation}
+                    onChange={(e) => setForm("guardianOccupation", e.target.value)}
+                    placeholder="สอบถามในวันเยี่ยมบ้าน"
+                  />
                 </Field>
                 <Field label="การศึกษาสูงสุดของผู้ปกครอง" htmlFor="education">
-                  <Input id="education" placeholder="สอบถามในวันเยี่ยมบ้าน" />
+                  <Input
+                    id="education"
+                    value={f.guardianEducation}
+                    onChange={(e) => setForm("guardianEducation", e.target.value)}
+                    placeholder="สอบถามในวันเยี่ยมบ้าน"
+                  />
                 </Field>
               </div>
             </SectionCard>
@@ -357,6 +477,7 @@ export default function HomeVisitRecordPage({
                       <td className="px-1 py-1.5 text-center">
                         <Checkbox
                           checked={m.disability}
+                          disabled={readOnly}
                           onCheckedChange={() =>
                             setMembers((prev) =>
                               prev.map((x, xi) =>
@@ -455,9 +576,9 @@ export default function HomeVisitRecordPage({
               <ChipGroup
                 label="4.1 ภาระพึ่งพิงของครัวเรือน"
                 options={DEPENDENCY_OPTIONS}
-                selected={dependencies}
-                onToggle={(id) => toggle(setDependencies, id)}
-                onClear={() => setDependencies([])}
+                selected={f.dependencies}
+                onToggle={(id) => toggleIn("dependencies", id)}
+                onClear={() => setForm("dependencies", [])}
                 source={autoFilled.get("dependencies")}
                 noneLabel="ไม่มีภาระพึ่งพิง"
                 columns={2}
@@ -465,17 +586,17 @@ export default function HomeVisitRecordPage({
               <ChipSelect
                 label="4.2 ประเภทที่อยู่อาศัย"
                 options={HOUSING_TYPE_OPTIONS}
-                value={housingType}
-                onChange={setHousingType}
+                value={f.housingType}
+                onChange={(v) => setForm("housingType", v)}
                 source={autoFilled.get("housingType")}
                 columns={3}
               />
               <ChipGroup
                 label="4.3 สภาพที่อยู่อาศัย"
                 options={HOUSING_CONDITION_OPTIONS}
-                selected={housingConditions}
-                onToggle={(id) => toggle(setHousingConditions, id)}
-                onClear={() => setHousingConditions([])}
+                selected={f.housingConditions}
+                onToggle={(id) => toggleIn("housingConditions", id)}
+                onClear={() => setForm("housingConditions", [])}
                 source={autoFilled.get("housingConditions")}
                 noneLabel="สภาพบ้านปกติ"
                 columns={1}
@@ -483,15 +604,15 @@ export default function HomeVisitRecordPage({
               <YesNoRows
                 label="4.4 ยานพาหนะของครอบครัว"
                 rows={VEHICLE_OPTIONS}
-                values={vehicles}
-                onChange={(id, value) => setVehicles((prev) => ({ ...prev, [id]: value }))}
+                values={f.vehicles}
+                onChange={(id, value) => setForm("vehicles", { ...f.vehicles, [id]: value })}
                 source={autoFilled.get("vehicles")}
               />
               <ChipSelect
                 label="4.5 ที่ดินทำกิน"
                 options={FARMLAND_OPTIONS}
-                value={farmland}
-                onChange={setFarmland}
+                value={f.farmland}
+                onChange={(v) => setForm("farmland", v)}
                 source={autoFilled.get("farmland")}
                 columns={2}
               />
@@ -509,8 +630,8 @@ export default function HomeVisitRecordPage({
                 >
                   <Input
                     id="hours"
-                    value={hoursTogether}
-                    onChange={(e) => setHoursTogether(e.target.value)}
+                    value={f.hoursTogether}
+                    onChange={(e) => setForm("hoursTogether", e.target.value)}
                     placeholder="ชั่วโมง/วัน"
                   />
                 </Field>
@@ -521,36 +642,46 @@ export default function HomeVisitRecordPage({
                 hint="เลือกระดับความสัมพันธ์ของแต่ละคน หากไม่มีสมาชิกคนนั้นให้เลือก “ไม่มี”"
                 rows={FAMILY_MEMBERS}
                 choices={RELATIONSHIP_LEVELS}
-                values={relations}
-                onChange={(row, choice) =>
-                  setRelations((prev) => ({ ...prev, [row]: choice }))
-                }
+                values={f.relations}
+                onChange={(row, choice) => setForm("relations", { ...f.relations, [row]: choice })}
               />
 
               <ChipSelect
                 label="5.3 กรณีที่ผู้ปกครองไม่อยู่บ้าน ฝากนักเรียนอยู่บ้านกับใคร"
                 options={CARETAKER_OPTIONS}
-                value={caretakerWhenAway}
-                onChange={setCaretakerWhenAway}
+                value={f.caretakerWhenAway}
+                onChange={(v) => setForm("caretakerWhenAway", v)}
                 source={autoFilled.get("caretakerWhenAway")}
                 columns={4}
               />
 
-              {appointment.caretakerName && (
+              {appointment.awayStayWith && (
                 <div className="flex items-center gap-2 rounded-lg bg-risk-green-bg px-3.5 py-2.5">
                   <AutoBadge source="guardian" />
                   <span className="text-[12.5px] text-risk-green">
-                    ผู้ปกครองระบุไว้ล่วงหน้าว่า: {appointment.caretakerName}
+                    ผู้ปกครองระบุไว้ล่วงหน้าว่า: {appointment.awayStayWith}
                   </span>
                 </div>
               )}
 
+              <ChipSelect
+                label="นักเรียนอาศัยอยู่กับใครจริง"
+                options={LIVES_WITH_OPTIONS}
+                value={input.livesWith}
+                onChange={(v) => setTop("livesWith", v)}
+                source={autoFilled.get("livesWith")}
+                columns={3}
+              />
+              <p className="-mt-4 text-[12px] text-muted-foreground">
+                เป็นข้อมูลประกอบเท่านั้น ไม่ทำให้ผู้ปกครองคนใดมีสิทธิ์ในระบบมากกว่าคนอื่น
+              </p>
+
               <ChipGroup
                 label="5.6 สิ่งที่ผู้ปกครองต้องการให้โรงเรียนช่วยเหลือนักเรียน"
                 options={SUPPORT_REQUEST_OPTIONS}
-                selected={supportRequests}
-                onToggle={(id) => toggle(setSupportRequests, id)}
-                onClear={() => setSupportRequests([])}
+                selected={f.supportRequests}
+                onToggle={(id) => toggleIn("supportRequests", id)}
+                onClear={() => setForm("supportRequests", [])}
                 source={autoFilled.get("supportRequests")}
                 columns={2}
               />
@@ -558,9 +689,9 @@ export default function HomeVisitRecordPage({
               <ChipGroup
                 label="5.7 ความช่วยเหลือที่ครอบครัวเคยได้รับหรือต้องการได้รับ"
                 options={WELFARE_RECEIVED_OPTIONS}
-                selected={welfareReceived}
-                onToggle={(id) => toggle(setWelfareReceived, id)}
-                onClear={() => setWelfareReceived([])}
+                selected={f.welfareReceived}
+                onToggle={(id) => toggleIn("welfareReceived", id)}
+                onClear={() => setForm("welfareReceived", [])}
                 noneLabel="ไม่เคยได้รับ"
                 columns={3}
               />
@@ -572,8 +703,8 @@ export default function HomeVisitRecordPage({
               >
                 <Textarea
                   id="concern"
-                  value={guardianConcern}
-                  onChange={(e) => setGuardianConcern(e.target.value)}
+                  value={f.guardianConcern}
+                  onChange={(e) => setForm("guardianConcern", e.target.value)}
                   rows={3}
                   placeholder="บันทึกสิ่งที่ผู้ปกครองห่วงใย"
                 />
@@ -587,9 +718,9 @@ export default function HomeVisitRecordPage({
               <ChipGroup
                 label="6.1 สุขภาพ"
                 options={HEALTH_RISK_OPTIONS}
-                selected={healthRisks}
-                onToggle={(id) => toggle(setHealthRisks, id)}
-                onClear={() => setHealthRisks([])}
+                selected={f.healthRisks}
+                onToggle={(id) => toggleIn("healthRisks", id)}
+                onClear={() => setForm("healthRisks", [])}
                 source={autoFilled.get("healthRisks")}
                 hint={
                   autoFilled.get("healthRisks")
@@ -603,9 +734,9 @@ export default function HomeVisitRecordPage({
               <ChipGroup
                 label="6.2 สวัสดิภาพหรือความปลอดภัย"
                 options={WELFARE_RISK_OPTIONS}
-                selected={welfareRisks}
-                onToggle={(id) => toggle(setWelfareRisks, id)}
-                onClear={() => setWelfareRisks([])}
+                selected={f.welfareRisks}
+                onToggle={(id) => toggleIn("welfareRisks", id)}
+                onClear={() => setForm("welfareRisks", [])}
                 source={autoFilled.get("welfareRisks")}
                 hint={
                   autoFilled.get("welfareRisks")
@@ -625,16 +756,16 @@ export default function HomeVisitRecordPage({
                 </div>
                 <div className="grid gap-3 md:grid-cols-3">
                   <Field label="ระยะทางไป-กลับ (กิโลเมตร)" htmlFor="km">
-                    <Input id="km" value={travelKm} onChange={(e) => setTravelKm(e.target.value)} />
+                    <Input id="km" value={f.travelKm} onChange={(e) => setForm("travelKm", e.target.value)} />
                   </Field>
                   <Field label="เวลาเดินทาง (ชั่วโมง)" htmlFor="hh">
-                    <Input id="hh" value={travelHours} onChange={(e) => setTravelHours(e.target.value)} />
+                    <Input id="hh" value={f.travelHours} onChange={(e) => setForm("travelHours", e.target.value)} />
                   </Field>
                   <Field label="เวลาเดินทาง (นาที)" htmlFor="mm">
                     <Input
                       id="mm"
-                      value={travelMinutes}
-                      onChange={(e) => setTravelMinutes(e.target.value)}
+                      value={f.travelMinutes}
+                      onChange={(e) => setForm("travelMinutes", e.target.value)}
                     />
                   </Field>
                 </div>
@@ -642,8 +773,8 @@ export default function HomeVisitRecordPage({
                   <ChipSelect
                     label="วิธีการเดินทาง"
                     options={TRAVEL_OPTIONS}
-                    value={travelMode}
-                    onChange={setTravelMode}
+                    value={f.travelMode}
+                    onChange={(v) => setForm("travelMode", v)}
                     columns={4}
                   />
                 </div>
@@ -652,9 +783,9 @@ export default function HomeVisitRecordPage({
               <ChipGroup
                 label="6.4 ภาระงานความรับผิดชอบของนักเรียนต่อครอบครัว"
                 options={DUTY_OPTIONS}
-                selected={duties}
-                onToggle={(id) => toggle(setDuties, id)}
-                onClear={() => setDuties([])}
+                selected={f.duties}
+                onToggle={(id) => toggleIn("duties", id)}
+                onClear={() => setForm("duties", [])}
                 source={autoFilled.get("duties")}
                 noneLabel="ไม่มีภาระงาน"
                 columns={2}
@@ -663,18 +794,18 @@ export default function HomeVisitRecordPage({
               <ChipGroup
                 label="6.5 กิจกรรมยามว่างหรืองานอดิเรก"
                 options={HOBBY_OPTIONS}
-                selected={hobbies}
-                onToggle={(id) => toggle(setHobbies, id)}
-                onClear={() => setHobbies([])}
+                selected={f.hobbies}
+                onToggle={(id) => toggleIn("hobbies", id)}
+                onClear={() => setForm("hobbies", [])}
                 columns={3}
               />
 
               <ChipGroup
                 label="6.6 พฤติกรรมการใช้สารเสพติด"
                 options={SUBSTANCE_OPTIONS}
-                selected={substances}
-                onToggle={(id) => toggle(setSubstances, id)}
-                onClear={() => setSubstances([])}
+                selected={f.substances}
+                onToggle={(id) => toggleIn("substances", id)}
+                onClear={() => setForm("substances", [])}
                 noneLabel="ไม่พบความเสี่ยง"
                 columns={2}
               />
@@ -682,9 +813,9 @@ export default function HomeVisitRecordPage({
               <ChipGroup
                 label="6.7 พฤติกรรมการใช้ความรุนแรง"
                 options={VIOLENCE_OPTIONS}
-                selected={violence}
-                onToggle={(id) => toggle(setViolence, id)}
-                onClear={() => setViolence([])}
+                selected={f.violence}
+                onToggle={(id) => toggleIn("violence", id)}
+                onClear={() => setForm("violence", [])}
                 noneLabel="ไม่พบความเสี่ยง"
                 columns={3}
               />
@@ -692,9 +823,9 @@ export default function HomeVisitRecordPage({
               <ChipGroup
                 label="6.8 พฤติกรรมทางเพศ"
                 options={SEXUAL_OPTIONS}
-                selected={sexual}
-                onToggle={(id) => toggle(setSexual, id)}
-                onClear={() => setSexual([])}
+                selected={f.sexual}
+                onToggle={(id) => toggleIn("sexual", id)}
+                onClear={() => setForm("sexual", [])}
                 noneLabel="ไม่พบความเสี่ยง"
                 columns={2}
               />
@@ -702,9 +833,9 @@ export default function HomeVisitRecordPage({
               <ChipGroup
                 label="6.9 การติดเกม"
                 options={GAMING_OPTIONS}
-                selected={gaming}
-                onToggle={(id) => toggle(setGaming, id)}
-                onClear={() => setGaming([])}
+                selected={f.gaming}
+                onToggle={(id) => toggleIn("gaming", id)}
+                onClear={() => setForm("gaming", [])}
                 source={autoFilled.get("gaming")}
                 hint={
                   autoFilled.get("gaming")
@@ -718,8 +849,8 @@ export default function HomeVisitRecordPage({
               <ChipSelect
                 label="6.10 การเข้าถึงสื่อคอมพิวเตอร์และอินเทอร์เน็ตที่บ้าน"
                 options={INTERNET_OPTIONS}
-                value={internet}
-                onChange={setInternet}
+                value={f.internet}
+                onChange={(v) => setForm("internet", v)}
                 source={autoFilled.get("internet")}
                 columns={2}
               />
@@ -727,9 +858,9 @@ export default function HomeVisitRecordPage({
               <ChipGroup
                 label="6.11 การใช้เครื่องมือสื่อสารอิเล็กทรอนิกส์"
                 options={DEVICE_OPTIONS}
-                selected={devices}
-                onToggle={(id) => toggle(setDevices, id)}
-                onClear={() => setDevices([])}
+                selected={f.devices}
+                onToggle={(id) => toggleIn("devices", id)}
+                onClear={() => setForm("devices", [])}
                 noneLabel="ไม่พบพฤติกรรมข้างต้น"
                 columns={2}
               />
@@ -738,74 +869,166 @@ export default function HomeVisitRecordPage({
 
 
           <SectionCard no="7." title="ผู้ให้ข้อมูลและการรับรองข้อมูล" description="หน้า 3–4 ของแบบฟอร์ม">
-            <div className="space-y-5">
+            <div className="space-y-6">
               <div>
                 <Label className="text-[13px] font-semibold">ผู้ให้ข้อมูลนักเรียน</Label>
-                <div className="mt-2 flex flex-wrap gap-2">
+                <div className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-5">
                   {INFORMANT_OPTIONS.map((opt) => (
                     <button
                       key={opt}
-                      onClick={() => setInformant(opt)}
+                      type="button"
+                      aria-pressed={input.informantRelation === opt}
+                      onClick={() => setTop("informantRelation", input.informantRelation === opt ? "" : opt)}
                       className={
-                        informant === opt
-                          ? "rounded-lg border border-primary bg-accent px-3.5 py-1.5 text-[13px] font-semibold text-primary"
-                          : "rounded-lg border border-border px-3.5 py-1.5 text-[13px] text-muted-foreground hover:bg-muted"
+                        input.informantRelation === opt
+                          ? "min-h-12 rounded-xl border border-primary bg-accent px-3 py-2 text-[13.5px] font-semibold text-primary"
+                          : "min-h-12 rounded-xl border border-border bg-card px-3 py-2 text-[13.5px] text-muted-foreground hover:bg-muted"
                       }
                     >
                       {opt}
                     </button>
                   ))}
                 </div>
+                <div className="mt-3 max-w-md">
+                  <Field label="ชื่อ-นามสกุลผู้ให้ข้อมูล" htmlFor="informant-name">
+                    <Input
+                      id="informant-name"
+                      value={input.informantName}
+                      onChange={(e) => setTop("informantName", e.target.value)}
+                      placeholder="เช่น นางรัตนา สายใจ"
+                      className="h-11"
+                    />
+                  </Field>
+                </div>
               </div>
 
-              <ChipSelect
-                label="ภาพถ่ายที่แนบมาคือ"
-                options={PHOTO_TYPE_OPTIONS}
-                value={photoType}
-                onChange={setPhotoType}
-                columns={2}
-              />
-
-              <div className="grid gap-3 md:grid-cols-2">
-                {["รูปที่ 1 ภาพถ่ายสภาพบ้านนักเรียน (มีหลังคาและฝาบ้าน)", "รูปที่ 2 ภาพถ่ายภายในบ้านนักเรียน"].map(
-                  (label) => (
-                    <div
-                      key={label}
-                      className="flex h-36 flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-surface px-4 text-center"
+              <div>
+                <Label className="text-[13px] font-semibold">การเข้าเยี่ยม</Label>
+                <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                  {[
+                    { v: false, label: "เข้าเยี่ยมในบ้านได้", sub: "แนบภาพสภาพบ้านและภายในบ้าน" },
+                    { v: true, label: "เข้าเยี่ยมที่บ้านไม่ได้", sub: "ใช้ภาพนักเรียนคู่ป้ายโรงเรียน พร้อมเหตุผล" },
+                  ].map((o) => (
+                    <button
+                      key={o.label}
+                      type="button"
+                      aria-pressed={input.cannotAccessHome === o.v}
+                      onClick={() => setTop("cannotAccessHome", o.v)}
+                      className={
+                        input.cannotAccessHome === o.v
+                          ? "min-h-14 rounded-xl border border-primary bg-accent px-4 py-2.5 text-left text-primary"
+                          : "min-h-14 rounded-xl border border-border bg-card px-4 py-2.5 text-left hover:bg-muted"
+                      }
                     >
-                      <Camera className="size-6 text-muted-foreground" />
-                      <span className="text-[12.5px] text-muted-foreground">{label}</span>
-                    </div>
-                  )
+                      <div className="text-[13.5px] font-semibold">{o.label}</div>
+                      <div className="text-[12px] text-muted-foreground">{o.sub}</div>
+                    </button>
+                  ))}
+                </div>
+                {input.cannotAccessHome && (
+                  <div className="mt-3">
+                    <Field label="เหตุผลที่เข้าเยี่ยมที่บ้านไม่ได้ (บังคับ)" htmlFor="no-access-reason">
+                      <Textarea
+                        id="no-access-reason"
+                        rows={2}
+                        value={input.cannotAccessReason}
+                        onChange={(e) => setTop("cannotAccessReason", e.target.value)}
+                        placeholder="เช่น พักอาศัยในหอพักของนายจ้าง ไม่อนุญาตให้บุคคลภายนอกเข้า"
+                      />
+                    </Field>
+                    <p className="mt-1.5 text-[12px] text-muted-foreground">
+                      นับว่าเยี่ยมแล้ว แต่รายงานแยกนับเป็นกลุ่มเข้าบ้านไม่ได้
+                    </p>
+                  </div>
                 )}
               </div>
 
+              <div className="grid gap-3 md:grid-cols-2">
+                {photoSlots.map((t, i) => {
+                  const attached = hasPhoto(t);
+                  return (
+                    <button
+                      key={t}
+                      type="button"
+                      aria-pressed={attached}
+                      onClick={() => togglePhoto(t)}
+                      className={
+                        attached
+                          ? "flex h-36 flex-col items-center justify-center gap-2 rounded-xl border border-risk-green bg-risk-green-bg px-4 text-center text-risk-green"
+                          : "flex h-36 flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-surface px-4 text-center text-muted-foreground hover:bg-muted"
+                      }
+                    >
+                      {attached ? <Check className="size-6" /> : <Camera className="size-6" />}
+                      <span className="text-[12.5px]">
+                        รูปที่ {i + 1} {PHOTO_TYPE_LABEL[t]}
+                      </span>
+                      <span className="text-[11.5px]">{attached ? "แนบแล้ว · แตะเพื่อนำออก" : "แตะเพื่อถ่าย / แนบภาพ"}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
               <div className="grid gap-4 md:grid-cols-2">
-                <Field label="ผู้รับรองข้อมูล" source="registry">
-                  <ReadOnly value={store.currentUser.name} />
+                <Field label="ครูผู้ไปเยี่ยมและรับรองข้อมูล (1 คน)" source="registry">
+                  <ReadOnly value={signed && existing?.signedBy ? store.nameOf(existing.signedBy) : store.currentUser.name} />
                 </Field>
                 <Field label="ตำแหน่ง" source="registry">
                   <ReadOnly value="ครูประจำชั้น" />
                 </Field>
               </div>
-
-              <div className="rounded-xl border border-dashed border-border bg-surface px-4 py-6 text-center text-[12.5px] text-muted-foreground">
-                พื้นที่ลงลายมือชื่อผู้ปกครอง / ผู้แทน และครูผู้รับรองข้อมูล
-              </div>
             </div>
           </SectionCard>
+          </fieldset>
 
-          <div className="flex items-center justify-between pb-6">
-            <p className="text-[13px] text-muted-foreground">
-              ข้อมูลที่บันทึกจะเชื่อมกับผลการคัดกรองและ case การช่วยเหลือของนักเรียนโดยอัตโนมัติ
+          {message && (
+            <p
+              className={
+                message.tone === "ok"
+                  ? "rounded-lg bg-risk-green-bg px-4 py-3 text-[13px] font-medium text-risk-green"
+                  : "rounded-lg bg-risk-red-bg px-4 py-3 text-[13px] font-medium text-risk-red"
+              }
+            >
+              {message.text}
             </p>
-            <div className="flex gap-3">
-              <LinkButton variant="outline" href="/home-visits">
-                บันทึกร่าง
+          )}
+
+          {readOnly ? (
+            <div className="flex justify-end pb-6">
+              <LinkButton variant="outline" className="h-12" href="/home-visits">
+                กลับไปรายการนัดหมาย
               </LinkButton>
-              <Button onClick={handleSave}>บันทึกผลการเยี่ยมบ้าน</Button>
             </div>
-          </div>
+          ) : (
+            <div className="space-y-3 pb-6">
+              {blockers.length > 0 && (
+                <p className="text-[12.5px] text-muted-foreground">ก่อนรับรอง: {blockers.join(" · ")}</p>
+              )}
+              {confirmSign ? (
+                <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-risk-amber-bg p-4">
+                  <p className="flex items-center gap-2 text-[13px] font-medium text-risk-amber">
+                    <Lock className="size-4 shrink-0" /> หลังรับรองแล้วจะแก้ไขแบบบันทึกนี้ไม่ได้อีก
+                  </p>
+                  <div className="flex gap-2.5">
+                    <Button variant="outline" className="h-12" onClick={() => setConfirmSign(false)}>
+                      ตรวจอีกครั้ง
+                    </Button>
+                    <Button className="h-12" onClick={() => save(true)}>
+                      ยืนยันรับรองผล
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-wrap items-center justify-end gap-3">
+                  <Button variant="outline" className="h-12" onClick={() => save(false)}>
+                    บันทึกร่าง
+                  </Button>
+                  <Button className="h-12" disabled={blockers.length > 0} onClick={() => setConfirmSign(true)}>
+                    รับรองและบันทึกผลการเยี่ยมบ้าน
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </>
@@ -820,4 +1043,15 @@ function ReadOnly({ value }: { value: string }) {
   );
 }
 
-
+/** ส่วนที่ครูกรอกของบันทึกเดิม (ตัด metadata ออก) */
+function pickInput(r: HomeVisitRecord): HomeVisitRecordInput {
+  return {
+    form: r.form,
+    livesWith: r.livesWith,
+    informantName: r.informantName,
+    informantRelation: r.informantRelation,
+    cannotAccessHome: r.cannotAccessHome,
+    cannotAccessReason: r.cannotAccessReason,
+    photos: r.photos,
+  };
+}

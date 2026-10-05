@@ -1,23 +1,49 @@
-/** ข้อมูลตัวอย่าง: การเยี่ยมบ้าน */
+/**
+ * ข้อมูลตัวอย่าง: การเยี่ยมบ้าน (ปีการศึกษา 2569 ภาคเรียนที่ 2, DEMO_TODAY 2570-02-16)
+ * - HV-000  30125 ประจำปี 2568 (รับรองแล้ว โดยครูประจำชั้นปีก่อน) — ใช้ยกข้อมูลครัวเรือนมากรอกให้ HV-001
+ * - HV-001  30125 ประจำปี ยืนยันแล้ว (ผู้ปกครองกรอกข้อมูลล่วงหน้า)
+ * - HV-002  30131 ประจำปี รอผู้ปกครองยืนยัน
+ * - HV-003  30118 ประจำปี รับรองแล้ว
+ * - HV-004  30118 เยี่ยมเพิ่ม (case CASE-2570-015) ยืนยันแล้ว — ยกข้อมูลจาก HV-003
+ * - HV-005  30140 ประจำปี รับรองแล้ว แบบเข้าบ้านไม่ได้ (เหตุผล + ภาพคู่ป้ายโรงเรียน)
+ * - HV-006  30152 ประจำปี ยืนยันแล้ว มีร่างบันทึกค้างไว้
+ * 30160 / 30171 / 30183 ยังไม่ได้นัดเยี่ยมบ้านประจำปี
+ */
 
-import type { HomeVisitAppointment, HomeVisitRecord } from "../types";
+import type { HomeVisitAppointment, HomeVisitForm, HomeVisitRecord } from "../types";
 import { USER } from "./core";
 
 export const appointments: HomeVisitAppointment[] = [
   {
+    appointmentId: "HV-000",
+    studentId: "30125",
+    teacherId: USER.prapa,
+    academicYear: 2568,
+    visitType: "annual",
+    caseId: null,
+    proposedDate: "2569-01-20T15:30:00",
+    status: "completed",
+  },
+  {
     appointmentId: "HV-001",
     studentId: "30125",
     teacherId: USER.somying,
+    academicYear: 2569,
+    visitType: "annual",
+    caseId: null,
     proposedDate: "2570-02-18T15:30:00",
     status: "confirmed",
     guardianPhone: "08x-xxx-4471",
-    caretakerName: "ยาย (นางบุญมา สายใจ)",
+    awayStayWith: "ยาย (นางบุญมา สายใจ)",
     guardianNote: "อยากขอคำแนะนำเรื่องทุนการศึกษา และการดูแลเรื่องการใช้โทรศัพท์ของลูก",
   },
   {
     appointmentId: "HV-002",
     studentId: "30131",
     teacherId: USER.somying,
+    academicYear: 2569,
+    visitType: "annual",
+    caseId: null,
     proposedDate: "2570-02-20T16:00:00",
     status: "pending",
   },
@@ -25,114 +51,241 @@ export const appointments: HomeVisitAppointment[] = [
     appointmentId: "HV-003",
     studentId: "30118",
     teacherId: USER.somying,
+    academicYear: 2569,
+    visitType: "annual",
+    caseId: null,
     proposedDate: "2570-02-08T15:00:00",
     status: "completed",
   },
   {
-    // การเยี่ยมบ้านรอบติดตามผล — ใช้สาธิตการดึงข้อมูลจากการเยี่ยมบ้านครั้งก่อนมากรอกอัตโนมัติ
     appointmentId: "HV-004",
     studentId: "30118",
     teacherId: USER.somying,
+    academicYear: 2569,
+    visitType: "follow_up",
+    caseId: "CASE-2570-015",
     proposedDate: "2570-02-21T15:30:00",
     status: "confirmed",
     guardianPhone: "08x-xxx-1182",
   },
+  {
+    appointmentId: "HV-005",
+    studentId: "30140",
+    teacherId: USER.theerapong,
+    academicYear: 2569,
+    visitType: "annual",
+    caseId: null,
+    proposedDate: "2570-02-05T16:00:00",
+    status: "completed",
+  },
+  {
+    appointmentId: "HV-006",
+    studentId: "30152",
+    teacherId: USER.theerapong,
+    academicYear: 2569,
+    visitType: "annual",
+    caseId: null,
+    proposedDate: "2570-02-14T15:00:00",
+    status: "confirmed",
+  },
 ];
 
+const BLANK_RISKS = {
+  supportRequests: [],
+  welfareReceived: [],
+  guardianConcern: "",
+  healthRisks: [],
+  welfareRisks: [],
+  hobbies: [],
+  substances: [],
+  violence: [],
+  sexual: [],
+  gaming: [],
+  devices: [],
+} satisfies Partial<HomeVisitForm>;
+
+const income = (p: Partial<Record<"wage" | "agriculture" | "business" | "welfare" | "other", number>>) => ({
+  wage: 0,
+  agriculture: 0,
+  business: 0,
+  welfare: 0,
+  other: 0,
+  ...p,
+});
+
+const form30118: HomeVisitForm = {
+  ...BLANK_RISKS,
+  guardianOccupation: "รับจ้างทั่วไป",
+  guardianEducation: "มัธยมศึกษาตอนต้น",
+  members: [
+    { id: "pm1", relation: "บิดา", age: 47, disability: false, income: income({ wage: 9000 }) },
+    { id: "pm2", relation: "มารดา", age: 44, disability: false, income: income({ business: 2500 }) },
+    { id: "pm3", relation: "นักเรียน", age: 15, disability: false, income: income({}) },
+    { id: "pm4", relation: "ยาย", age: 71, disability: false, income: income({ welfare: 600 }) },
+  ],
+  dependencies: ["dep_elderly"],
+  housingType: "own",
+  housingConditions: [],
+  vehicles: { car: false, pickup: false, farm: false },
+  farmland: "no_land",
+  hoursTogether: "4",
+  relations: { บิดา: "เฉยๆ", มารดา: "สนิทสนม", "ปู่ / ย่า / ตา / ยาย": "สนิทสนม" },
+  caretakerWhenAway: "relative",
+  travelKm: "3.5",
+  travelHours: "0",
+  travelMinutes: "25",
+  travelMode: "motorcycle",
+  duties: ["housework", "care_sick"],
+  internet: "can_access",
+  welfareRisks: ["family_conflict"],
+  gaming: ["over_2h", "obsessed"],
+  hobbies: ["games"],
+  guardianConcern: "ผู้ปกครองทำงานต่างจังหวัดเป็นช่วง ๆ เป็นห่วงเรื่องการเล่นเกมของลูก",
+};
+
+const form30125Prev: HomeVisitForm = {
+  ...BLANK_RISKS,
+  guardianOccupation: "ค้าขาย",
+  guardianEducation: "มัธยมศึกษาตอนปลาย / ปวช.",
+  members: [
+    { id: "pm1", relation: "มารดา", age: 39, disability: false, income: income({ business: 6500 }) },
+    { id: "pm2", relation: "บิดา", age: 42, disability: false, income: income({ wage: 4000 }) },
+    { id: "pm3", relation: "นักเรียน", age: 14, disability: false, income: income({}) },
+    { id: "pm4", relation: "ยาย", age: 69, disability: false, income: income({ welfare: 600 }) },
+  ],
+  dependencies: ["dep_elderly"],
+  housingType: "rent",
+  housingConditions: [],
+  vehicles: { car: false, pickup: false, farm: false },
+  farmland: "no_land",
+  hoursTogether: "3",
+  relations: { มารดา: "สนิทสนม", บิดา: "สนิทสนม", "ปู่ / ย่า / ตา / ยาย": "สนิทสนม" },
+  caretakerWhenAway: "relative",
+  travelKm: "5",
+  travelHours: "0",
+  travelMinutes: "20",
+  travelMode: "guardian",
+  duties: ["housework", "small_trade"],
+  internet: "can_access",
+  supportRequests: ["economic"],
+};
+
+const form30140: HomeVisitForm = {
+  ...BLANK_RISKS,
+  guardianOccupation: "พนักงานโรงงาน",
+  guardianEducation: "มัธยมศึกษาตอนต้น",
+  members: [
+    { id: "pm1", relation: "บิดา", age: 45, disability: false, income: income({ wage: 11000 }) },
+    { id: "pm2", relation: "นักเรียน", age: 15, disability: false, income: income({}) },
+  ],
+  dependencies: ["dep_single_parent"],
+  housingType: "with_others",
+  housingConditions: [],
+  vehicles: { car: false, pickup: false, farm: false },
+  farmland: "no_land",
+  hoursTogether: "2",
+  relations: { บิดา: "สนิทสนม" },
+  caretakerWhenAway: "neighbor",
+  travelKm: "8",
+  travelHours: "0",
+  travelMinutes: "35",
+  travelMode: "bus",
+  duties: ["housework"],
+  internet: "cannot_access",
+};
+
 export const homeVisitRecords: HomeVisitRecord[] = [
+  {
+    recordId: "HVR-000",
+    appointmentId: "HV-000",
+    studentId: "30125",
+    form: form30125Prev,
+    livesWith: "บิดาและมารดา",
+    informantName: "นางรัตนา สายใจ",
+    informantRelation: "มารดา",
+    cannotAccessHome: false,
+    cannotAccessReason: "",
+    photos: [
+      { photoId: "PH-000-1", photoType: "exterior", fileUrl: "mock://home-visit/HVR-000-exterior.jpg", uploadedAt: "2569-01-20T16:10:00" },
+      { photoId: "PH-000-2", photoType: "interior", fileUrl: "mock://home-visit/HVR-000-interior.jpg", uploadedAt: "2569-01-20T16:12:00" },
+    ],
+    householdIncomeAvg: 2775,
+    travelDistanceKm: 5,
+    recordedBy: USER.prapa,
+    updatedAt: "2569-01-20T17:00:00",
+    signedBy: USER.prapa,
+    signedAt: "2569-01-20T17:00:00",
+  },
   {
     recordId: "HVR-001",
     appointmentId: "HV-003",
     studentId: "30118",
-    householdMembers: [
-      { memberId: "M1", relation: "บิดา", age: 47, occupation: "รับจ้างทั่วไป", monthlyIncome: 9000 },
-      { memberId: "M2", relation: "มารดา", age: 44, occupation: "แม่บ้าน", monthlyIncome: 0 },
-      { memberId: "M3", relation: "นักเรียน", age: 15, occupation: "-", monthlyIncome: 0 },
-    ],
-    riskFindings: ["ผู้ปกครองทำงานต่างจังหวัดเป็นช่วง ๆ", "นักเรียนใช้เวลากับเกมมากกว่า 4 ชั่วโมงต่อวัน"],
+    form: form30118,
+    livesWith: "บิดาและมารดา",
     informantName: "นายสมชาย ตั้งใจเรียน",
     informantRelation: "บิดา",
-    photoLabels: ["ภาพภายนอกบ้าน", "ภาพภายในบ้าน"],
+    cannotAccessHome: false,
+    cannotAccessReason: "",
+    photos: [
+      { photoId: "PH-001-1", photoType: "exterior", fileUrl: "mock://home-visit/HVR-001-exterior.jpg", uploadedAt: "2570-02-08T15:40:00" },
+      { photoId: "PH-001-2", photoType: "interior", fileUrl: "mock://home-visit/HVR-001-interior.jpg", uploadedAt: "2570-02-08T15:45:00" },
+    ],
+    householdIncomeAvg: 3025,
+    travelDistanceKm: 3.5,
+    recordedBy: USER.somying,
+    updatedAt: "2570-02-08T17:20:00",
     signedBy: USER.somying,
-    signedAt: "2570-02-08",
+    signedAt: "2570-02-08T17:20:00",
+  },
+  {
+    recordId: "HVR-002",
+    appointmentId: "HV-005",
+    studentId: "30140",
+    form: form30140,
+    livesWith: "อื่น ๆ (วัด มูลนิธิ หอพัก นายจ้าง)",
+    informantName: "นายสมศักดิ์ ใฝ่ดี",
+    informantRelation: "บิดา",
+    cannotAccessHome: true,
+    cannotAccessReason: "พักอาศัยในหอพักของโรงงานที่บิดาทำงาน ไม่อนุญาตให้บุคคลภายนอกเข้า จึงพบผู้ปกครองที่หน้าโรงงาน",
+    photos: [
+      { photoId: "PH-002-1", photoType: "with_signboard", fileUrl: "mock://home-visit/HVR-002-with_signboard.jpg", uploadedAt: "2570-02-05T16:30:00" },
+    ],
+    householdIncomeAvg: 5500,
+    travelDistanceKm: 8,
+    recordedBy: USER.theerapong,
+    updatedAt: "2570-02-05T18:00:00",
+    signedBy: USER.theerapong,
+    signedAt: "2570-02-05T18:00:00",
+  },
+  {
+    recordId: "HVR-003",
+    appointmentId: "HV-006",
+    studentId: "30152",
+    form: {
+      ...form30140,
+      guardianOccupation: "เกษตรกร",
+      members: [
+        { id: "pm1", relation: "มารดา", age: 41, disability: false, income: income({ agriculture: 5000 }) },
+        { id: "pm2", relation: "นักเรียน", age: 15, disability: false, income: income({}) },
+      ],
+      dependencies: ["dep_single_parent"],
+      housingType: "own",
+      farmland: "under_1_rai",
+      relations: { มารดา: "สนิทสนม" },
+      caretakerWhenAway: "relative",
+      internet: "can_access",
+    },
+    livesWith: "มารดา",
+    informantName: "",
+    informantRelation: "",
+    cannotAccessHome: false,
+    cannotAccessReason: "",
+    photos: [],
+    householdIncomeAvg: 2500,
+    travelDistanceKm: 8,
+    recordedBy: USER.theerapong,
+    updatedAt: "2570-02-14T16:20:00",
+    signedBy: null,
+    signedAt: null,
   },
 ];
-
-
-
-/**
- * ข้อมูลแบบบันทึกการเยี่ยมบ้านครั้งก่อนของนักเรียนแต่ละคน
- * ใช้สาธิตการดึงข้อมูลเดิมมากรอกอัตโนมัติ เพื่อลดการกรอกซ้ำของครู
- */
-export interface PreviousVisitForm {
-  visitedAt: string;
-  householdMembers: {
-    id: string;
-    relation: string;
-    age: number;
-    disability: boolean;
-    income: { wage: number; agriculture: number; business: number; welfare: number; other: number };
-  }[];
-  dependencies: string[];
-  housingType: string;
-  housingConditions: string[];
-  vehicles: string[];
-  farmland: string;
-  hoursTogether: string;
-  caretakerWhenAway: string;
-  travelKm: string;
-  travelHours: string;
-  travelMinutes: string;
-  travelMode: string;
-  duties: string[];
-  internet: string;
-}
-
-export const previousVisitForms: Record<string, PreviousVisitForm> = {
-  "30118": {
-    visitedAt: "2570-02-08",
-    householdMembers: [
-      {
-        id: "pm1",
-        relation: "บิดา",
-        age: 47,
-        disability: false,
-        income: { wage: 9000, agriculture: 0, business: 0, welfare: 0, other: 0 },
-      },
-      {
-        id: "pm2",
-        relation: "มารดา",
-        age: 44,
-        disability: false,
-        income: { wage: 0, agriculture: 0, business: 2500, welfare: 0, other: 0 },
-      },
-      {
-        id: "pm3",
-        relation: "นักเรียน",
-        age: 15,
-        disability: false,
-        income: { wage: 0, agriculture: 0, business: 0, welfare: 0, other: 0 },
-      },
-      {
-        id: "pm4",
-        relation: "ยาย",
-        age: 71,
-        disability: false,
-        income: { wage: 0, agriculture: 0, business: 0, welfare: 600, other: 0 },
-      },
-    ],
-    dependencies: ["dep_elderly"],
-    housingType: "own",
-    housingConditions: [],
-    vehicles: ["motorcycle"],
-    farmland: "no_land",
-    hoursTogether: "4",
-    caretakerWhenAway: "relative",
-    travelKm: "3.5",
-    travelHours: "0",
-    travelMinutes: "25",
-    travelMode: "motorcycle",
-    duties: ["housework", "care_sick"],
-    internet: "can_access",
-  },
-};
