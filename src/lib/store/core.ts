@@ -6,7 +6,8 @@
  * (slice ของ audit log, การแจ้งเตือน, ตั้งค่า, ช่วงดำเนินงาน, ความยินยอม จะต่อจาก core ในลำดับเดียวกัน)
  */
 
-import { useMemo, useState } from "react";
+import { useMemo, useSyncExternalStore } from "react";
+import { storedCurrentUserId } from "../demo/persisted";
 import {
   classroomHomerooms,
   classrooms,
@@ -33,7 +34,7 @@ const SYSTEM_NAME = "ระบบ";
 
 export interface CoreSlice {
   currentTerm: AcademicTerm;
-  /** ผู้ใช้ที่กำลังใช้งาน (ตั้งจากตัวเลือกบทบาทในหน้า login หรือท้าย sidebar) */
+  /** ผู้ใช้ที่กำลังใช้งาน (ตั้งจากตัวเลือกบทบาทในหน้า login หรือแผงสาธิต) */
   currentUser: User;
   setCurrentUser: (userId: string) => void;
 
@@ -66,7 +67,10 @@ export interface CoreSlice {
 }
 
 export function useCoreSlice(): CoreSlice {
-  const [currentUserId, setCurrentUserId] = useState<string>(DEFAULT_USER_ID);
+  // จำผู้ใช้ที่เลือกไว้ข้ามการ reload; ฝั่ง server/รอบ hydrate ใช้ DEFAULT_USER_ID
+  const storedUserId = useSyncExternalStore(storedCurrentUserId.subscribe, storedCurrentUserId.get, () => null);
+  const currentUserId =
+    storedUserId && users.some((u) => u.userId === storedUserId) ? storedUserId : DEFAULT_USER_ID;
 
   return useMemo<CoreSlice>(() => {
     const getUser = (userId: string) => users.find((u) => u.userId === userId);
@@ -91,7 +95,7 @@ export function useCoreSlice(): CoreSlice {
       currentTerm: CURRENT_TERM,
       currentUser,
       setCurrentUser: (userId) => {
-        if (getUser(userId)) setCurrentUserId(userId);
+        if (getUser(userId)) storedCurrentUserId.set(userId);
       },
 
       users,

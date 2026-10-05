@@ -22,7 +22,6 @@ import { SCHOOL_NAME } from "@/lib/mock-data";
 import { isActivePath, navForRole, SETTINGS_NAV } from "@/lib/navigation";
 import { useStore } from "@/lib/store";
 import { initialOf } from "@/lib/format";
-import { SidebarRoleSwitcher } from "./role-switcher";
 
 const ICONS: Record<string, LucideIcon> = {
   "/dashboard": LayoutGrid,
@@ -109,7 +108,6 @@ export function Sidebar() {
             </Link>
           )}
         </div>
-        <SidebarRoleSwitcher />
       </div>
     </aside>
   );

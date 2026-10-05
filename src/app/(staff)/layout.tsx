@@ -1,3 +1,4 @@
+import { DemoPanel } from "@/components/demo/demo-panel";
 import { RoleGate } from "@/components/layout/role-gate";
 import { Sidebar } from "@/components/layout/sidebar";
 
@@ -8,6 +9,7 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
       <div className="flex flex-1 flex-col overflow-hidden">
         <RoleGate>{children}</RoleGate>
       </div>
+      <DemoPanel />
     </div>
   );
 }
