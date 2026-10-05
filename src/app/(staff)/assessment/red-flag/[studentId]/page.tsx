@@ -1,6 +1,8 @@
 "use client";
 
 import { use, useState } from "react";
+import { redFlagAnswersFor } from "@/lib/demo/assessment-autofill";
+import { useDemoPageTool } from "@/lib/demo/page-tools";
 import { useRouter } from "next/navigation";
 import { AlertTriangle } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
@@ -28,6 +30,13 @@ export default function RedFlagPage({ params }: { params: Promise<{ studentId: s
 
   const [answers, setAnswers] = useState<Record<string, boolean>>({});
   const missing = useMissingAnswers();
+
+  const autofill = (target: "normal" | "needs_care") => {
+    setAnswers(redFlagAnswersFor(target));
+    missing.reset();
+  };
+  useDemoPageTool("กรอกอัตโนมัติ · ผลปกติ", () => autofill("normal"), "ตอบ \"ไม่ใช่\" ทุกข้อ → ไปทำ 9S ต่อ");
+  useDemoPageTool("กรอกอัตโนมัติ · ควรดูแล", () => autofill("needs_care"), "ตอบ \"ใช่\" 1 ข้อ → เปิด SDQ ทันที");
 
   const unanswered = RED_FLAG_QUESTIONS.map((q, index) => ({ q, index })).filter(
     ({ q }) => answers[q.id] === undefined

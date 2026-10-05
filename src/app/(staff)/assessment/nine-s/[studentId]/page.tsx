@@ -1,6 +1,8 @@
 "use client";
 
 import { use, useMemo, useState } from "react";
+import { nineSAnswersFor } from "@/lib/demo/assessment-autofill";
+import { useDemoPageTool } from "@/lib/demo/page-tools";
 import { useRouter } from "next/navigation";
 import { CheckCircle2 } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
@@ -29,6 +31,13 @@ export default function NineSPage({ params }: { params: Promise<{ studentId: str
 
   const [answers, setAnswers] = useState<Record<string, 0 | 1 | 2>>({});
   const missing = useMissingAnswers();
+
+  const autofill = (target: "normal" | "needs_care") => {
+    setAnswers(nineSAnswersFor(target));
+    missing.reset();
+  };
+  useDemoPageTool("กรอกอัตโนมัติ · ผลปกติ", () => autofill("normal"), "ทุกกลุ่มต่ำกว่า 3 คะแนน");
+  useDemoPageTool("กรอกอัตโนมัติ · ควรดูแล", () => autofill("needs_care"), "กลุ่มซึมเศร้า/วิตกกังวลได้ 3 คะแนน → เปิด SDQ");
   const answeredCount = Object.keys(answers).length;
 
   const unanswered = NINE_S_QUESTIONS.map((q, index) => ({ q, index })).filter(

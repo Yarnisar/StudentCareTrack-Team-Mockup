@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { sdqAnswersFor } from "@/lib/demo/assessment-autofill";
+import { useDemoPageTool } from "@/lib/demo/page-tools";
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -39,6 +41,14 @@ export function SdqForm({
   const [answers, setAnswers] = useState<Record<number, 0 | 1 | 2>>({});
   const [page, setPage] = useState(0);
   const missing = useMissingAnswers(setPage);
+
+  const autofill = (target: "normal" | "risk" | "problem") => {
+    setAnswers(sdqAnswersFor(target));
+    missing.reset();
+  };
+  useDemoPageTool("กรอกอัตโนมัติ · ปกติ", () => autofill("normal"), "ตอบครบ 25 ข้อ ผลอยู่ในเกณฑ์ปกติ");
+  useDemoPageTool("กรอกอัตโนมัติ · เสี่ยง", () => autofill("risk"), "ตอบครบ 25 ข้อ ผลอยู่ในเกณฑ์เสี่ยง");
+  useDemoPageTool("กรอกอัตโนมัติ · มีปัญหา", () => autofill("problem"), "ตอบครบ 25 ข้อ ผลอยู่ในเกณฑ์มีปัญหา");
 
   const answeredCount = Object.keys(answers).length;
   const complete = answeredCount === SDQ_QUESTIONS.length;
