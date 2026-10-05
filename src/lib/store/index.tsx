@@ -47,6 +47,12 @@ export type StoreValue = CoreSlice &
   DocumentsSlice;
 
 export type { CheckinOutcome } from "./checkin";
+export type {
+  AddBehaviorRecordResult,
+  BehaviorActionResult,
+  BehaviorRecordPatch,
+  BehaviorScoreLowEvent,
+} from "./behavior";
 export type { PlatformSlice } from "./platform";
 export type { RecipientGroup } from "./notifications";
 export type { OperatingWindowInput, SaveWindowResult, SchoolSettingsPatch } from "./settings";

@@ -7,10 +7,17 @@
  * เพื่อตอบคำถามว่า "จัดวางอย่างไรให้ชื่อพฤติกรรมและรายละเอียดเหตุการณ์ไม่ถูกตัด"
  * สลับด้วย ?variant=A|B|C จากแถบลอยด้านล่าง (แสดงเฉพาะตอน dev)
  * เมื่อเลือกแบบได้แล้ว ให้ยุบเหลือแบบเดียวและลบโฟลเดอร์ _prototype/ ทิ้ง
+ *
+ * ส่วนที่ไม่ขึ้นกับการตัดสินใจด้านการจัดวาง อยู่นอก _prototype/ และวางไว้เหนือแบบร่าง:
+ * - BehaviorPendingQueue: บันทึกมาสายรอยืนยัน (ยืนยัน / ยกเว้นพร้อมเหตุผล)
+ * - BehaviorRecordManager: แก้ไขภายใน 24 ชม. / ยกเลิกพร้อมเหตุผล
+ * แบบร่างแสดงเฉพาะบันทึกที่มีผล (confirmed)
  */
 
 import { Suspense, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
+import { BehaviorPendingQueue } from "@/components/behavior/pending-queue";
+import { BehaviorRecordManager } from "@/components/behavior/record-manager";
 import { PageHeader } from "@/components/layout/page-header";
 import { PrototypeSwitcher } from "@/components/prototype/prototype-switcher";
 import { CURRENT_TERM } from "@/lib/mock-data";
@@ -41,8 +48,9 @@ function BehaviorContent() {
   const store = useStore();
   const form = useBehaviorForm();
 
+  // แบบร่างแสดงเฉพาะบันทึกที่มีผลกับคะแนน — รอยืนยัน/ยกเว้น/ยกเลิก อยู่ในส่วนด้านบน
   const records = useMemo(
-    () => [...store.behaviorRecords].sort((a, b) => b.occurredAt.localeCompare(a.occurredAt)),
+    () => store.behaviorRecords.filter((r) => r.status === "confirmed"),
     [store.behaviorRecords]
   );
 
@@ -53,9 +61,17 @@ function BehaviorContent() {
         subtitle={`บันทึกและติดตามพฤติกรรมนักเรียน · ${CURRENT_TERM.label}`}
       />
 
-      {variant === "A" && <VariantA records={records} form={form} />}
-      {variant === "B" && <VariantB records={records} form={form} />}
-      {variant === "C" && <VariantC records={records} form={form} />}
+      {/* block (ไม่ใช่ flex) เพื่อให้แบบร่างขยายตามเนื้อหาและเลื่อนพร้อมกันทั้งหน้า */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="space-y-5 px-8 pt-8">
+          <BehaviorPendingQueue />
+          <BehaviorRecordManager />
+        </div>
+
+        {variant === "A" && <VariantA records={records} form={form} />}
+        {variant === "B" && <VariantB records={records} form={form} />}
+        {variant === "C" && <VariantC records={records} form={form} />}
+      </div>
 
       <PrototypeSwitcher variants={VARIANTS} />
     </>

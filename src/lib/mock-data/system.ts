@@ -6,6 +6,7 @@
  * และช่วง SDQ (ปิด 20 ก.พ. แจ้งล่วงหน้า 5 วัน) อยู่ในช่วง "ใกล้ปิด"
  */
 
+import { addHoursThai } from "../format";
 import { buildNotificationContent } from "../notifications";
 import type {
   AuditLog,
@@ -104,6 +105,9 @@ export const seedNotifications: Notification[] = [
   seedNotification("behavior_confirmed", USER.pimjai, "30131", "2570-02-15T13:20:00", null),
   seedNotification("behavior_confirmed", "U-G05", "30140", "2570-02-15T10:05:00", "2570-02-15T18:30:00"),
   seedNotification("behavior_confirmed", "U-G06", "30152", "2570-02-13T15:40:00", null),
+  // คะแนนความประพฤติของ 30183 ต่ำกว่า 60 จากบันทึก BH-028 → แจ้งครูประจำชั้นทั้ง 2 คน
+  seedNotification("behavior_score_low", USER.somying, "30183", "2570-02-03T10:15:00", "2570-02-03T12:00:00"),
+  seedNotification("behavior_score_low", USER.theerapong, "30183", "2570-02-03T10:15:00", null),
   // case เปิดให้อัตโนมัติจากผลคัดกรองมิติสุขภาพจิต "มีปัญหา" ของ 30118
   seedNotification("case_opened", USER.somying, "30118", "2570-02-13T09:00:00", "2570-02-13T09:30:00"),
   seedNotification("case_opened", USER.theerapong, "30118", "2570-02-13T09:00:00", null),
@@ -170,7 +174,22 @@ export const seedAuditLogs: AuditLog[] = [
     ),
   ]),
   ...checkinLogs.map((c) => audit(c.scannedBy, "CREATE", "checkin_logs", c.logId, c.scannedAt)),
-  ...behaviorRecords.map((b) => audit(b.recordedBy, "CREATE", "behavior_records", b.recordId, b.occurredAt)),
+  ...behaviorRecords.flatMap((b) => [
+    audit(b.recordedBy, "CREATE", "behavior_records", b.recordId, b.createdAt),
+    // การยืนยัน/ยกเว้นบันทึกจาก QR โดยครู
+    ...(b.source === "qr_checkin" && b.decidedBy && b.decidedAt
+      ? [
+          audit(b.decidedBy, "UPDATE", "behavior_records", b.recordId, b.decidedAt, {
+            before: { status: "pending" },
+            after: { status: b.status },
+            ...(b.decisionReason ? { reason: b.decisionReason } : {}),
+          }),
+        ]
+      : []),
+    ...(b.status === "voided"
+      ? [audit(b.recordedBy, "VOID", "behavior_records", b.recordId, addHoursThai(b.createdAt, 30), { reason: b.voidReason ?? "" })]
+      : []),
+  ]),
   // ผู้บริหารเปิดดูข้อมูลรายคน — ระบบบันทึกไว้ทุกครั้ง
   audit(USER.director, "VIEW_SENSITIVE", "students", "30118", "2570-02-14T13:10:00", {
     note: "เปิดหน้าข้อมูลนักเรียนรายคน",

@@ -17,14 +17,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { behaviorRules, useStore } from "@/lib/store";
-import type { BehaviorRecord, BehaviorRule } from "@/lib/types";
+import { BEHAVIOR_SEVERITY_LABEL, type BehaviorRecord } from "@/lib/types";
 
-export const SEVERITY_LABEL: Record<BehaviorRule["severity"], string> = {
-  minor: "เล็กน้อย",
-  moderate: "ปานกลาง",
-  severe: "ร้ายแรง",
-  positive: "คะแนนบวก",
-};
+/** ป้ายระดับย้ายไปที่ lib/types (BEHAVIOR_SEVERITY_LABEL: น้อย / กลาง / มาก / ความดี) */
+export const SEVERITY_LABEL = BEHAVIOR_SEVERITY_LABEL;
 
 export function ruleOf(ruleId: string) {
   return behaviorRules.find((r) => r.ruleId === ruleId);
