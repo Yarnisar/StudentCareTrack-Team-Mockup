@@ -5,7 +5,7 @@ import { MobileShell } from "@/components/layout/mobile-shell";
 import { SdqForm } from "@/components/assessment/sdq-form";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { dcSummaries, behaviorRules, useStore } from "@/lib/store";
+import { useStore } from "@/lib/store";
 import { dcCriteria, CURRENT_TERM } from "@/lib/mock-data";
 import { formatThaiDate } from "@/lib/format";
 import { DC_LEVEL_LABEL, SDQ_LEVEL_LABEL, SdqRater } from "@/lib/types";
@@ -19,7 +19,7 @@ export default function ParentResultsPage() {
   const student = store.getStudent(DEMO_STUDENT_ID);
   const sdqSet = store.sdqOf(DEMO_STUDENT_ID).filter((s) => s.round === 1);
   const parentSdq = sdqSet.find((s) => s.rater === "parent");
-  const dc = dcSummaries.find((d) => d.studentId === DEMO_STUDENT_ID);
+  const dc = store.dcSummaryOf(DEMO_STUDENT_ID);
   const behaviors = store.behaviorOf(DEMO_STUDENT_ID).slice(0, 4);
 
   if (!student) return null;
@@ -145,7 +145,7 @@ export default function ParentResultsPage() {
             <h2 className="mb-1 text-[14.5px] font-bold">ประวัติความประพฤติล่าสุด</h2>
             <div className="divide-y divide-border">
               {behaviors.map((rec) => {
-                const rule = behaviorRules.find((r) => r.ruleId === rec.ruleId);
+                const rule = store.ruleOf(rec.ruleId);
                 const positive = (rule?.scoreDelta ?? 0) > 0;
                 return (
                   <div key={rec.recordId} className="flex items-center gap-3 py-2.5">

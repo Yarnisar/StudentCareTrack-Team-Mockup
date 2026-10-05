@@ -120,7 +120,7 @@ export function VariantA({ records, form }: { records: BehaviorRecord[]; form: B
                       <SourceBadge source={rec.source} />
                     </td>
                     <td className="py-3 pr-3 text-[12.5px] text-muted-foreground">
-                      {rec.recordedByName}
+                      {store.nameOf(rec.recordedBy)}
                     </td>
                     <td className="py-3">
                       <ScoreChip delta={rule?.scoreDelta ?? 0} />

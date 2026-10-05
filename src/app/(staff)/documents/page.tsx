@@ -5,8 +5,8 @@ import { Check, Download, FileText, Info } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { educationDocuments } from "@/lib/store";
-import { CURRENT_TERM, subjectSubmissions } from "@/lib/mock-data";
+import { useStore } from "@/lib/store";
+import { CURRENT_TERM } from "@/lib/mock-data";
 import { formatThaiDate } from "@/lib/format";
 import { DocumentType } from "@/lib/types";
 
@@ -92,6 +92,8 @@ const DOCS: DocSpec[] = [
 ];
 
 export default function DocumentsPage() {
+  const store = useStore();
+  const { educationDocuments, subjectSubmissions } = store;
   const [selected, setSelected] = useState<DocumentType>("ปพ.6");
   const doc = DOCS.find((d) => d.code === selected)!;
   const pendingSubjects = subjectSubmissions.filter((s) => !s.submitted);
@@ -216,7 +218,7 @@ export default function DocumentsPage() {
                         {d.target}
                       </span>
                       <span className="w-40 shrink-0 text-[12.5px] text-muted-foreground">
-                        {d.generatedByName}
+                        {store.nameOf(d.generatedBy)}
                       </span>
                       <Download className="size-4 shrink-0 text-primary" />
                     </div>

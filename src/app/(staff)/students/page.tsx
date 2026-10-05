@@ -5,32 +5,40 @@ import { ChevronRight } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { RiskBadge } from "@/components/shared/risk-badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { CLASS_SIZE, CURRENT_TEACHER } from "@/lib/mock-data";
+import { CLASS_SIZE } from "@/lib/mock-data";
 import { useStore } from "@/lib/store";
 import { initialOf } from "@/lib/format";
 import { DIMENSION_LABEL } from "@/lib/types";
 
 export default function StudentsPage() {
   const store = useStore();
+  const anySensitive = store.students.some((s) => store.canSeeSensitive(s.studentId));
 
   return (
     <>
       <PageHeader
         title="ข้อมูลนักเรียน"
-        subtitle={`${CURRENT_TEACHER.role} · แสดง ${store.students.length} จาก ${CLASS_SIZE} คน`}
+        subtitle={`${store.currentUser.title ?? ""} · แสดง ${store.students.length} จาก ${CLASS_SIZE} คน`}
       />
 
       <div className="flex-1 overflow-y-auto p-8">
         <div className="mb-4 rounded-xl border border-border bg-card px-5 py-3 text-[13px] text-muted-foreground">
           ข้อมูลพื้นฐานของนักเรียนอ้างอิงจากงานทะเบียนนักเรียนของโรงเรียน — ระบบนี้อ่านอย่างเดียว
           ไม่มีการเพิ่มหรือแก้ไขข้อมูลทะเบียน
+          {!anySensitive && (
+            <>
+              <br />
+              คุณไม่ใช่ครูประจำชั้นของนักเรียนกลุ่มนี้ จึงเห็นเฉพาะชื่อ ห้อง ความประพฤติ และคุณลักษณะอันพึงประสงค์
+            </>
+          )}
         </div>
 
         <Card>
           <CardContent className="divide-y divide-border p-6">
             {store.students.map((student) => {
-              const risk = store.overallRiskOf(student.studentId);
-              const screening = store.latestScreening(student.studentId);
+              const sensitive = store.canSeeSensitive(student.studentId);
+              const risk = sensitive ? store.overallRiskOf(student.studentId) : null;
+              const screening = sensitive ? store.latestScreening(student.studentId) : undefined;
               const flagged = screening?.results
                 .filter((r) => r.group !== "green")
                 .map((r) => DIMENSION_LABEL[r.dimension])
@@ -48,11 +56,12 @@ export default function StudentsPage() {
                   <div className="min-w-0 flex-1">
                     <div className="text-sm font-semibold">{student.fullName}</div>
                     <div className="truncate text-xs text-muted-foreground">
-                      {student.roomName} เลขที่ {student.classNo} · เลขประจำตัว {student.studentId}
+                      {student.roomName} เลขที่ {student.classNo}
+                      {sensitive ? ` · เลขประจำตัว ${student.studentId}` : ""}
                       {flagged ? ` · มิติที่พบ: ${flagged}` : ""}
                     </div>
                   </div>
-                  {risk ? (
+                  {!sensitive ? null : risk ? (
                     <RiskBadge group={risk} />
                   ) : (
                     <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-semibold text-muted-foreground">

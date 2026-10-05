@@ -1,0 +1,128 @@
+/** ข้อมูลตัวอย่าง: การคัดกรอง 6 มิติ */
+
+import type { Screening } from "../types";
+import { CURRENT_TERM, USER } from "./core";
+
+export const screenings: Screening[] = [
+  {
+    screeningId: "SC-001",
+    studentId: "30125",
+    termId: CURRENT_TERM.termId,
+    screenedBy: USER.somying,
+    screenedAt: "2570-02-12",
+    results: [
+      { dimension: "academic", group: "green", checkedItemIds: [] },
+      { dimension: "physical", group: "green", checkedItemIds: [] },
+      { dimension: "economic", group: "amber", checkedItemIds: ["ec1", "ec2"] },
+      { dimension: "welfare", group: "green", checkedItemIds: [] },
+      { dimension: "behavior", group: "green", checkedItemIds: [] },
+      { dimension: "mental", group: "amber", checkedItemIds: ["mt1", "mt3"] },
+    ],
+  },
+  {
+    screeningId: "SC-002",
+    studentId: "30118",
+    termId: CURRENT_TERM.termId,
+    screenedBy: USER.somying,
+    screenedAt: "2570-02-12",
+    results: [
+      { dimension: "academic", group: "amber", checkedItemIds: ["ac3"] },
+      { dimension: "physical", group: "green", checkedItemIds: [] },
+      { dimension: "economic", group: "green", checkedItemIds: [] },
+      { dimension: "welfare", group: "green", checkedItemIds: [] },
+      { dimension: "behavior", group: "amber", checkedItemIds: ["bh1", "bh2"] },
+      { dimension: "mental", group: "red", checkedItemIds: ["mt2", "mt4"] },
+    ],
+  },
+  {
+    screeningId: "SC-003",
+    studentId: "30131",
+    termId: CURRENT_TERM.termId,
+    screenedBy: USER.somying,
+    screenedAt: "2570-02-11",
+    results: [
+      { dimension: "academic", group: "red", checkedItemIds: ["ac1", "ac4"] },
+      { dimension: "physical", group: "green", checkedItemIds: [] },
+      { dimension: "economic", group: "amber", checkedItemIds: ["ec1"] },
+      { dimension: "welfare", group: "green", checkedItemIds: [] },
+      { dimension: "behavior", group: "amber", checkedItemIds: ["bh1"] },
+      { dimension: "mental", group: "green", checkedItemIds: [] },
+    ],
+  },
+  {
+    screeningId: "SC-004",
+    studentId: "30140",
+    termId: CURRENT_TERM.termId,
+    screenedBy: USER.somying,
+    screenedAt: "2570-02-11",
+    results: [
+      { dimension: "academic", group: "green", checkedItemIds: [] },
+      { dimension: "physical", group: "green", checkedItemIds: [] },
+      { dimension: "economic", group: "green", checkedItemIds: [] },
+      { dimension: "welfare", group: "amber", checkedItemIds: ["wf2"] },
+      { dimension: "behavior", group: "green", checkedItemIds: [] },
+      { dimension: "mental", group: "green", checkedItemIds: [] },
+    ],
+  },
+  {
+    screeningId: "SC-005",
+    studentId: "30152",
+    termId: CURRENT_TERM.termId,
+    screenedBy: USER.somying,
+    screenedAt: "2570-02-10",
+    results: [
+      { dimension: "academic", group: "green", checkedItemIds: [] },
+      { dimension: "physical", group: "green", checkedItemIds: [] },
+      { dimension: "economic", group: "green", checkedItemIds: [] },
+      { dimension: "welfare", group: "green", checkedItemIds: [] },
+      { dimension: "behavior", group: "green", checkedItemIds: [] },
+      { dimension: "mental", group: "amber", checkedItemIds: ["mt3"] },
+    ],
+  },
+  {
+    screeningId: "SC-006",
+    studentId: "30160",
+    termId: CURRENT_TERM.termId,
+    screenedBy: USER.somying,
+    screenedAt: "2570-02-10",
+    results: [
+      { dimension: "academic", group: "green", checkedItemIds: [] },
+      { dimension: "physical", group: "green", checkedItemIds: [] },
+      { dimension: "economic", group: "green", checkedItemIds: [] },
+      { dimension: "welfare", group: "green", checkedItemIds: [] },
+      { dimension: "behavior", group: "green", checkedItemIds: [] },
+      { dimension: "mental", group: "green", checkedItemIds: [] },
+    ],
+  },
+  // ปีการศึกษาก่อน (ม.2/1) — บันทึกโดยครูประจำชั้นคนเดิม ใช้สาธิตกฎหลังเลื่อนชั้น
+  {
+    screeningId: "SC-0568-01",
+    studentId: "30125",
+    termId: "T2568-2",
+    screenedBy: USER.prapa,
+    screenedAt: "2569-01-20",
+    results: [
+      { dimension: "academic", group: "green", checkedItemIds: [] },
+      { dimension: "physical", group: "green", checkedItemIds: [] },
+      { dimension: "economic", group: "amber", checkedItemIds: ["ec1"] },
+      { dimension: "welfare", group: "green", checkedItemIds: [] },
+      { dimension: "behavior", group: "green", checkedItemIds: [] },
+      { dimension: "mental", group: "green", checkedItemIds: [] },
+    ],
+  },
+  {
+    screeningId: "SC-0568-02",
+    studentId: "30118",
+    termId: "T2568-2",
+    screenedBy: USER.wichai,
+    screenedAt: "2569-01-21",
+    results: [
+      { dimension: "academic", group: "amber", checkedItemIds: ["ac3"] },
+      { dimension: "physical", group: "green", checkedItemIds: [] },
+      { dimension: "economic", group: "green", checkedItemIds: [] },
+      { dimension: "welfare", group: "green", checkedItemIds: [] },
+      { dimension: "behavior", group: "amber", checkedItemIds: ["bh2"] },
+      { dimension: "mental", group: "amber", checkedItemIds: ["mt3"] },
+    ],
+  },
+];

@@ -16,23 +16,31 @@ import {
   Star,
   Users,
 } from "lucide-react";
-import { CURRENT_TEACHER, SCHOOL_NAME } from "@/lib/mock-data";
+import type { LucideIcon } from "lucide-react";
+import { SCHOOL_NAME } from "@/lib/mock-data";
+import { isActivePath, navForRole, SETTINGS_NAV } from "@/lib/navigation";
+import { useStore } from "@/lib/store";
+import { initialOf } from "@/lib/format";
+import { SidebarRoleSwitcher } from "./role-switcher";
 
-const NAV = [
-  { href: "/dashboard", label: "ภาพรวม", icon: LayoutGrid },
-  { href: "/students", label: "ข้อมูลนักเรียน", icon: Users },
-  { href: "/screening", label: "การคัดกรอง", icon: ClipboardCheck },
-  { href: "/assessment", label: "การประเมิน", icon: HeartPulse },
-  { href: "/behavior", label: "ความประพฤติ", icon: AlertTriangle },
-  { href: "/home-visits", label: "เยี่ยมบ้าน", icon: Home },
-  { href: "/characteristics", label: "คุณลักษณะฯ", icon: Star },
-  { href: "/documents", label: "เอกสาร ปพ.", icon: FileText },
-  { href: "/checkin", label: "บัตร / QR", icon: QrCode },
-  { href: "/care-cases", label: "ติดตามช่วยเหลือ", icon: Flag },
-];
+const ICONS: Record<string, LucideIcon> = {
+  "/dashboard": LayoutGrid,
+  "/students": Users,
+  "/screening": ClipboardCheck,
+  "/assessment": HeartPulse,
+  "/behavior": AlertTriangle,
+  "/home-visits": Home,
+  "/characteristics": Star,
+  "/documents": FileText,
+  "/checkin": QrCode,
+  "/care-cases": Flag,
+};
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { currentUser } = useStore();
+  const nav = navForRole(currentUser.role);
+  const canOpenSettings = SETTINGS_NAV.roles.includes(currentUser.role);
 
   return (
     <aside className="flex w-[264px] shrink-0 flex-col border-r border-border bg-card">
@@ -47,8 +55,9 @@ export function Sidebar() {
       </div>
 
       <nav className="flex-1 overflow-y-auto py-3">
-        {NAV.map(({ href, label, icon: Icon }) => {
-          const active = pathname === href || pathname.startsWith(`${href}/`);
+        {nav.map(({ href, label }) => {
+          const Icon = ICONS[href] ?? LayoutGrid;
+          const active = isActivePath(pathname, href);
           return (
             <Link
               key={href}
@@ -70,16 +79,19 @@ export function Sidebar() {
       <div className="border-t border-border p-3">
         <div className="flex items-center gap-2.5 rounded-[10px] bg-surface p-2.5">
           <div className="flex size-9 items-center justify-center rounded-full bg-muted text-xs font-bold text-muted-foreground">
-            ค.
+            {initialOf(currentUser.name.replace(/^ครู/, ""))}
           </div>
-          <div className="flex-1">
-            <div className="text-[13.5px] font-semibold">{CURRENT_TEACHER.name}</div>
-            <div className="text-[11.5px] text-muted-foreground">{CURRENT_TEACHER.role}</div>
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-[13.5px] font-semibold">{currentUser.name}</div>
+            <div className="truncate text-[11.5px] text-muted-foreground">{currentUser.title}</div>
           </div>
-          <Link href="/settings" aria-label="ตั้งค่าระบบ">
-            <Settings className="size-[17px] text-muted-foreground hover:text-foreground" />
-          </Link>
+          {canOpenSettings && (
+            <Link href={SETTINGS_NAV.href} aria-label={SETTINGS_NAV.label}>
+              <Settings className="size-[17px] text-muted-foreground hover:text-foreground" />
+            </Link>
+          )}
         </div>
+        <SidebarRoleSwitcher />
       </div>
     </aside>
   );

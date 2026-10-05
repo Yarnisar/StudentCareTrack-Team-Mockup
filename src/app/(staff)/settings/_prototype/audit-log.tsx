@@ -19,19 +19,19 @@ export function useAuditEntries(): AuditEntry[] {
       at: c.scannedAt,
       action: "CHECKIN",
       detail: `สแกน QR เช็คอินนักเรียน ${store.getStudent(c.studentId)?.fullName ?? c.studentId}`,
-      by: c.scannedByName,
+      by: store.nameOf(c.scannedBy),
     })),
     ...store.behaviorRecords.slice(0, 4).map((b) => ({
       at: b.occurredAt,
       action: "CREATE_BEHAVIOR",
       detail: `บันทึกความประพฤติ: ${b.description}`,
-      by: b.recordedByName,
+      by: store.nameOf(b.recordedBy),
     })),
     ...store.screenings.slice(0, 3).map((s) => ({
       at: s.screenedAt,
       action: "CREATE_SCREENING",
       detail: `คัดกรองนักเรียน ${store.getStudent(s.studentId)?.fullName ?? s.studentId}`,
-      by: s.screenedBy,
+      by: store.nameOf(s.screenedBy),
     })),
   ].sort((a, b) => b.at.localeCompare(a.at));
 }

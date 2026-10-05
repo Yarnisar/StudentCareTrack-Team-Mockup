@@ -221,7 +221,7 @@ function CareCasesContent() {
                           <div className="flex-1 pb-3">
                             <div className="text-[14px] font-semibold">{f.actionTaken}</div>
                             <div className="mt-0.5 mb-1 text-[12px] text-muted-foreground">
-                              {formatThaiDate(f.followupDate)} · {f.recordedByName}
+                              {formatThaiDate(f.followupDate)} · {store.nameOf(f.recordedBy)}
                             </div>
                             <p className="text-[13.5px] leading-relaxed text-muted-foreground">
                               {f.result}

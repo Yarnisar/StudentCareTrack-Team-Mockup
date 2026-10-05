@@ -86,7 +86,7 @@ export function VariantB({ records, form }: { records: BehaviorRecord[]; form: B
                     <span>
                       {formatThaiDate(rec.occurredAt)} · {formatThaiTime(rec.occurredAt)}
                     </span>
-                    <span>บันทึกโดย {rec.recordedByName}</span>
+                    <span>บันทึกโดย {store.nameOf(rec.recordedBy)}</span>
                   </div>
                 </div>
               );

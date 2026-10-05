@@ -25,7 +25,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { CURRENT_TEACHER, previousVisitForms, SCHOOL_NAME } from "@/lib/mock-data";
+import { previousVisitForms, SCHOOL_NAME } from "@/lib/mock-data";
 import { useStore } from "@/lib/store";
 import { formatBaht, formatThaiDate } from "@/lib/format";
 import {
@@ -112,6 +112,8 @@ export default function HomeVisitRecordPage({
     }
     return map;
   }, [student, appointment, previous, screening]);
+
+  const guardians = student ? store.guardiansOf(student.studentId) : [];
 
   const initialMembers: HouseholdMemberRow[] = previous
     ? previous.householdMembers.map((m) => ({ ...m }))
@@ -265,16 +267,16 @@ export default function HomeVisitRecordPage({
                   <ReadOnly value={student.citizenId} />
                 </Field>
                 <Field label="ชื่อผู้ปกครอง" source="registry">
-                  <ReadOnly value={student.guardianName} />
+                  <ReadOnly value={guardians.map((g) => g.user.name).join(", ") || "-"} />
                 </Field>
                 <Field label="ความสัมพันธ์กับนักเรียน" source="registry">
-                  <ReadOnly value={student.guardianRelation} />
+                  <ReadOnly value={guardians.map((g) => g.relation).join(", ") || "-"} />
                 </Field>
                 <Field
                   label="เบอร์โทรศัพท์"
                   source={autoFilled.get("guardianPhone")}
                 >
-                  <ReadOnly value={appointment.guardianPhone ?? student.guardianPhone} />
+                  <ReadOnly value={appointment.guardianPhone ?? guardians[0]?.user.phone ?? "-"} />
                 </Field>
                 <Field label="ที่อยู่" source="registry" className="md:col-span-2">
                   <ReadOnly value={student.address} />
@@ -780,7 +782,7 @@ export default function HomeVisitRecordPage({
 
               <div className="grid gap-4 md:grid-cols-2">
                 <Field label="ผู้รับรองข้อมูล" source="registry">
-                  <ReadOnly value={CURRENT_TEACHER.name} />
+                  <ReadOnly value={store.currentUser.name} />
                 </Field>
                 <Field label="ตำแหน่ง" source="registry">
                   <ReadOnly value="ครูประจำชั้น" />

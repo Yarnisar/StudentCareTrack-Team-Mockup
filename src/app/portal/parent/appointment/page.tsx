@@ -66,7 +66,7 @@ export default function ParentAppointmentPage() {
             <div className="my-4 h-px bg-border" />
 
             <div className="space-y-2.5">
-              <Row icon={<User className="size-4" />} title={appointment.teacherName} sub="ครูประจำชั้น" />
+              <Row icon={<User className="size-4" />} title={store.nameOf(appointment.teacherId)} sub="ครูประจำชั้น" />
               <Row icon={<Home className="size-4" />} title={student.address} sub="ที่อยู่ตามทะเบียนนักเรียน" />
             </div>
           </CardContent>

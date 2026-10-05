@@ -2,15 +2,8 @@ import Link from "next/link";
 import { LinkButton } from "@/components/ui/link-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { LoginRolePicker } from "@/components/layout/role-switcher";
 import { SCHOOL_NAME } from "@/lib/mock-data";
-
-const ROLES = [
-  { label: "แอดมินโรงเรียน", href: "/dashboard" },
-  { label: "ครูทั่วไป", href: "/behavior" },
-  { label: "ครูประจำชั้น", href: "/dashboard", primary: true },
-  { label: "นักเรียน", href: "/portal/student/card" },
-  { label: "ผู้ปกครอง", href: "/portal/parent" },
-];
 
 export default function LoginPage() {
   return (
@@ -77,17 +70,11 @@ export default function LoginPage() {
 
           <div className="my-7 flex items-center gap-3">
             <span className="h-px flex-1 bg-border" />
-            <span className="text-xs text-muted-foreground">เลือกบทบาทเพื่อดูต้นแบบ</span>
+            <span className="text-xs text-muted-foreground">เลือกผู้ใช้เพื่อดูต้นแบบตามบทบาท</span>
             <span className="h-px flex-1 bg-border" />
           </div>
 
-          <div className="flex flex-wrap gap-2">
-            {ROLES.map((role) => (
-              <LinkButton key={role.label} size="sm" variant={role.primary ? "default" : "outline"} href={role.href}>
-                {role.label}
-              </LinkButton>
-            ))}
-          </div>
+          <LoginRolePicker />
         </div>
       </div>
     </div>

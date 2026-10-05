@@ -5,7 +5,6 @@ import { ChevronRight, ClipboardList, Home } from "lucide-react";
 import { MobileShell } from "@/components/layout/mobile-shell";
 import { Card, CardContent } from "@/components/ui/card";
 import { useStore } from "@/lib/store";
-import { dcSummaries } from "@/lib/store";
 import { formatThaiDate, formatThaiTime } from "@/lib/format";
 import { SDQ_LEVEL_LABEL } from "@/lib/types";
 
@@ -23,7 +22,9 @@ export default function ParentHomePage() {
   const teacherSdq = store
     .sdqOf(DEMO_STUDENT_ID)
     .find((s) => s.rater === "teacher" && s.round === 1);
-  const dc = dcSummaries.find((d) => d.studentId === DEMO_STUDENT_ID);
+  const dc = store.dcSummaryOf(DEMO_STUDENT_ID);
+  const guardian =
+    store.currentUser.role === "parent" ? store.currentUser : store.guardiansOf(DEMO_STUDENT_ID)[0]?.user;
   const dcLevels: number[] = dc
     ? Object.values(dc.levels).flatMap((l) => (l == null ? [] : [l as number]))
     : [];
@@ -38,7 +39,7 @@ export default function ParentHomePage() {
 
   return (
     <MobileShell
-      title={`สวัสดี ${student.guardianName.replace("นางสาว", "คุณ").replace("นาง", "คุณ")}`}
+      title={`สวัสดี ${(guardian?.name ?? "ผู้ปกครอง").replace("นางสาว", "คุณ").replace("นาง", "คุณ")}`}
       subtitle={`ผู้ปกครองของ ${student.fullName}`}
       role="parent"
       brand
@@ -66,7 +67,7 @@ export default function ParentHomePage() {
             tone="warn"
             icon={<Home className="size-5 text-risk-amber" />}
             title="นัดหมายเยี่ยมบ้าน รอการยืนยัน"
-            description={`${appointment.teacherName} ขอนัดเยี่ยมบ้านวันที่ ${formatThaiDate(appointment.proposedDate)} เวลา ${formatThaiTime(appointment.proposedDate)}`}
+            description={`${store.nameOf(appointment.teacherId)} ขอนัดเยี่ยมบ้านวันที่ ${formatThaiDate(appointment.proposedDate)} เวลา ${formatThaiTime(appointment.proposedDate)}`}
             cta="ดูรายละเอียดและยืนยัน"
           />
         )}

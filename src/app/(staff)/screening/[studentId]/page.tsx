@@ -11,7 +11,7 @@ import { LinkButton } from "@/components/ui/link-button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { CURRENT_TEACHER, CURRENT_TERM } from "@/lib/mock-data";
+import { CURRENT_TERM } from "@/lib/mock-data";
 import { classifyDimension, overallRisk, SCREENING_ITEMS } from "@/lib/rules";
 import { useStore } from "@/lib/store";
 import { DIMENSION_LABEL, DIMENSION_ORDER, ScreeningDimension } from "@/lib/types";
@@ -97,7 +97,7 @@ export default function ScreeningFormPage({
                 {student.fullName} · {student.roomName} เลขที่ {student.classNo}
               </div>
               <div className="mt-0.5 text-[13px] text-muted-foreground">
-                ผู้คัดกรอง: {CURRENT_TEACHER.name}
+                ผู้คัดกรอง: {store.currentUser.name}
               </div>
             </div>
             <div className="text-right">

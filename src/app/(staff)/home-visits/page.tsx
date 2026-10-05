@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { LinkButton } from "@/components/ui/link-button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { homeVisitRecords, useStore } from "@/lib/store";
+import { useStore } from "@/lib/store";
 import { formatBaht, formatThaiDate, formatThaiTime } from "@/lib/format";
 import { APPOINTMENT_STATUS_LABEL, AppointmentStatus } from "@/lib/types";
 
@@ -25,7 +25,7 @@ export default function HomeVisitsPage() {
 
   const appointment = store.appointments.find((a) => a.appointmentId === selected);
   const student = appointment ? store.getStudent(appointment.studentId) : undefined;
-  const record = homeVisitRecords.find((r) => r.appointmentId === selected);
+  const record = store.homeVisitRecords.find((r) => r.appointmentId === selected);
 
   const totalIncome = record?.householdMembers.reduce((s, m) => s + m.monthlyIncome, 0) ?? 0;
   const perCapita = record ? Math.round(totalIncome / record.householdMembers.length) : 0;
@@ -89,7 +89,7 @@ export default function HomeVisitsPage() {
                       {student.roomName} เลขที่ {student.classNo} · นัดหมาย{" "}
                       {formatThaiDate(appointment.proposedDate)}{" "}
                       {formatThaiTime(appointment.proposedDate)} · ครูผู้เยี่ยม{" "}
-                      {appointment.teacherName}
+                      {store.nameOf(appointment.teacherId)}
                     </p>
                   </div>
                   <span
@@ -165,7 +165,7 @@ export default function HomeVisitsPage() {
                         </ul>
                         <div className="mt-4 border-t border-border pt-3 text-[13px] text-muted-foreground">
                           ผู้ให้ข้อมูล: {record.informantName} ({record.informantRelation}) ·
-                          รับรองโดย {record.signedBy} เมื่อ {formatThaiDate(record.signedAt)}
+                          รับรองโดย {store.nameOf(record.signedBy)} เมื่อ {formatThaiDate(record.signedAt)}
                         </div>
                       </CardContent>
                     </Card>

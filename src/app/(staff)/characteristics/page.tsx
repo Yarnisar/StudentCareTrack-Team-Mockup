@@ -4,8 +4,8 @@ import { AlertTriangle } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { CURRENT_TEACHER, CURRENT_TERM, dcCriteria, subjectSubmissions } from "@/lib/mock-data";
-import { dcSummaries, useStore } from "@/lib/store";
+import { CURRENT_TERM } from "@/lib/mock-data";
+import { useStore } from "@/lib/store";
 import { DC_LEVEL_LABEL, DcLevel } from "@/lib/types";
 
 const LEVEL_STYLE: Record<DcLevel, string> = {
@@ -17,6 +17,8 @@ const LEVEL_STYLE: Record<DcLevel, string> = {
 
 export default function CharacteristicsPage() {
   const store = useStore();
+  const { dcCriteria, subjectSubmissions } = store;
+  const roomNames = [...new Set(store.students.map((s) => s.roomName))].join(", ");
   const pending = subjectSubmissions.filter((s) => !s.submitted);
   const submitted = subjectSubmissions.length - pending.length;
 
@@ -47,7 +49,7 @@ export default function CharacteristicsPage() {
               <div className="mb-4">
                 <h2 className="text-[15.5px] font-bold">ผลการประเมินคุณลักษณะอันพึงประสงค์ 8 ด้าน</h2>
                 <p className="mt-0.5 text-xs text-muted-foreground">
-                  ห้อง {CURRENT_TEACHER.roomName} · รวบรวมจาก ปพ.5 ของครูประจำวิชาทุกคน
+                  ห้อง {roomNames} · รวบรวมจาก ปพ.5 ของครูประจำวิชาทุกคน
                 </p>
               </div>
 
@@ -73,7 +75,7 @@ export default function CharacteristicsPage() {
                   </thead>
                   <tbody>
                     {store.students.map((student) => {
-                      const dc = dcSummaries.find((d) => d.studentId === student.studentId);
+                      const dc = store.dcSummaryOf(student.studentId);
                       const incomplete =
                         !dc || dcCriteria.some((c) => dc.levels[c.criteriaId] == null);
                       return (
@@ -174,7 +176,7 @@ export default function CharacteristicsPage() {
                     <div key={s.subject} className="flex items-center justify-between py-2.5">
                       <div>
                         <div className="text-[13.5px] font-medium">{s.subject}</div>
-                        <div className="text-[11.5px] text-muted-foreground">{s.teacherName}</div>
+                        <div className="text-[11.5px] text-muted-foreground">{store.nameOf(s.teacherId)}</div>
                       </div>
                       <span
                         className={

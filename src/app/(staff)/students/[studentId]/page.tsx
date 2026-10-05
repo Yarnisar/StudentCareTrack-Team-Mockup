@@ -8,8 +8,8 @@ import { RiskBadge } from "@/components/shared/risk-badge";
 import { Button } from "@/components/ui/button";
 import { LinkButton } from "@/components/ui/link-button";
 import { Card, CardContent } from "@/components/ui/card";
-import { behaviorRules, useStore } from "@/lib/store";
-import { dcCriteria, dcSummaries, CURRENT_TERM } from "@/lib/mock-data";
+import { useStore } from "@/lib/store";
+import { CURRENT_TERM } from "@/lib/mock-data";
 import { formatThaiDate, formatThaiDateTime } from "@/lib/format";
 import {
   DC_LEVEL_LABEL,
@@ -30,22 +30,44 @@ export default function StudentDetailPage({
 
   if (!student) return <p className="p-8 text-sm text-muted-foreground">ไม่พบข้อมูลนักเรียน</p>;
 
+  // ครูทั่วไปเห็นเฉพาะ ชื่อ ห้อง ความประพฤติ และคุณลักษณะอันพึงประสงค์
+  const sensitive = store.canSeeSensitive(studentId);
+  const homeroom = store.isHomeroomOf(studentId);
+  const previousHomeroom = store.isPreviousHomeroomOf(studentId);
+  const ownPastScreenings = previousHomeroom
+    ? store.screenings.filter(
+        (s) => s.studentId === studentId && store.canViewRecord(studentId, s.screenedBy)
+      )
+    : [];
   const risk = store.overallRiskOf(studentId);
   const screening = store.latestScreening(studentId);
   const sdqSet = store.sdqOf(studentId).filter((s) => s.round === 1);
   const behaviors = store.behaviorOf(studentId).slice(0, 5);
   const behaviorScore = store.behaviorScoreOf(studentId);
   const careCase = store.caseOf(studentId);
-  const dc = dcSummaries.find((d) => d.studentId === studentId);
+  const dc = store.dcSummaryOf(studentId);
+  const dcCriteria = store.dcCriteria;
+  const guardians = store.guardiansOf(studentId);
 
-  const info: [string, string][] = [
-    ["เลขประจำตัวนักเรียน", student.studentId],
-    ["เลขบัตรประชาชน", student.citizenId],
-    ["ชั้น / ห้อง", `${student.roomName} เลขที่ ${student.classNo}`],
-    ["ผู้ปกครอง", `${student.guardianName} (${student.guardianRelation})`],
-    ["เบอร์ติดต่อ", student.guardianPhone],
-    ["ที่อยู่", student.address],
-  ];
+  const info: [string, string][] = sensitive
+    ? [
+        ["เลขประจำตัวนักเรียน", student.studentId],
+        ["เลขบัตรประชาชน", student.citizenId],
+        ["ชั้น / ห้อง", `${student.roomName} เลขที่ ${student.classNo}`],
+        [
+          "ผู้ปกครอง",
+          guardians.map((g) => `${g.user.name} (${g.relation})`).join(", ") || "-",
+        ],
+        [
+          "เบอร์ติดต่อ",
+          guardians
+            .map((g) => g.user.phone)
+            .filter(Boolean)
+            .join(", ") || "-",
+        ],
+        ["ที่อยู่", student.address],
+      ]
+    : [["ชั้น / ห้อง", `${student.roomName} เลขที่ ${student.classNo}`]];
 
   return (
     <>
@@ -59,9 +81,11 @@ export default function StudentDetailPage({
           >
             <ChevronLeft className="size-4" /> กลับไปรายชื่อนักเรียน
           </Link>
-          <Button variant="outline" size="sm">
-            <Download className="size-4" /> ส่งออกรายงานรายบุคคล
-          </Button>
+          {sensitive && (
+            <Button variant="outline" size="sm">
+              <Download className="size-4" /> ส่งออกรายงานรายบุคคล
+            </Button>
+          )}
         </div>
 
         <Card className="mb-5">
@@ -72,20 +96,25 @@ export default function StudentDetailPage({
             <div className="flex-1">
               <div className="flex items-center gap-2.5">
                 <h2 className="text-xl font-bold">{student.fullName}</h2>
-                {risk && <RiskBadge group={risk} />}
+                {sensitive && risk && <RiskBadge group={risk} />}
               </div>
               <p className="mt-1 text-[13.5px] text-muted-foreground">
-                {student.roomName} เลขที่ {student.classNo} · เลขประจำตัว {student.studentId}
-                {screening ? ` · คัดกรองล่าสุด ${formatThaiDate(screening.screenedAt)}` : ""}
+                {student.roomName} เลขที่ {student.classNo}
+                {sensitive ? ` · เลขประจำตัว ${student.studentId}` : ""}
+                {sensitive && screening ? ` · คัดกรองล่าสุด ${formatThaiDate(screening.screenedAt)}` : ""}
               </p>
             </div>
             <div className="flex gap-2">
-              <LinkButton variant="outline" href={`/screening/${studentId}`}>
-                คัดกรองใหม่
-              </LinkButton>
-              <LinkButton href={`/care-cases?student=${studentId}`}>
-                {careCase ? "ดู case ช่วยเหลือ" : "เปิด case ช่วยเหลือ"}
-              </LinkButton>
+              {homeroom && (
+                <LinkButton variant="outline" href={`/screening/${studentId}`}>
+                  คัดกรองใหม่
+                </LinkButton>
+              )}
+              {(homeroom || (sensitive && careCase)) && (
+                <LinkButton href={`/care-cases?student=${studentId}`}>
+                  {careCase ? "ดู case ช่วยเหลือ" : "เปิด case ช่วยเหลือ"}
+                </LinkButton>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -96,6 +125,7 @@ export default function StudentDetailPage({
               <h3 className="text-[15.5px] font-bold">ข้อมูลพื้นฐาน</h3>
               <p className="mt-1 mb-3 text-[11.5px] text-muted-foreground">
                 อ้างอิงจากงานทะเบียนนักเรียนของโรงเรียน — อ่านอย่างเดียว
+                {!sensitive && " · ข้อมูลอื่นเปิดให้เฉพาะครูประจำชั้นของห้องนี้และแอดมิน"}
               </p>
               <dl className="divide-y divide-border">
                 {info.map(([label, value]) => (
@@ -109,86 +139,119 @@ export default function StudentDetailPage({
           </Card>
 
           <div className="space-y-5">
-            <Card>
-              <CardContent className="p-6">
-                <div className="mb-3 flex items-center justify-between">
-                  <h3 className="text-[15.5px] font-bold">ผลการคัดกรอง 6 มิติ</h3>
-                  {screening && (
-                    <span className="text-[12.5px] text-muted-foreground">
-                      ล่าสุด {formatThaiDate(screening.screenedAt)}
-                    </span>
-                  )}
-                </div>
-                {screening ? (
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    {screening.results.map((r) => (
-                      <div
-                        key={r.dimension}
-                        className="flex items-center justify-between rounded-lg bg-surface px-3.5 py-2.5"
-                      >
-                        <span className="text-[13.5px] font-medium">
-                          {DIMENSION_LABEL[r.dimension]}
-                        </span>
-                        <RiskBadge group={r.group} short />
+            {ownPastScreenings.length > 0 && (
+              <Card>
+                <CardContent className="p-6">
+                  <h3 className="text-[15.5px] font-bold">บันทึกที่คุณเคยบันทึกไว้</h3>
+                  <p className="mt-1 mb-3 text-[11.5px] text-muted-foreground">
+                    คุณเคยเป็นครูประจำชั้นของนักเรียนคนนี้ จึงเห็นเฉพาะบันทึกของตัวเอง — อ่านอย่างเดียว
+                  </p>
+                  {ownPastScreenings.map((s) => (
+                    <div key={s.screeningId} className="mb-3 last:mb-0">
+                      <div className="mb-2 text-[12.5px] text-muted-foreground">
+                        การคัดกรอง {formatThaiDate(s.screenedAt)}
                       </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="py-4 text-sm text-muted-foreground">ยังไม่มีข้อมูลการคัดกรอง</p>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-6">
-                <h3 className="mb-3 text-[15.5px] font-bold">ผลการประเมิน SDQ (3 ผู้ประเมิน)</h3>
-                <div className="grid gap-3 sm:grid-cols-3">
-                  {(["teacher", "student", "parent"] as SdqRater[]).map((rater) => {
-                    const rec = sdqSet.find((s) => s.rater === rater);
-                    const done = rec?.status === "completed";
-                    return (
-                      <div
-                        key={rater}
-                        className={
-                          done
-                            ? "rounded-xl border border-border p-4"
-                            : "rounded-xl border border-dashed border-border bg-surface p-4"
-                        }
-                      >
-                        <div className="text-[12.5px] text-muted-foreground">
-                          {SDQ_RATER_LABEL[rater]}
-                        </div>
-                        {done ? (
-                          <>
-                            <div className="my-1.5 text-2xl font-bold">
-                              {rec.totalDifficulties}
-                              <span className="ml-1 text-xs font-medium text-muted-foreground">
-                                คะแนน
-                              </span>
-                            </div>
-                            <span
-                              className={
-                                rec.level === "normal"
-                                  ? "rounded-full bg-risk-green-bg px-2.5 py-1 text-xs font-semibold text-risk-green"
-                                  : rec.level === "risk"
-                                    ? "rounded-full bg-risk-amber-bg px-2.5 py-1 text-xs font-semibold text-risk-amber"
-                                    : "rounded-full bg-risk-red-bg px-2.5 py-1 text-xs font-semibold text-risk-red"
-                              }
-                            >
-                              {rec.level ? SDQ_LEVEL_LABEL[rec.level] : ""}
-                            </span>
-                          </>
-                        ) : (
-                          <div className="mt-3 text-[13px] font-medium text-muted-foreground">
-                            {rec ? "รอทำแบบประเมิน" : "ยังไม่เปิดแบบประเมิน"}
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        {s.results.map((r) => (
+                          <div
+                            key={r.dimension}
+                            className="flex items-center justify-between rounded-lg bg-surface px-3.5 py-2"
+                          >
+                            <span className="text-[13px]">{DIMENSION_LABEL[r.dimension]}</span>
+                            <RiskBadge group={r.group} />
                           </div>
-                        )}
+                        ))}
                       </div>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
+
+            {sensitive && (
+              <>
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="mb-3 flex items-center justify-between">
+                      <h3 className="text-[15.5px] font-bold">ผลการคัดกรอง 6 มิติ</h3>
+                      {screening && (
+                        <span className="text-[12.5px] text-muted-foreground">
+                          ล่าสุด {formatThaiDate(screening.screenedAt)}
+                        </span>
+                      )}
+                    </div>
+                    {screening ? (
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        {screening.results.map((r) => (
+                          <div
+                            key={r.dimension}
+                            className="flex items-center justify-between rounded-lg bg-surface px-3.5 py-2.5"
+                          >
+                            <span className="text-[13.5px] font-medium">
+                              {DIMENSION_LABEL[r.dimension]}
+                            </span>
+                            <RiskBadge group={r.group} short />
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="py-4 text-sm text-muted-foreground">ยังไม่มีข้อมูลการคัดกรอง</p>
+                    )}
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-6">
+                    <h3 className="mb-3 text-[15.5px] font-bold">ผลการประเมิน SDQ (3 ผู้ประเมิน)</h3>
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      {(["teacher", "student", "parent"] as SdqRater[]).map((rater) => {
+                        const rec = sdqSet.find((s) => s.rater === rater);
+                        const done = rec?.status === "completed";
+                        return (
+                          <div
+                            key={rater}
+                            className={
+                              done
+                                ? "rounded-xl border border-border p-4"
+                                : "rounded-xl border border-dashed border-border bg-surface p-4"
+                            }
+                          >
+                            <div className="text-[12.5px] text-muted-foreground">
+                              {SDQ_RATER_LABEL[rater]}
+                            </div>
+                            {done ? (
+                              <>
+                                <div className="my-1.5 text-2xl font-bold">
+                                  {rec.totalDifficulties}
+                                  <span className="ml-1 text-xs font-medium text-muted-foreground">
+                                    คะแนน
+                                  </span>
+                                </div>
+                                <span
+                                  className={
+                                    rec.level === "normal"
+                                      ? "rounded-full bg-risk-green-bg px-2.5 py-1 text-xs font-semibold text-risk-green"
+                                      : rec.level === "risk"
+                                        ? "rounded-full bg-risk-amber-bg px-2.5 py-1 text-xs font-semibold text-risk-amber"
+                                        : "rounded-full bg-risk-red-bg px-2.5 py-1 text-xs font-semibold text-risk-red"
+                                  }
+                                >
+                                  {rec.level ? SDQ_LEVEL_LABEL[rec.level] : ""}
+                                </span>
+                              </>
+                            ) : (
+                              <div className="mt-3 text-[13px] font-medium text-muted-foreground">
+                                {rec ? "รอทำแบบประเมิน" : "ยังไม่เปิดแบบประเมิน"}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+              </>
+            )}
 
             <Card>
               <CardContent className="p-6">
@@ -203,7 +266,7 @@ export default function StudentDetailPage({
                 </div>
                 <div className="divide-y divide-border">
                   {behaviors.map((rec) => {
-                    const rule = behaviorRules.find((r) => r.ruleId === rec.ruleId);
+                    const rule = store.ruleOf(rec.ruleId);
                     const positive = (rule?.scoreDelta ?? 0) > 0;
                     return (
                       <div key={rec.recordId} className="flex items-center gap-3 py-2.5">

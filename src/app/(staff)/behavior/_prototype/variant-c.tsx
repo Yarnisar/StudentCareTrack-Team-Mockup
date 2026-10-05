@@ -157,6 +157,7 @@ export function VariantC({ records, form }: { records: BehaviorRecord[]; form: B
 }
 
 function RecordRow({ rec }: { rec: BehaviorRecord }) {
+  const store = useStore();
   const rule = ruleOf(rec.ruleId);
   const positive = (rule?.scoreDelta ?? 0) > 0;
   return (
@@ -180,7 +181,7 @@ function RecordRow({ rec }: { rec: BehaviorRecord }) {
           {rec.description}
         </span>
         <span className="mt-1 block text-[11.5px] text-muted-foreground">
-          บันทึกโดย {rec.recordedByName}
+          บันทึกโดย {store.nameOf(rec.recordedBy)}
         </span>
       </span>
       <span
