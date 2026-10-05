@@ -12,6 +12,7 @@ const NEXT_HREF: Record<AssessmentNextStep, string | null> = {
   red_flag: "red-flag",
   nine_s: "nine-s",
   open_sdq: "sdq",
+  wait_sdq_window: "sdq",
   sdq: "sdq",
   done: "sdq",
   not_required: null,

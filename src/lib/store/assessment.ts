@@ -7,6 +7,9 @@
  * - Red Flag/9S: 1 ฉบับต่อนักเรียนต่อภาคเรียน แก้ได้จนปิดช่วงดำเนินงานคัดกรอง (screening)
  * - SDQ: 1 ฉบับต่อ (นักเรียน, ภาคเรียน, ครั้ง, ผู้ประเมิน) ส่งแล้วแก้ไม่ได้ เปิดรับเฉพาะในช่วงดำเนินงาน sdq
  * - Red Flag ควรดูแล → เปิด case อัตโนมัติ; ผล SDQ รวมมีปัญหา → เปิด case, เสี่ยง → แนะนำ (care.raiseTrigger)
+ * - เปิดแบบ SDQ ได้เมื่อต้องทำ SDQ รอบนี้ (sdqRequiredFor) และอยู่ในช่วงดำเนินงาน sdq — นอกช่วงรอเปิดภายหลัง
+ * - Red Flag/9S แก้จากควรดูแลกลับเป็นปกติ → ยกเลิก (void) ฉบับ SDQ รอบนี้ที่ยังไม่มีใครตอบ ฉบับที่ส่งแล้วคงไว้
+ * - ฉบับที่ยกเลิกแล้วเก็บไว้ในสถานะ voided (ไม่ลบ) แต่ไม่นับในทุกการค้นหา/ผลรวม
  */
 
 import { useMemo, useState } from "react";
@@ -54,9 +57,11 @@ export type SaveRedFlagResult = AssessmentResult<{
   trigger: RaiseTriggerResult | null;
   /** เปิดแบบ SDQ ให้ใหม่กี่ฉบับ */
   sdqOpened: number;
+  /** ยกเลิกแบบ SDQ ที่ยังไม่มีใครตอบกี่ฉบับ (ผลแก้กลับเป็นปกติ) */
+  sdqVoided: number;
 }>;
 
-export type SaveNineSResult = AssessmentResult<{ record: NineSAssessment; sdqOpened: number }>;
+export type SaveNineSResult = AssessmentResult<{ record: NineSAssessment; sdqOpened: number; sdqVoided: number }>;
 
 export type SaveSdqResult = AssessmentResult<{
   form: SdqAssessment;
@@ -70,7 +75,7 @@ export type OpenSdqSetResult = AssessmentResult<{ created: SdqAssessment[] }>;
 export interface AssessmentSlice {
   redFlags: RedFlagAssessment[];
   nineS: NineSAssessment[];
-  /** SDQ ทุกฉบับ ทุกภาคเรียน */
+  /** SDQ ทุกฉบับ ทุกภาคเรียน (ไม่รวมฉบับที่ยกเลิกแล้ว) */
   sdq: SdqAssessment[];
   /** SDQ ทุกฉบับของนักเรียน (ทุกภาคเรียน/ทุกครั้ง) */
   sdqOf: (studentId: string) => SdqAssessment[];
@@ -99,7 +104,10 @@ export interface AssessmentSlice {
   saveNineS: (studentId: string, answers: Record<string, 0 | 1 | 2>) => SaveNineSResult;
   /** ส่ง SDQ (ส่งแล้วแก้ไม่ได้) — ฉบับผู้ปกครอง: ผู้ปกครองคนที่ส่งก่อนเป็นผู้ประเมิน */
   saveSdq: (studentId: string, rater: SdqRater, answers: Record<number, 0 | 1 | 2>) => SaveSdqResult;
-  /** เปิดแบบ SDQ ของรอบปัจจุบันที่ยังไม่มี (ประถมไม่มีฉบับนักเรียน) และแจ้ง sdq_requested */
+  /**
+   * เปิดแบบ SDQ ของรอบปัจจุบันที่ยังไม่มี (ประถมไม่มีฉบับนักเรียน) และแจ้ง sdq_requested
+   * เปิดได้เฉพาะเมื่อนักเรียนต้องทำ SDQ รอบนี้ และอยู่ในช่วงดำเนินงาน sdq
+   */
   openSdqSet: (studentId: string) => OpenSdqSetResult;
 
   /** เปิดดูคำตอบรายข้อได้หรือไม่ (เฉพาะฉบับที่ผลมีปัญหา + ผู้ที่เห็นข้อมูลอ่อนไหว) */
@@ -121,19 +129,20 @@ export function useAssessmentSlice(base: PlatformSlice, care: CareSlice): Assess
     const term = base.currentTerm;
     const termId = term.termId;
     const round = sdqRoundFor(term);
-    // สำเนาที่ใช้ภายใน event เดียว (เช่น Red Flag แล้วเปิด SDQ ต่อทันที)
-    const working = { sdq };
+    // สำเนาที่ใช้ภายใน event เดียว (เช่น Red Flag แล้วเปิด/ยกเลิก SDQ ต่อทันที)
+    const working = { sdq, redFlags, nineS };
 
     const inYear = (tid: string) => termById(tid)?.academicYear === term.academicYear;
-    const redFlagsOf = (studentId: string) => redFlags.filter((r) => r.studentId === studentId);
-    const nineSOfStudent = (studentId: string) => nineS.filter((r) => r.studentId === studentId);
+    const redFlagsOf = (studentId: string) => working.redFlags.filter((r) => r.studentId === studentId);
+    const nineSOfStudent = (studentId: string) => working.nineS.filter((r) => r.studentId === studentId);
 
     const redFlagOf: AssessmentSlice["redFlagOf"] = (studentId, tid = termId) =>
-      redFlags.find((r) => r.studentId === studentId && r.termId === tid);
+      working.redFlags.find((r) => r.studentId === studentId && r.termId === tid);
     const nineSOf: AssessmentSlice["nineSOf"] = (studentId, tid = termId) =>
-      nineS.find((r) => r.studentId === studentId && r.termId === tid);
+      working.nineS.find((r) => r.studentId === studentId && r.termId === tid);
 
-    const sdqOf = (studentId: string) => working.sdq.filter((s) => s.studentId === studentId);
+    const sdqOf = (studentId: string) =>
+      working.sdq.filter((s) => s.studentId === studentId && s.status !== "voided");
     const setOf = (studentId: string, tid: string) => sdqOf(studentId).filter((s) => s.termId === tid);
     const currentSdqOf = (studentId: string) => setOf(studentId, termId);
     const sdqFormFor: AssessmentSlice["sdqFormFor"] = (studentId, rater, tid = termId) =>
@@ -167,7 +176,8 @@ export function useAssessmentSlice(base: PlatformSlice, care: CareSlice): Assess
       if (!redFlag && needsRedFlag(rfTerms, term)) next = "red_flag";
       else if (redFlag && redFlag.result === "normal" && !nine) next = "nine_s";
       else if (sdqForms.length > 0) next = sdqForms.every((f) => f.status === "submitted") ? "done" : "sdq";
-      else next = sdqRequired ? "open_sdq" : "not_required";
+      else if (!sdqRequired) next = "not_required";
+      else next = base.isWindowOpen("sdq") ? "open_sdq" : "wait_sdq_window";
       return {
         studentId,
         termId,
@@ -245,6 +255,10 @@ export function useAssessmentSlice(base: PlatformSlice, care: CareSlice): Assess
       const student = base.getStudent(studentId);
       if (!student) return { ok: false, error: "ไม่พบข้อมูลนักเรียน" };
       if (!base.canEdit(studentId)) return { ok: false, error: "เปิดแบบประเมินได้เฉพาะครูประจำชั้นของนักเรียนและแอดมิน" };
+      if (!assessmentPlanOf(studentId).sdqRequired)
+        return { ok: false, error: `นักเรียนไม่ต้องทำ SDQ ครั้งที่ ${round} ตามผล Red Flag/9S และการตั้งค่าของโรงเรียน` };
+      if (!base.isWindowOpen("sdq"))
+        return { ok: false, error: "อยู่นอกช่วงดำเนินงาน SDQ — เปิดแบบประเมินได้เมื่อถึงช่วงทำ SDQ" };
       const existing = new Set(currentSdqOf(studentId).map((s) => s.rater));
       const at = nowThaiIso();
       const created = sdqRatersFor(student.gradeLevel)
@@ -279,6 +293,28 @@ export function useAssessmentSlice(base: PlatformSlice, care: CareSlice): Assess
       ];
       if (recipients.length > 0) base.notify("sdq_requested", recipients, studentId);
       return { ok: true, created };
+    };
+
+    /**
+     * ผลแก้กลับเป็นปกติ: ถ้าไม่ต้องทำ SDQ รอบนี้แล้ว ยกเลิกฉบับที่ยังรอทำและยังไม่มีคำตอบ (ฉบับที่ส่งแล้วไม่แตะ)
+     */
+    const voidUnansweredSdq = (studentId: string, reason: string): number => {
+      if (assessmentPlanOf(studentId).sdqRequired) return 0;
+      const targets = currentSdqOf(studentId).filter(
+        (s) => s.status === "pending" && Object.keys(s.answers).length === 0
+      );
+      if (targets.length === 0) return 0;
+      const ids = new Set(targets.map((s) => s.id));
+      working.sdq = working.sdq.map((s) => (ids.has(s.id) ? { ...s, status: "voided", voidReason: reason } : s));
+      setSdq(working.sdq);
+      for (const form of targets) {
+        base.logAudit("VOID", "sdq_assessments", form.id, {
+          before: { status: "pending" },
+          after: { studentId, rater: form.rater, round: form.round, status: "voided" },
+          reason,
+        });
+      }
+      return targets.length;
     };
 
     const saveSdq: AssessmentSlice["saveSdq"] = (studentId, rater, answers) => {
@@ -343,20 +379,26 @@ export function useAssessmentSlice(base: PlatformSlice, care: CareSlice): Assess
         assessedBy: base.currentUser.userId,
         assessedAt: nowThaiIso(),
       };
-      setRedFlags((prev) => [record, ...prev.filter((r) => r.id !== record.id)]);
+      working.redFlags = [record, ...working.redFlags.filter((r) => r.id !== record.id)];
+      setRedFlags(working.redFlags);
       base.logAudit(previous ? "UPDATE" : "CREATE", "red_flag_assessments", record.id, {
         ...(previous ? { before: { result: previous.result } } : {}),
         after: { studentId, termId, result },
       });
       let trigger: RaiseTriggerResult | null = null;
       let sdqOpened = 0;
+      let sdqVoided = 0;
       const mode = triggerModeForRedFlag(result === "needs_care");
       if (mode) {
         trigger = care.raiseTrigger(studentId, "red_flag", record.id, mode, { summary: "ผล Red Flag ควรดูแล" });
+        // นอกช่วงดำเนินงาน sdq จะไม่เปิด — ขั้นถัดไปเป็น "รอเปิดช่วงทำ SDQ"
         const opened = openSdqSet(studentId);
         if (opened.ok) sdqOpened = opened.created.length;
       }
-      return { ok: true, record, trigger, sdqOpened };
+      if (previous?.result === "needs_care" && result === "normal") {
+        sdqVoided = voidUnansweredSdq(studentId, "แก้ผล Red Flag จากควรดูแลเป็นปกติ");
+      }
+      return { ok: true, record, trigger, sdqOpened, sdqVoided };
     };
 
     const saveNineS: AssessmentSlice["saveNineS"] = (studentId, answers) => {
@@ -374,24 +416,28 @@ export function useAssessmentSlice(base: PlatformSlice, care: CareSlice): Assess
         assessedBy: base.currentUser.userId,
         assessedAt: nowThaiIso(),
       };
-      setNineS((prev) => [record, ...prev.filter((r) => r.id !== record.id)]);
+      working.nineS = [record, ...working.nineS.filter((r) => r.id !== record.id)];
+      setNineS(working.nineS);
       base.logAudit(previous ? "UPDATE" : "CREATE", "nine_s_assessments", record.id, {
         ...(previous ? { before: { result: previous.result } } : {}),
         after: { studentId, termId, result },
       });
       // 9S ควรดูแล → ขอ SDQ เท่านั้น (ไม่เปิด case อัตโนมัติ)
       let sdqOpened = 0;
+      let sdqVoided = 0;
       if (result === "needs_care") {
         const opened = openSdqSet(studentId);
         if (opened.ok) sdqOpened = opened.created.length;
+      } else if (previous?.result === "needs_care") {
+        sdqVoided = voidUnansweredSdq(studentId, "แก้ผล 9S จากควรดูแลเป็นปกติ");
       }
-      return { ok: true, record, sdqOpened };
+      return { ok: true, record, sdqOpened, sdqVoided };
     };
 
     return {
       redFlags,
       nineS,
-      sdq,
+      sdq: sdq.filter((s) => s.status !== "voided"),
       sdqOf,
       currentSdqOf,
       sdqFormFor,

@@ -7,6 +7,7 @@
  *   30125 เปิดแล้ว ครู+นักเรียนส่งแล้ว รอผู้ปกครอง · 30118 เปิดแล้ว รอทุกฉบับ
  *   30152 เปิดแล้ว นักเรียนส่งแล้ว รอฉบับครู · 30140 ยังไม่เปิด
  *   30131 / 30160 / 30183 ปกติ → ไม่ต้องทำ (เว้นแต่เปิด sdq2_for_normal_students)
+ * ปีการศึกษา 2568 (ม.2/1): 30118 ประเมินโดยครูวิชัย (ครูประจำชั้นคนเดิม) — สาธิต "เห็นเฉพาะที่ตัวเองบันทึกไว้"
  */
 
 import { evaluateNineS, RED_FLAG_QUESTIONS, scoreSdq, SDQ_QUESTIONS } from "../rules";
@@ -26,7 +27,18 @@ const redFlag = (studentId: string, assessedAt: string, assessedBy: string = USE
   assessedAt,
 });
 
+const PREV_YEAR_TERM = "T2568-2";
+
 export const redFlagAssessments: RedFlagAssessment[] = [
+  {
+    id: `RF-${PREV_YEAR_TERM}-30118`,
+    studentId: "30118",
+    termId: PREV_YEAR_TERM,
+    answers: Object.fromEntries(RED_FLAG_QUESTIONS.map((q) => [q.id, false])),
+    result: "normal",
+    assessedBy: USER.wichai,
+    assessedAt: "2568-11-12T10:00:00",
+  },
   redFlag("30125", "2569-06-10T10:00:00"),
   redFlag("30118", "2569-06-10T10:20:00"),
   redFlag("30131", "2569-06-11T09:30:00"),
@@ -47,6 +59,11 @@ const nineS = (
 };
 
 export const nineSAssessments: NineSAssessment[] = [
+  {
+    ...nineS("30118", { s7: 1, s9: 2, s2: 1 }, "2568-11-12T10:10:00", USER.wichai),
+    id: `NS-${PREV_YEAR_TERM}-30118`,
+    termId: PREV_YEAR_TERM,
+  },
   nineS("30125", { s4: 2, s5: 2, s8: 1 }, "2569-06-10T10:10:00"),
   nineS("30118", { s7: 1, s9: 2, s2: 1 }, "2569-06-10T10:30:00"),
   nineS("30131", { s1: 1, s3: 1 }, "2569-06-11T09:40:00"),
@@ -119,6 +136,9 @@ function sdq(
 const S = studentUserId;
 
 export const sdqAssessments: SdqAssessment[] = [
+  // ---------------- ปีการศึกษา 2568 (ฉบับครู โดยครูประจำชั้นคนเดิม) ----------------
+  sdq("30118", PREV_YEAR_TERM, "teacher", "2568-11-12T10:10:00", { by: USER.wichai, at: "2568-11-20T14:00:00", total: 15 }),
+
   // ---------------- ครั้งที่ 1 (ภาคเรียนที่ 1/2569) ----------------
   sdq("30125", SEM1, "teacher", "2569-06-10T10:10:00", { by: USER.somying, at: "2569-07-03T14:00:00", total: 16 }),
   sdq("30125", SEM1, "student", "2569-06-10T10:10:00", { by: S("30125"), at: "2569-07-04T10:15:00", total: 13 }),

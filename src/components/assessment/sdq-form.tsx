@@ -7,7 +7,6 @@ import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Progress } from "@/components/ui/progress";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { SDQ_CHOICES, SDQ_QUESTIONS, scoreSdq } from "@/lib/rules";
 import { SDQ_LEVEL_LABEL, SDQ_SCALE_LABEL, SdqRater, SdqScale } from "@/lib/types";
@@ -28,6 +27,31 @@ const missingItem = (no: number): MissingItem => ({
   label: `ข้อ ${no}`,
   page: pageOf(no),
 });
+
+type AutofillTarget = "normal" | "risk" | "problem";
+
+/**
+ * เครื่องมือสาธิต: กรอกคำตอบอัตโนมัติ — แสดงเฉพาะเมื่อแบบประเมินแก้ไขได้
+ * ฉบับนักเรียนใช้ชื่อกลาง ๆ ไม่บอกระดับผล (นักเรียนไม่เห็นผลของตัวเอง)
+ */
+function SdqAutofillTools({ neutral, onFill }: { neutral: boolean; onFill: (target: AutofillTarget) => void }) {
+  useDemoPageTool(
+    neutral ? "กรอกอัตโนมัติ · ชุดคำตอบ 1" : "กรอกอัตโนมัติ · ปกติ",
+    () => onFill("normal"),
+    neutral ? "ตอบครบ 25 ข้อ" : "ตอบครบ 25 ข้อ ผลอยู่ในเกณฑ์ปกติ"
+  );
+  useDemoPageTool(
+    neutral ? "กรอกอัตโนมัติ · ชุดคำตอบ 2" : "กรอกอัตโนมัติ · เสี่ยง",
+    () => onFill("risk"),
+    neutral ? "ตอบครบ 25 ข้อ" : "ตอบครบ 25 ข้อ ผลอยู่ในเกณฑ์เสี่ยง"
+  );
+  useDemoPageTool(
+    neutral ? "กรอกอัตโนมัติ · ชุดคำตอบ 3" : "กรอกอัตโนมัติ · มีปัญหา",
+    () => onFill("problem"),
+    neutral ? "ตอบครบ 25 ข้อ" : "ตอบครบ 25 ข้อ ผลอยู่ในเกณฑ์มีปัญหา"
+  );
+  return null;
+}
 
 /**
  * แบบประเมิน SDQ 25 ข้อ
@@ -53,14 +77,10 @@ export function SdqForm({
   const [page, setPage] = useState(0);
   const missing = useMissingAnswers(setPage);
 
-  const autofill = (target: "normal" | "risk" | "problem") => {
-    if (readOnly) return;
+  const autofill = (target: AutofillTarget) => {
     setAnswers(sdqAnswersFor(target));
     missing.reset();
   };
-  useDemoPageTool("กรอกอัตโนมัติ · ปกติ", () => autofill("normal"), "ตอบครบ 25 ข้อ ผลอยู่ในเกณฑ์ปกติ");
-  useDemoPageTool("กรอกอัตโนมัติ · เสี่ยง", () => autofill("risk"), "ตอบครบ 25 ข้อ ผลอยู่ในเกณฑ์เสี่ยง");
-  useDemoPageTool("กรอกอัตโนมัติ · มีปัญหา", () => autofill("problem"), "ตอบครบ 25 ข้อ ผลอยู่ในเกณฑ์มีปัญหา");
 
   const answeredCount = Object.keys(answers).length;
   const complete = answeredCount === SDQ_QUESTIONS.length;
@@ -99,6 +119,7 @@ export function SdqForm({
 
   return (
     <div className="space-y-4">
+      {!readOnly && <SdqAutofillTools neutral={rater === "student"} onFill={autofill} />}
       <Card>
         <CardContent className={mobile ? "p-4" : "p-5"}>
           <div className="mb-2 flex items-center justify-between text-[13px]">
@@ -107,7 +128,20 @@ export function SdqForm({
               {answeredCount} / {SDQ_QUESTIONS.length} ข้อ
             </span>
           </div>
-          <Progress value={(answeredCount / SDQ_QUESTIONS.length) * 100} />
+          {/* แถบธรรมดาแทน Progress ของ Base UI ซึ่งแทรก <span>x</span> ซ่อนไว้ และหลุดออกมาให้เห็นบนมือถือ */}
+          <div
+            role="progressbar"
+            aria-label="ความคืบหน้า"
+            aria-valuemin={0}
+            aria-valuemax={SDQ_QUESTIONS.length}
+            aria-valuenow={answeredCount}
+            className="h-1 w-full overflow-hidden rounded-full bg-muted"
+          >
+            <div
+              className="h-full rounded-full bg-primary transition-all"
+              style={{ width: `${(answeredCount / SDQ_QUESTIONS.length) * 100}%` }}
+            />
+          </div>
           {!mobile && complete && showPreview && (
             <div className="mt-4 grid grid-cols-5 gap-2">
               {(Object.keys(SDQ_SCALE_LABEL) as SdqScale[]).map((scale) => (

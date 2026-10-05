@@ -204,7 +204,7 @@ export default function ScreeningFormPage({
                 <CardContent className="p-5">
                   <div className="mb-2 flex items-center justify-between">
                     <h3 className="text-[15px] font-bold">{DIMENSION_LABEL[dimension]}</h3>
-                    <RiskBadge group={result.group} short />
+                    <RiskBadge group={result.group} />
                   </div>
 
                   <div className="space-y-2">

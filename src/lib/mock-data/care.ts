@@ -225,6 +225,52 @@ export const careCases: CareCase[] = [
     ],
     referrals: [],
   },
+  {
+    // ปีการศึกษา 2568 (ม.2/1) — ครูวิชัยเป็นครูประจำชั้นในตอนนั้น เปิด/ปิด case เอง (สาธิตครูประจำชั้นคนเดิม)
+    caseId: "CASE-2568-031",
+    studentId: "30118",
+    openedBy: USER.wichai,
+    status: "closed",
+    openedAt: "2568-11-14",
+    closedBy: USER.wichai,
+    closeReason: "resolved",
+    closedAt: "2569-02-20",
+    triggers: [
+      {
+        triggerId: "TRG-2568-031",
+        caseId: "CASE-2568-031",
+        source: "manual",
+        sourceRefId: null,
+        detectedAt: "2568-11-14T09:00:00",
+        planId: "PLAN-2568-031-1",
+        summary: "ครูประจำชั้นสังเกตว่าไม่ส่งงานหลายวิชาติดต่อกัน",
+      },
+    ],
+    plans: [
+      {
+        planId: "PLAN-2568-031-1",
+        caseId: "CASE-2568-031",
+        supportType: "prevent",
+        careMethods: ["behavior_adjust", "counseling"],
+        goal: "ติดตามการส่งงานรายสัปดาห์และให้คำปรึกษาเรื่องการจัดเวลา จนส่งงานครบทุกวิชา",
+        targetDate: "2569-02-28",
+        createdBy: USER.wichai,
+        createdAt: "2568-11-14T10:00:00",
+      },
+    ],
+    followups: [
+      {
+        followupId: "FU-0568-031",
+        caseId: "CASE-2568-031",
+        planId: "PLAN-2568-031-1",
+        actionTaken: "ติดตามการส่งงานร่วมกับครูประจำวิชา",
+        result: "ส่งงานครบทุกวิชาตั้งแต่เดือนมกราคม",
+        followupDate: "2569-02-15",
+        recordedBy: USER.wichai,
+      },
+    ],
+    referrals: [],
+  },
 ];
 
 /** คำแนะนำให้เปิด case จากผลคัดกรอง "เสี่ยง" ของนักเรียนที่ยังไม่มี case เปิดอยู่ */

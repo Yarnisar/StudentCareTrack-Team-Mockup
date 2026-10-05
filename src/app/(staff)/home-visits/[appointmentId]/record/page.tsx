@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useEffect, useMemo, useState } from "react";
+import { use, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Camera, Check, ChevronLeft, Lock, Plus, Sparkles, Trash2 } from "lucide-react";
@@ -28,7 +28,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { WindowNotice } from "@/components/shared/window-notice";
 import { useDemoPageTool } from "@/lib/demo/page-tools";
 import { SCHOOL_NAME } from "@/lib/mock-data";
-import { useStore } from "@/lib/store";
+import { useSensitiveView, useStore } from "@/lib/store";
+import { nextId, nextSeq } from "@/lib/store/ids";
 import { formatBaht, formatThaiDate, formatThaiDateTime, nowThaiIso } from "@/lib/format";
 import {
   buildDemoAutofill,
@@ -88,7 +89,6 @@ export default function HomeVisitRecordPage({
   const { appointmentId } = use(params);
   const router = useRouter();
   const store = useStore();
-  const { logSensitiveView } = store;
 
   const appointment = store.appointments.find((a) => a.appointmentId === appointmentId);
   const student = appointment ? store.getStudent(appointment.studentId) : undefined;
@@ -162,9 +162,7 @@ export default function HomeVisitRecordPage({
     (sensitive || store.canViewRecord(appointment.studentId, existing?.recordedBy ?? appointment.teacherId));
 
   // แอดมิน/ผู้บริหารเปิดผลเยี่ยมบ้านรายคน → VIEW_SENSITIVE
-  useEffect(() => {
-    if (canOpen) logSensitiveView("home_visit_records", appointmentId, { note: "เปิดแบบบันทึกการเยี่ยมบ้าน" });
-  }, [canOpen, appointmentId, logSensitiveView]);
+  useSensitiveView("home_visit_records", appointmentId, { enabled: canOpen, note: "เปิดแบบบันทึกการเยี่ยมบ้าน" });
 
   // เครื่องมือสาธิต: กรอกข้อมูลอัตโนมัติ (ไม่รับรองให้ — ครูต้องตรวจและรับรองเอง)
   useDemoPageTool(
@@ -223,13 +221,15 @@ export default function HomeVisitRecordPage({
 
   const photoSlots = input.cannotAccessHome ? PHOTO_SLOTS_INACCESSIBLE : PHOTO_SLOTS_HOME;
   const hasPhoto = (t: HomeVisitPhotoType) => input.photos.some((p) => p.photoType === t);
-  const togglePhoto = (t: HomeVisitPhotoType) =>
-    setInput((prev) => ({
-      ...prev,
-      photos: prev.photos.some((p) => p.photoType === t)
-        ? prev.photos.filter((p) => p.photoType !== t)
-        : [...prev.photos, mockPhoto(t, nowThaiIso(), Date.now())],
-    }));
+  const togglePhoto = (t: HomeVisitPhotoType) => {
+    if (hasPhoto(t)) {
+      setInput((prev) => ({ ...prev, photos: prev.photos.filter((p) => p.photoType !== t) }));
+      return;
+    }
+    // สร้างภาพนอก updater เพื่อให้ updater บริสุทธิ์
+    const photo = mockPhoto(t, nowThaiIso(), nextSeq());
+    setInput((prev) => ({ ...prev, photos: [...prev.photos.filter((p) => p.photoType !== t), photo] }));
+  };
 
   /** ข้อมูลที่จะบันทึก: เก็บเฉพาะภาพของกรณีที่เลือก (เข้าบ้านได้ / ไม่ได้) */
   const collect = (): HomeVisitRecordInput => ({
@@ -534,18 +534,19 @@ export default function HomeVisitRecordPage({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() =>
+                onClick={() => {
+                  const id = nextId("m");
                   setMembers((prev) => [
                     ...prev,
                     {
-                      id: `m${Date.now()}`,
+                      id,
                       relation: "",
                       age: "",
                       disability: false,
                       income: { wage: 0, agriculture: 0, business: 0, welfare: 0, other: 0 },
                     },
-                  ])
-                }
+                  ]);
+                }}
               >
                 <Plus className="size-4" /> เพิ่มสมาชิก
               </Button>

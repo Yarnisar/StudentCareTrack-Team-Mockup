@@ -5,7 +5,7 @@
  * VIEW_SENSITIVE: เรียก logSensitiveView() เมื่อแอดมิน/ผู้บริหารเปิดข้อมูลรายคน หรือเมื่อเปิดคำตอบรายข้อของ SDQ
  */
 
-import { useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { seedAuditLogs } from "../mock-data";
 import { nowThaiIso } from "../format";
 import { AUDIT_ACTION_LABEL, type AuditAction, type AuditDetail, type AuditLog } from "../types";
@@ -46,12 +46,14 @@ export function auditSummary(log: AuditLog): string {
 export function useAuditSlice(core: CoreSlice): AuditSlice {
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>(seedAuditLogs);
   const lastViews = useRef(new Map<string, number>());
+  const { currentUser } = core;
 
-  return useMemo<AuditSlice>(() => {
-    const logAudit: AuditSlice["logAudit"] = (action, entityType, entityId, detail = null, userId) => {
+  // ฟังก์ชันคงที่ตราบเท่าที่ผู้ใช้ไม่เปลี่ยน (ไม่ขึ้นกับ auditLogs) — หน้าที่เรียกจาก useEffect จึงไม่ยิงซ้ำหลังทุกการบันทึก
+  const logAudit = useCallback<AuditSlice["logAudit"]>(
+    (action, entityType, entityId, detail = null, userId) => {
       const entry: AuditLog = {
         logId: nextId("AL"),
-        userId: userId ?? core.currentUser.userId,
+        userId: userId ?? currentUser.userId,
         action,
         entityType,
         entityId,
@@ -60,19 +62,26 @@ export function useAuditSlice(core: CoreSlice): AuditSlice {
       };
       setAuditLogs((prev) => [entry, ...prev]);
       return entry;
-    };
+    },
+    [currentUser]
+  );
 
-    const logSensitiveView: AuditSlice["logSensitiveView"] = (entityType, entityId, opts) => {
-      const user = core.currentUser;
-      if (!opts?.always && user.role !== "admin_school") return;
-      const key = `${user.userId}|${entityType}|${entityId}`;
+  const logSensitiveView = useCallback<AuditSlice["logSensitiveView"]>(
+    (entityType, entityId, opts) => {
+      if (!opts?.always && currentUser.role !== "admin_school") return;
+      const key = `${currentUser.userId}|${entityType}|${entityId}`;
+      // นาฬิกาจริงใช้เฉพาะกันบันทึกซ้ำจากการ mount ซ้ำ (เช่น StrictMode) ไม่ได้บันทึกลงข้อมูล
       const now = Date.now();
       const last = lastViews.current.get(key);
       if (last !== undefined && now - last < VIEW_DEDUPE_MS) return;
       lastViews.current.set(key, now);
       logAudit("VIEW_SENSITIVE", entityType, entityId, opts?.note ? { note: opts.note } : null);
-    };
+    },
+    [currentUser, logAudit]
+  );
 
-    return { auditLogs, logAudit, logSensitiveView };
-  }, [core, auditLogs]);
+  return useMemo<AuditSlice>(
+    () => ({ auditLogs, logAudit, logSensitiveView }),
+    [auditLogs, logAudit, logSensitiveView]
+  );
 }

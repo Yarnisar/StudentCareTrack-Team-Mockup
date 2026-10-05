@@ -122,6 +122,8 @@ function actionOf(next: AssessmentNextStep, studentId: string, round: 1 | 2) {
       return { href: `/assessment/nine-s/${studentId}`, label: "ทำ 9S", primary: true };
     case "open_sdq":
       return { href: `/assessment/sdq/${studentId}`, label: `เปิด SDQ ครั้งที่ ${round}`, primary: true };
+    case "wait_sdq_window":
+      return { href: `/assessment/sdq/${studentId}`, label: "ดู SDQ", primary: false };
     case "sdq":
       return { href: `/assessment/sdq/${studentId}`, label: "ไปที่ SDQ", primary: false };
     case "done":

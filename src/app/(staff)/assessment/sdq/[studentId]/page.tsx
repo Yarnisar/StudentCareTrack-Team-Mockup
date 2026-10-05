@@ -181,8 +181,14 @@ function SdqContent({ studentId }: { studentId: string }) {
                         ? `ผล Red Flag/9S ของปีการศึกษานี้ควรดูแล — ต้องทำ SDQ ครั้งที่ ${plan.round}`
                         : `โรงเรียนกำหนดให้นักเรียนที่ปกติทำ SDQ ครั้งที่ ${plan.round} ด้วย`}
                     </p>
-                    {store.canEdit(studentId) && (
-                      <Button onClick={openSet}>เปิดแบบประเมิน SDQ ครั้งที่ {plan.round}</Button>
+                    {plan.next === "wait_sdq_window" ? (
+                      <p className="text-[13px] font-medium text-muted-foreground">
+                        รอเปิดช่วงทำ SDQ — เปิดแบบประเมินได้เมื่อถึงช่วงดำเนินงาน SDQ
+                      </p>
+                    ) : (
+                      store.canEdit(studentId) && (
+                        <Button onClick={openSet}>เปิดแบบประเมิน SDQ ครั้งที่ {plan.round}</Button>
+                      )
                     )}
                   </>
                 ) : (

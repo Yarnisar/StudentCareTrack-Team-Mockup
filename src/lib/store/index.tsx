@@ -17,7 +17,7 @@
  * ให้รับ slice นั้นเป็นอาร์กิวเมนต์เพิ่ม และต้องอยู่หลัง slice นั้นในลำดับ
  */
 
-import { createContext, useContext, useMemo, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, type ReactNode } from "react";
 import { useAuditSlice, type AuditSlice } from "./audit";
 import { useConsentSlice, type ConsentSlice } from "./consent";
 import { useNotificationsSlice, type NotificationsSlice } from "./notifications";
@@ -123,3 +123,21 @@ export function useStore() {
  * คงไว้ให้หน้า behavior/_prototype ที่ยังรอการตัดสินใจด้าน UI คอมไพล์ได้
  */
 export { behaviorRules } from "../mock-data";
+
+/**
+ * บันทึก VIEW_SENSITIVE ครั้งเดียวเมื่อเปิดข้อมูลรายคน (logSensitiveView ข้ามเองถ้าไม่ใช่แอดมิน/ผู้บริหาร
+ * เว้นแต่ always) — ยิงใหม่เมื่อ entityId/ผู้ใช้เปลี่ยนเท่านั้น
+ */
+export function useSensitiveView(
+  entityType: string,
+  entityId: string | null | undefined,
+  opts?: { enabled?: boolean; always?: boolean; note?: string }
+) {
+  const { logSensitiveView } = useStore();
+  const enabled = opts?.enabled ?? true;
+  const always = opts?.always;
+  const note = opts?.note;
+  useEffect(() => {
+    if (enabled && entityId) logSensitiveView(entityType, entityId, { always, note });
+  }, [enabled, entityType, entityId, always, note, logSensitiveView]);
+}

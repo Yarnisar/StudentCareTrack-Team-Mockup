@@ -45,7 +45,7 @@ function SettingsContent() {
   const store = useStore();
   const proto = useSettingsPrototype();
 
-  /** จำนวนบันทึกความประพฤติที่อ้างอิงกฎแต่ละข้อ — ใช้ตัดสินว่าลบกฎได้หรือไม่ */
+  /** จำนวนบันทึกความประพฤติที่อ้างอิงกฎแต่ละข้อ — แสดงประกอบการปิดใช้งานกฎ (ไม่มีการลบกฎ บันทึกเดิมยังอ้างอิงได้) */
   const ruleUsage = useMemo(() => {
     const map: Record<string, number> = {};
     for (const rec of store.behaviorRecords) {

@@ -411,9 +411,13 @@ export function timeToMinutes(time: string): number {
   return (h || 0) * 60 + (m || 0);
 }
 
-/** มาสาย = เช็คอินหลังเวลาเข้าเรียนครบ 1 นาทีขึ้นไป (schoolStartTime จาก useStore().schoolSettings) */
-export function isLateArrival(date: Date, schoolStartTime: string): boolean {
-  return date.getHours() * 60 + date.getMinutes() > timeToMinutes(schoolStartTime);
+/**
+ * มาสาย = เช็คอินหลังเวลาเข้าเรียนครบ 1 นาทีขึ้นไป (schoolStartTime จาก useStore().schoolSettings)
+ * scannedAt = สตริงวันเวลา พ.ศ. "2569-11-16T07:52:00" (จาก nowThaiIso)
+ */
+export function isLateArrival(scannedAt: string, schoolStartTime: string): boolean {
+  const time = scannedAt.split("T")[1] ?? "";
+  return timeToMinutes(time) > timeToMinutes(schoolStartTime);
 }
 
 /* ------------------------------------------------------------------ */

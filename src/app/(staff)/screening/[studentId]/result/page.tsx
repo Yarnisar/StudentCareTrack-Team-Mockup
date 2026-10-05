@@ -82,8 +82,17 @@ export default function ScreeningResultPage({ params }: { params: Promise<{ stud
       ? { href: `/assessment/red-flag/${studentId}`, label: "ทำแบบคัดกรอง Red Flag", text: "นักเรียนยังไม่เคยประเมินสุขภาพจิตในปีการศึกษานี้" }
       : plan.next === "nine_s"
         ? { href: `/assessment/nine-s/${studentId}`, label: "ทำแบบประเมิน 9S", text: "ผล Red Flag ปกติ — ทำ 9S ต่อ" }
-        : plan.next === "open_sdq" || plan.next === "sdq"
-          ? { href: `/assessment/sdq/${studentId}`, label: `ไปที่ SDQ ครั้งที่ ${plan.round}`, text: plan.next === "sdq" ? "มีแบบ SDQ ที่รอส่ง" : `ต้องทำ SDQ ครั้งที่ ${plan.round}` }
+        : plan.next === "open_sdq" || plan.next === "sdq" || plan.next === "wait_sdq_window"
+          ? {
+              href: `/assessment/sdq/${studentId}`,
+              label: `ไปที่ SDQ ครั้งที่ ${plan.round}`,
+              text:
+                plan.next === "sdq"
+                  ? "มีแบบ SDQ ที่รอส่ง"
+                  : plan.next === "wait_sdq_window"
+                    ? `ต้องทำ SDQ ครั้งที่ ${plan.round} — รอเปิดช่วงทำ SDQ`
+                    : `ต้องทำ SDQ ครั้งที่ ${plan.round}`,
+            }
           : null;
 
   return (

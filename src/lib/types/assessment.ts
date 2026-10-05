@@ -64,11 +64,13 @@ export const SDQ_LEVEL_LABEL: Record<SdqLevel, string> = {
   problem: "มีปัญหา",
 };
 
-export type SdqStatus = "pending" | "submitted";
+/** voided: ยกเลิกแล้ว (ต้องมีเหตุผล) — ใช้เมื่อผล Red Flag/9S แก้กลับเป็นปกติก่อนมีใครตอบ ไม่มีการลบจริง */
+export type SdqStatus = "pending" | "submitted" | "voided";
 
 export const SDQ_STATUS_LABEL: Record<SdqStatus, string> = {
   pending: "รอทำแบบประเมิน",
   submitted: "ส่งแล้ว",
+  voided: "ยกเลิกแล้ว",
 };
 
 /** sdq_assessments — UNIQUE (studentId, termId, round, rater) ส่งแล้วแก้ไม่ได้ */
@@ -94,6 +96,8 @@ export interface SdqAssessment {
   /** วันเวลาที่เปิดแบบประเมิน (ส่งคำขอ) */
   requestedAt: string;
   submittedAt: string | null;
+  /** เหตุผลการยกเลิก (มีเมื่อ status = voided) */
+  voidReason?: string | null;
 }
 
 /**
@@ -117,16 +121,25 @@ export interface CombinedSdqResult {
  * ขั้นถัดไปของนักเรียนในภาคเรียนปัจจุบัน
  * - red_flag / nine_s: ต้องทำแบบคัดกรอง (ภาคเรียนที่ 2 เฉพาะคนที่ยังไม่เคยประเมินในปีนี้)
  * - open_sdq: ต้องทำ SDQ รอบนี้ แต่ยังไม่ได้เปิดแบบประเมิน
+ * - wait_sdq_window: ต้องทำ SDQ รอบนี้ แต่ยังไม่อยู่ในช่วงดำเนินงาน sdq (เปิดแบบประเมินเมื่อถึงช่วง)
  * - sdq: เปิดแล้ว รอฉบับใดฉบับหนึ่ง
  * - done: ครบทุกฉบับของรอบนี้แล้ว
  * - not_required: ผลปกติ ไม่ต้องทำ SDQ รอบนี้
  */
-export type AssessmentNextStep = "red_flag" | "nine_s" | "open_sdq" | "sdq" | "done" | "not_required";
+export type AssessmentNextStep =
+  | "red_flag"
+  | "nine_s"
+  | "open_sdq"
+  | "wait_sdq_window"
+  | "sdq"
+  | "done"
+  | "not_required";
 
 export const ASSESSMENT_NEXT_STEP_LABEL: Record<AssessmentNextStep, string> = {
   red_flag: "รอทำ Red Flag",
   nine_s: "รอทำ 9S",
   open_sdq: "รอเปิด SDQ",
+  wait_sdq_window: "รอเปิดช่วงทำ SDQ",
   sdq: "รอส่ง SDQ",
   done: "ครบแล้ว",
   not_required: "ไม่ต้องทำ SDQ รอบนี้",

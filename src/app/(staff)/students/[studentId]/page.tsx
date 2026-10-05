@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useEffect } from "react";
+import { use } from "react";
 import Link from "next/link";
 import { ChevronLeft, Download } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
@@ -11,12 +11,12 @@ import { BehaviorCard } from "@/components/student/behavior-card";
 import { CaseCard } from "@/components/student/case-card";
 import { DcCard } from "@/components/student/dc-card";
 import { HomeVisitCard } from "@/components/student/home-visit-card";
+import { OwnRecordsCard } from "@/components/student/own-records-card";
 import { ScreeningCard } from "@/components/student/screening-card";
 import { SdqCard } from "@/components/student/sdq-card";
-import { useStore } from "@/lib/store";
+import { useSensitiveView, useStore } from "@/lib/store";
 import { CURRENT_TERM } from "@/lib/mock-data";
 import { formatThaiDate } from "@/lib/format";
-import { DIMENSION_LABEL } from "@/lib/types";
 
 export default function StudentDetailPage({
   params,
@@ -26,27 +26,15 @@ export default function StudentDetailPage({
   const { studentId } = use(params);
   const store = useStore();
   const student = store.getStudent(studentId);
-  const { logSensitiveView } = store;
-  const viewerId = store.currentUser.userId;
-  const exists = Boolean(student);
 
-  // แอดมิน/ผู้บริหารเปิดข้อมูลรายคน → VIEW_SENSITIVE (logSensitiveView ข้ามเองถ้าไม่ใช่แอดมิน และกันบันทึกซ้ำ)
-  useEffect(() => {
-    if (exists) logSensitiveView("students", studentId, { note: "เปิดหน้าข้อมูลนักเรียนรายคน" });
-    // บันทึกครั้งเดียวต่อการเปิดหน้า/สลับผู้ใช้ ไม่ใช่ทุกครั้งที่สโตร์เปลี่ยน
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [studentId, viewerId, exists]);
+  // แอดมิน/ผู้บริหารเปิดข้อมูลรายคน → VIEW_SENSITIVE (ข้ามเองถ้าไม่ใช่แอดมิน)
+  useSensitiveView("students", student ? studentId : null, { note: "เปิดหน้าข้อมูลนักเรียนรายคน" });
 
   if (!student) return <p className="p-8 text-sm text-muted-foreground">ไม่พบข้อมูลนักเรียน</p>;
 
   // ครูทั่วไปเห็นเฉพาะ ชื่อ ห้อง ความประพฤติ และคุณลักษณะอันพึงประสงค์
   const sensitive = store.canSeeSensitive(studentId);
   const previousHomeroom = store.isPreviousHomeroomOf(studentId);
-  const ownPastScreenings = previousHomeroom
-    ? store.screenings.filter(
-        (s) => s.studentId === studentId && store.canViewRecord(studentId, s.screenedBy)
-      )
-    : [];
   const risk = store.overallRiskOf(studentId);
   const screening = store.latestCertifiedScreening(studentId);
   const guardians = store.guardiansOf(studentId);
@@ -129,34 +117,7 @@ export default function StudentDetailPage({
           </Card>
 
           <div className="space-y-5">
-            {ownPastScreenings.length > 0 && (
-              <Card>
-                <CardContent className="p-6">
-                  <h3 className="text-[15.5px] font-bold">บันทึกที่คุณเคยบันทึกไว้</h3>
-                  <p className="mt-1 mb-3 text-[11.5px] text-muted-foreground">
-                    คุณเคยเป็นครูประจำชั้นของนักเรียนคนนี้ จึงเห็นเฉพาะบันทึกของตัวเอง — อ่านอย่างเดียว
-                  </p>
-                  {ownPastScreenings.map((s) => (
-                    <div key={s.screeningId} className="mb-3 last:mb-0">
-                      <div className="mb-2 text-[12.5px] text-muted-foreground">
-                        การคัดกรอง {formatThaiDate(s.screenedAt)}
-                      </div>
-                      <div className="grid gap-2 sm:grid-cols-2">
-                        {s.results.map((r) => (
-                          <div
-                            key={r.dimension}
-                            className="flex items-center justify-between rounded-lg bg-surface px-3.5 py-2"
-                          >
-                            <span className="text-[13px]">{DIMENSION_LABEL[r.dimension]}</span>
-                            <RiskBadge group={r.group} />
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-            )}
+            {previousHomeroom && <OwnRecordsCard studentId={studentId} />}
 
             {sensitive && (
               <>

@@ -7,6 +7,7 @@
  * - HV-004  30118 เยี่ยมเพิ่ม (case CASE-2570-015) ยืนยันแล้ว — ยกข้อมูลจาก HV-003
  * - HV-005  30140 ประจำปี รับรองแล้ว แบบเข้าบ้านไม่ได้ (เหตุผล + ภาพคู่ป้ายโรงเรียน)
  * - HV-006  30152 ประจำปี ยืนยันแล้ว มีร่างบันทึกค้างไว้
+ * - HV-0568-118  30118 ประจำปี 2568 (รับรองแล้ว โดยครูวิชัย ครูประจำชั้นคนเดิม)
  * 30160 / 30171 / 30183 ยังไม่ได้นัดเยี่ยมบ้านประจำปี
  */
 
@@ -14,6 +15,16 @@ import type { HomeVisitAppointment, HomeVisitForm, HomeVisitRecord } from "../ty
 import { USER } from "./core";
 
 export const appointments: HomeVisitAppointment[] = [
+  {
+    appointmentId: "HV-0568-118",
+    studentId: "30118",
+    teacherId: USER.wichai,
+    academicYear: 2568,
+    visitType: "annual",
+    caseId: null,
+    proposedDate: "2568-12-10T15:30:00",
+    status: "completed",
+  },
   {
     appointmentId: "HV-000",
     studentId: "30125",
@@ -195,6 +206,27 @@ const form30140: HomeVisitForm = {
 };
 
 export const homeVisitRecords: HomeVisitRecord[] = [
+  {
+    recordId: "HVR-0568-118",
+    appointmentId: "HV-0568-118",
+    studentId: "30118",
+    form: form30118,
+    livesWith: "บิดาและมารดา",
+    informantName: "นายสมชาย ตั้งใจเรียน",
+    informantRelation: "บิดา",
+    cannotAccessHome: false,
+    cannotAccessReason: "",
+    photos: [
+      { photoId: "PH-0568-1", photoType: "exterior", fileUrl: "mock://home-visit/HVR-0568-118-exterior.jpg", uploadedAt: "2568-12-10T16:00:00" },
+      { photoId: "PH-0568-2", photoType: "interior", fileUrl: "mock://home-visit/HVR-0568-118-interior.jpg", uploadedAt: "2568-12-10T16:05:00" },
+    ],
+    householdIncomeAvg: 3025,
+    travelDistanceKm: 3.5,
+    recordedBy: USER.wichai,
+    updatedAt: "2568-12-10T17:30:00",
+    signedBy: USER.wichai,
+    signedAt: "2568-12-10T17:30:00",
+  },
   {
     recordId: "HVR-000",
     appointmentId: "HV-000",

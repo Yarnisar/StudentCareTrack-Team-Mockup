@@ -17,8 +17,6 @@ export function RiskBadge({
   className,
 }: {
   group: DimensionResult;
-  /** คงไว้ให้หน้าที่ยังส่งมา — ข้อความสั้นอยู่แล้วจึงไม่มีผล */
-  short?: boolean;
   className?: string;
 }) {
   return (

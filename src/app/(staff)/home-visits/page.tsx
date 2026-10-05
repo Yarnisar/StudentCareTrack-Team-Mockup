@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { CalendarClock, Check, Eye, Plus, XCircle } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { AnnualVisitSummary } from "@/components/home-visit/annual-visit-summary";
@@ -13,7 +13,7 @@ import { LinkButton } from "@/components/ui/link-button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { useStore } from "@/lib/store";
+import { useSensitiveView, useStore } from "@/lib/store";
 import { formatThaiDate, formatThaiTime } from "@/lib/format";
 import { fromDateInputs, toDateInputs } from "@/lib/home-visit-form";
 import {
@@ -35,7 +35,6 @@ type Panel = "none" | "reschedule" | "cancel";
 
 export default function HomeVisitsPage() {
   const store = useStore();
-  const { logSensitiveView } = store;
   const windowOpen = store.isWindowOpen("home_visit");
 
   // ครูประจำชั้น/แอดมินเห็นนัดของนักเรียนในความดูแล · ครูประจำชั้นคนเดิมเห็นเฉพาะนัดที่ตัวเองสร้าง
@@ -52,9 +51,7 @@ export default function HomeVisitsPage() {
   const student = appointment ? store.getStudent(appointment.studentId) : undefined;
 
   // แอดมิน/ผู้บริหารเปิดข้อมูลเยี่ยมบ้านรายคน → VIEW_SENSITIVE (ข้ามเองถ้าไม่ใช่แอดมิน)
-  useEffect(() => {
-    if (selected) logSensitiveView("home_visit_appointments", selected, { note: "เปิดข้อมูลการเยี่ยมบ้าน" });
-  }, [selected, logSensitiveView]);
+  useSensitiveView("home_visit_appointments", selected, { note: "เปิดข้อมูลการเยี่ยมบ้าน" });
 
   return (
     <>

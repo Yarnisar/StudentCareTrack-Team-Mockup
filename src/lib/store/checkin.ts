@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { checkinLogs as seedCheckins, SYSTEM_USER_ID } from "../mock-data";
 import { isLateArrival } from "../rules";
-import { nowThaiIso, thaiDateOf } from "../format";
+import { formatThaiTime, nowThaiIso, thaiDateOf } from "../format";
 import { LATE_RULE_ID, type BehaviorRecord, type CheckinLog, type Student } from "../types";
 import type { BehaviorSlice } from "./behavior";
 import type { PlatformSlice } from "./platform";
@@ -69,15 +69,9 @@ export function useCheckinSlice(base: PlatformSlice, behavior: BehaviorSlice): C
         };
       }
 
-      const now = new Date();
       // ต้นแบบ: อนุญาตให้จำลองเวลาสแกน (HH:MM) เพื่อสาธิตเงื่อนไขการมาสายได้ทุกช่วงเวลา
-      if (simulatedTime) {
-        const [h, m] = simulatedTime.split(":").map(Number);
-        now.setHours(h, m, 0, 0);
-      }
-      const late = isLateArrival(now, base.schoolSettings.schoolStartTime);
-      const pad = (n: number) => String(n).padStart(2, "0");
-      const stamp = nowThaiIso(`${pad(now.getHours())}:${pad(now.getMinutes())}`);
+      const stamp = nowThaiIso(simulatedTime);
+      const late = isLateArrival(stamp, base.schoolSettings.schoolStartTime);
       const log: CheckinLog = {
         logId: nextId("CI"),
         studentId,
@@ -95,7 +89,7 @@ export function useCheckinSlice(base: PlatformSlice, behavior: BehaviorSlice): C
         ? behavior.addSystemBehaviorRecord({
             studentId,
             ruleId: LATE_RULE_ID,
-            description: `บันทึกอัตโนมัติจากการสแกน QR เวลา ${stamp.split("T")[1].slice(0, 5)} น.`,
+            description: `บันทึกอัตโนมัติจากการสแกน QR เวลา ${formatThaiTime(stamp)}`,
             occurredAt: stamp,
             recordedBy: SYSTEM_USER_ID,
             source: "qr_checkin",

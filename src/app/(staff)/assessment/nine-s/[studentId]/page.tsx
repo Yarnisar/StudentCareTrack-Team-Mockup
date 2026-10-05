@@ -109,8 +109,12 @@ export default function NineSPage({ params }: { params: Promise<{ studentId: str
                     {saved.record.result === "needs_care"
                       ? saved.sdqOpened > 0
                         ? `ระบบเปิดแบบ SDQ ครั้งที่ ${plan.round} ให้ ${saved.sdqOpened} ฉบับ และแจ้งผู้ปกครอง/นักเรียนแล้ว`
-                        : `แบบ SDQ ครั้งที่ ${plan.round} เปิดไว้แล้ว`
-                      : plan.sdqRequired
+                        : plan.next === "wait_sdq_window"
+                          ? `ต้องทำ SDQ ครั้งที่ ${plan.round} — รอเปิดช่วงทำ SDQ แล้วจึงเปิดแบบประเมินจากหน้าการประเมิน`
+                          : `แบบ SDQ ครั้งที่ ${plan.round} เปิดไว้แล้ว`
+                      : saved.sdqVoided > 0
+                        ? `ผลปกติ — ยกเลิกแบบ SDQ ที่ยังไม่มีผู้ตอบ ${saved.sdqVoided} ฉบับ`
+                        : plan.sdqRequired
                         ? `ผลปกติ — โรงเรียนกำหนดให้ทำ SDQ ครั้งที่ ${plan.round} ด้วย`
                         : "ผลปกติ — ไม่ต้องทำ SDQ รอบนี้"}
                   </p>

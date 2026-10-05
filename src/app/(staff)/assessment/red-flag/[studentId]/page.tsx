@@ -102,8 +102,16 @@ export default function RedFlagPage({ params }: { params: Promise<{ studentId: s
                   </h2>
                   <p className="mt-1 text-sm text-muted-foreground">
                     {saved.record.result === "needs_care"
-                      ? `ข้าม 9S · ${saved.sdqOpened > 0 ? `ระบบเปิดแบบ SDQ ครั้งที่ ${plan.round} ให้ ${saved.sdqOpened} ฉบับ และแจ้งผู้ปกครอง/นักเรียนแล้ว` : `แบบ SDQ ครั้งที่ ${plan.round} เปิดไว้แล้ว`}`
-                      : "ทำแบบประเมิน 9S ต่อ"}
+                      ? `ข้าม 9S · ${
+                          saved.sdqOpened > 0
+                            ? `ระบบเปิดแบบ SDQ ครั้งที่ ${plan.round} ให้ ${saved.sdqOpened} ฉบับ และแจ้งผู้ปกครอง/นักเรียนแล้ว`
+                            : plan.next === "wait_sdq_window"
+                              ? `ต้องทำ SDQ ครั้งที่ ${plan.round} — รอเปิดช่วงทำ SDQ แล้วจึงเปิดแบบประเมินจากหน้าการประเมิน`
+                              : `แบบ SDQ ครั้งที่ ${plan.round} เปิดไว้แล้ว`
+                        }`
+                      : saved.sdqVoided > 0
+                        ? `ทำแบบประเมิน 9S ต่อ · ยกเลิกแบบ SDQ ที่ยังไม่มีผู้ตอบ ${saved.sdqVoided} ฉบับ`
+                        : "ทำแบบประเมิน 9S ต่อ"}
                   </p>
                 </div>
                 <CaseTriggerOutcome studentId={studentId} result={saved.trigger} />

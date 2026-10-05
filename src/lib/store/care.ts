@@ -213,9 +213,13 @@ export function useCareSlice(base: PlatformSlice, behavior: BehaviorSlice): Care
       return working.sugs.find((s) => s.suggestionId === id);
     };
 
+    /** เปลี่ยนสถานะคำแนะนำ + audit (คำแนะนำจากคะแนนความประพฤติคำนวณสด ไม่มีแถวให้แก้ แต่ยัง audit) */
     const setSuggestionStatus = (id: string, status: CaseSuggestion["status"]) => {
-      if (id.startsWith(BEHAVIOR_SUGGESTION_PREFIX)) return;
-      commitSuggestions(working.sugs.map((s) => (s.suggestionId === id ? { ...s, status } : s)));
+      const before = findSuggestion(id)?.status ?? "pending";
+      if (!id.startsWith(BEHAVIOR_SUGGESTION_PREFIX)) {
+        commitSuggestions(working.sugs.map((s) => (s.suggestionId === id ? { ...s, status } : s)));
+      }
+      base.logAudit("UPDATE", "case_suggestions", id, { before: { status: before }, after: { status } });
     };
 
     /* ----------------------------- เหตุ ----------------------------- */
@@ -412,9 +416,8 @@ export function useCareSlice(base: PlatformSlice, behavior: BehaviorSlice): Care
       if (s.source === "behavior" && suggestionId.startsWith(BEHAVIOR_SUGGESTION_PREFIX)) {
         const key = `${s.studentId}:${behavior.behaviorScoreOf(s.studentId)}`;
         setDismissedBehavior((prev) => [...prev, key]);
-      } else {
-        setSuggestionStatus(suggestionId, "dismissed");
       }
+      setSuggestionStatus(suggestionId, "dismissed");
     };
 
     const addManualTrigger: CareSlice["addManualTrigger"] = (caseId, summary) => {
