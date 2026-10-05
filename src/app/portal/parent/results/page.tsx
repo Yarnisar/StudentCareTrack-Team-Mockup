@@ -6,21 +6,29 @@ import { SdqForm } from "@/components/assessment/sdq-form";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useStore } from "@/lib/store";
+import { usePortalStudent } from "@/lib/portal";
+import { ChildSwitcher } from "@/components/portal/child-switcher";
 import { dcCriteria, CURRENT_TERM } from "@/lib/mock-data";
 import { formatThaiDate } from "@/lib/format";
 import { DC_LEVEL_LABEL, SDQ_LEVEL_LABEL, SdqRater } from "@/lib/types";
 
-const DEMO_STUDENT_ID = "30125";
 
+/** เปลี่ยนบุตรหลานแล้วเริ่มฟอร์มใหม่ ไม่ให้ค่าที่กรอกค้างไปอยู่กับอีกคน */
 export default function ParentResultsPage() {
+  const { studentId } = usePortalStudent();
+  return <ParentResultsPageContent key={studentId ?? "none"} />;
+}
+
+function ParentResultsPageContent() {
   const store = useStore();
+  const portalStudentId = usePortalStudent().studentId ?? "";
   const [takingSdq, setTakingSdq] = useState(false);
 
-  const student = store.getStudent(DEMO_STUDENT_ID);
-  const sdqSet = store.sdqOf(DEMO_STUDENT_ID).filter((s) => s.round === 1);
+  const student = store.getStudent(portalStudentId);
+  const sdqSet = store.sdqOf(portalStudentId).filter((s) => s.round === 1);
   const parentSdq = sdqSet.find((s) => s.rater === "parent");
-  const dc = store.dcSummaryOf(DEMO_STUDENT_ID);
-  const behaviors = store.behaviorOf(DEMO_STUDENT_ID).slice(0, 4);
+  const dc = store.dcSummaryOf(portalStudentId);
+  const behaviors = store.behaviorOf(portalStudentId).slice(0, 4);
 
   if (!student) return null;
 
@@ -32,12 +40,13 @@ export default function ParentResultsPage() {
         role="parent"
         back="/portal/parent/results"
       >
-        <div className="p-5">
+        <div className="space-y-4 p-5">
+          <ChildSwitcher />
           <SdqForm
             rater="parent"
             layout="mobile"
             onSubmit={(answers) => {
-              store.saveSdq(DEMO_STUDENT_ID, "parent", answers);
+              store.saveSdq(portalStudentId, "parent", answers);
               setTakingSdq(false);
             }}
           />
@@ -54,6 +63,7 @@ export default function ParentResultsPage() {
       back="/portal/parent"
     >
       <div className="space-y-4 p-5">
+        <ChildSwitcher />
         <Card>
           <CardContent className="p-5">
             <h2 className="mb-3 text-[14.5px] font-bold">

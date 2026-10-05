@@ -5,15 +5,16 @@ import { MobileShell } from "@/components/layout/mobile-shell";
 import { Card, CardContent } from "@/components/ui/card";
 import { SCHOOL_NAME } from "@/lib/mock-data";
 import { useStore } from "@/lib/store";
+import { usePortalStudent } from "@/lib/portal";
 import { formatThaiDate, formatThaiTime } from "@/lib/format";
 
 /** ต้นแบบ: ผู้ใช้ที่ล็อกอินคือนักเรียนคนแรกในระบบ */
-const DEMO_STUDENT_ID = "30125";
 
 export default function StudentCardPage() {
   const store = useStore();
-  const student = store.getStudent(DEMO_STUDENT_ID);
-  const history = store.checkins.filter((c) => c.studentId === DEMO_STUDENT_ID).slice(0, 3);
+  const portalStudentId = usePortalStudent().studentId ?? "";
+  const student = store.getStudent(portalStudentId);
+  const history = store.checkins.filter((c) => c.studentId === portalStudentId).slice(0, 3);
 
   if (!student) return null;
 

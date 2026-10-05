@@ -5,26 +5,28 @@ import { ChevronRight, ClipboardList, Home } from "lucide-react";
 import { MobileShell } from "@/components/layout/mobile-shell";
 import { Card, CardContent } from "@/components/ui/card";
 import { useStore } from "@/lib/store";
+import { usePortalStudent } from "@/lib/portal";
+import { ChildSwitcher } from "@/components/portal/child-switcher";
 import { formatThaiDate, formatThaiTime } from "@/lib/format";
 import { SDQ_LEVEL_LABEL } from "@/lib/types";
 
-const DEMO_STUDENT_ID = "30125";
 
 export default function ParentHomePage() {
   const store = useStore();
-  const student = store.getStudent(DEMO_STUDENT_ID);
+  const portalStudentId = usePortalStudent().studentId ?? "";
+  const student = store.getStudent(portalStudentId);
   const appointment = store.appointments.find(
-    (a) => a.studentId === DEMO_STUDENT_ID && a.status !== "completed"
+    (a) => a.studentId === portalStudentId && a.status !== "completed"
   );
   const parentSdq = store
-    .sdqOf(DEMO_STUDENT_ID)
+    .sdqOf(portalStudentId)
     .find((s) => s.rater === "parent" && s.round === 1);
   const teacherSdq = store
-    .sdqOf(DEMO_STUDENT_ID)
+    .sdqOf(portalStudentId)
     .find((s) => s.rater === "teacher" && s.round === 1);
-  const dc = store.dcSummaryOf(DEMO_STUDENT_ID);
+  const dc = store.dcSummaryOf(portalStudentId);
   const guardian =
-    store.currentUser.role === "parent" ? store.currentUser : store.guardiansOf(DEMO_STUDENT_ID)[0]?.user;
+    store.currentUser.role === "parent" ? store.currentUser : store.guardiansOf(portalStudentId)[0]?.user;
   const dcLevels: number[] = dc
     ? Object.values(dc.levels).flatMap((l) => (l == null ? [] : [l as number]))
     : [];
@@ -45,6 +47,7 @@ export default function ParentHomePage() {
       brand
     >
       <div className="space-y-4 p-5">
+        <ChildSwitcher />
         <Card>
           <CardContent className="flex items-center gap-3 p-4">
             <div className="flex size-12 items-center justify-center rounded-xl bg-muted text-base font-bold text-muted-foreground">

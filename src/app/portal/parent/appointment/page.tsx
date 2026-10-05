@@ -9,16 +9,24 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useStore } from "@/lib/store";
+import { usePortalStudent } from "@/lib/portal";
+import { ChildSwitcher } from "@/components/portal/child-switcher";
 import { formatThaiDate, formatThaiTime } from "@/lib/format";
 import { APPOINTMENT_STATUS_LABEL } from "@/lib/types";
 
-const DEMO_STUDENT_ID = "30125";
 
+/** เปลี่ยนบุตรหลานแล้วเริ่มฟอร์มใหม่ ไม่ให้ค่าที่กรอกค้างไปอยู่กับอีกคน */
 export default function ParentAppointmentPage() {
+  const { studentId } = usePortalStudent();
+  return <ParentAppointmentPageContent key={studentId ?? "none"} />;
+}
+
+function ParentAppointmentPageContent() {
   const store = useStore();
-  const student = store.getStudent(DEMO_STUDENT_ID);
+  const portalStudentId = usePortalStudent().studentId ?? "";
+  const student = store.getStudent(portalStudentId);
   const appointment = store.appointments.find(
-    (a) => a.studentId === DEMO_STUDENT_ID && a.status !== "completed"
+    (a) => a.studentId === portalStudentId && a.status !== "completed"
   );
 
   const [phone, setPhone] = useState(appointment?.guardianPhone ?? "");
@@ -29,7 +37,10 @@ export default function ParentAppointmentPage() {
   if (!student || !appointment) {
     return (
       <MobileShell title="นัดหมายเยี่ยมบ้าน" role="parent" back="/portal/parent">
-        <p className="p-6 text-sm text-muted-foreground">ยังไม่มีนัดหมายเยี่ยมบ้านในขณะนี้</p>
+        <div className="space-y-4 p-5">
+          <ChildSwitcher />
+          <p className="text-sm text-muted-foreground">ยังไม่มีนัดหมายเยี่ยมบ้านในขณะนี้</p>
+        </div>
       </MobileShell>
     );
   }
@@ -39,6 +50,7 @@ export default function ParentAppointmentPage() {
   return (
     <MobileShell title="นัดหมายเยี่ยมบ้าน" role="parent" back="/portal/parent">
       <div className="space-y-4 p-5">
+        <ChildSwitcher />
         <Card>
           <CardContent className="p-5">
             <div className="flex items-center justify-between">

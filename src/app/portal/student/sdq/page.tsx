@@ -7,12 +7,13 @@ import { SdqForm } from "@/components/assessment/sdq-form";
 import { LinkButton } from "@/components/ui/link-button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useStore } from "@/lib/store";
+import { usePortalStudent } from "@/lib/portal";
 import { SDQ_LEVEL_LABEL, SdqAssessment } from "@/lib/types";
 
-const DEMO_STUDENT_ID = "30125";
 
 export default function StudentSdqPage() {
   const store = useStore();
+  const portalStudentId = usePortalStudent().studentId ?? "";
   const [saved, setSaved] = useState<SdqAssessment | null>(null);
 
   return (
@@ -51,7 +52,7 @@ export default function StudentSdqPage() {
           <SdqForm
             rater="student"
             layout="mobile"
-            onSubmit={(answers) => setSaved(store.saveSdq(DEMO_STUDENT_ID, "student", answers))}
+            onSubmit={(answers) => setSaved(store.saveSdq(portalStudentId, "student", answers))}
           />
         )}
       </div>
