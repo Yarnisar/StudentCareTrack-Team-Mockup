@@ -15,6 +15,7 @@ import { useStore } from "@/lib/store";
 import {
   OPERATING_ACTIVITIES,
   OPERATING_ACTIVITY_LABEL,
+  BEHAVIOR_SEVERITY_LABEL,
   type BehaviorRule,
   type OperatingActivity,
   type OperatingWindow,
@@ -125,12 +126,8 @@ export const SEVERITY_ORDER: BehaviorRule["severity"][] = [
   "positive",
 ];
 
-export const SEVERITY_LABEL: Record<BehaviorRule["severity"], string> = {
-  minor: "เล็กน้อย",
-  moderate: "ปานกลาง",
-  severe: "ร้ายแรง",
-  positive: "คะแนนบวก",
-};
+/** ป้ายระดับตามข้อกำหนด — แหล่งเดียวอยู่ที่ lib/types (BEHAVIOR_SEVERITY_LABEL) */
+export const SEVERITY_LABEL: Record<BehaviorRule["severity"], string> = BEHAVIOR_SEVERITY_LABEL;
 
 export const DEFAULT_DELTA: Record<BehaviorRule["severity"], number> = {
   minor: -1,

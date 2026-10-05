@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { AlertTriangle, QrCode, ScanLine } from "lucide-react";
+import { AlertTriangle, CheckCircle2, QrCode, ScanLine } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -31,8 +31,10 @@ export default function CheckinPage() {
     setCode("");
   };
 
-  const today = store.checkins.slice(0, 8);
-  const lateToday = store.checkins.filter((c) => c.isLate).length;
+  const todayLogs = store.checkinsOn();
+  const recent = store.checkins.slice(0, 8);
+  const lateToday = todayLogs.filter((c) => c.isLate).length;
+  const threshold = store.schoolSettings.lateAlertThreshold;
 
   return (
     <>
@@ -46,7 +48,7 @@ export default function CheckinPage() {
           <div className="space-y-4">
             <div className="grid grid-cols-3 gap-4">
               <MiniStat label="เวลาเข้าเรียน" value={`${startTime} น.`} />
-              <MiniStat label="สแกนแล้ววันนี้" value={`${store.checkins.length} คน`} />
+              <MiniStat label="สแกนแล้ววันนี้" value={`${todayLogs.length} คน`} />
               <MiniStat label="มาสายวันนี้" value={`${lateToday} คน`} warn />
             </div>
 
@@ -123,7 +125,11 @@ export default function CheckinPage() {
             {last && (
               <Card
                 className={
-                  last.isLate ? "border-risk-amber bg-risk-amber-bg" : "border-risk-green bg-risk-green-bg"
+                  last.alreadyCheckedIn
+                    ? "border-border bg-muted"
+                    : last.isLate
+                      ? "border-risk-amber bg-risk-amber-bg"
+                      : "border-risk-green bg-risk-green-bg"
                 }
               >
                 <CardContent className="p-5">
@@ -140,29 +146,37 @@ export default function CheckinPage() {
                     </div>
                     <span
                       className={
-                        last.isLate
-                          ? "rounded-full bg-white px-3 py-1 text-[12.5px] font-bold text-risk-amber"
-                          : "rounded-full bg-white px-3 py-1 text-[12.5px] font-bold text-risk-green"
+                        last.alreadyCheckedIn
+                          ? "rounded-full bg-white px-3 py-1 text-[12.5px] font-bold text-muted-foreground"
+                          : last.isLate
+                            ? "rounded-full bg-white px-3 py-1 text-[12.5px] font-bold text-risk-amber"
+                            : "rounded-full bg-white px-3 py-1 text-[12.5px] font-bold text-risk-green"
                       }
                     >
-                      {last.isLate ? "มาสาย" : "ตรงเวลา"}
+                      {last.alreadyCheckedIn ? "เช็คอินแล้ว" : last.isLate ? "มาสาย" : "ตรงเวลา"}
                     </span>
                   </div>
 
-                  {last.isLate && (
+                  {last.alreadyCheckedIn && (
+                    <p className="mt-3 flex items-center gap-2 rounded-lg bg-white/70 px-3 py-2 text-[12.5px]">
+                      <CheckCircle2 className="size-4 shrink-0 text-muted-foreground" />
+                      เช็คอินแล้ววันนี้เมื่อ {formatThaiTime(last.log.scannedAt)} (
+                      {last.isLate ? "มาสาย" : "ตรงเวลา"}) — เช็คอินได้วันละ 1 ครั้ง ไม่มีการบันทึกซ้ำ
+                    </p>
+                  )}
+
+                  {!last.alreadyCheckedIn && last.isLate && (
                     <p className="mt-3 rounded-lg bg-white/70 px-3 py-2 text-[12.5px]">
-                      สร้างบันทึกความประพฤติ &quot;มาสาย&quot; อัตโนมัติแล้ว · มาสายครั้งที่{" "}
-                      {last.lateCountThisMonth} ในเดือนนี้
+                      สร้างบันทึก &quot;มาสาย&quot; รอครูประจำชั้นยืนยันแล้ว — ยังไม่มีผลกับคะแนนจนกว่าจะยืนยัน
+                      (หรือครบ {store.schoolSettings.pendingAutoConfirmDays} วันทำการ) · มาสายที่ยืนยันแล้วเดือนนี้{" "}
+                      {last.lateCountThisMonth} ครั้ง
                     </p>
                   )}
 
                   {last.exceededThreshold && (
                     <p className="mt-2 flex items-center gap-2 rounded-lg bg-risk-red-bg px-3 py-2 text-[12.5px] font-semibold text-risk-red">
                       <AlertTriangle className="size-4" />
-                      มาสายครบเกณฑ์ {store.schoolSettings.lateAlertThreshold} ครั้งต่อเดือน
-                      {last.notifiedHomeroom.length > 0
-                        ? ` — แจ้งเตือนครูประจำชั้นแล้ว ${last.notifiedHomeroom.length} คน`
-                        : " — แจ้งเตือนครูประจำชั้นไปแล้วเมื่อครบเกณฑ์"}
+                      มาสาย (ยืนยันแล้ว) ครบเกณฑ์ {threshold} ครั้งต่อเดือน — ระบบแจ้งครูประจำชั้นเมื่อครบเกณฑ์
                     </p>
                   )}
                 </CardContent>
@@ -170,8 +184,9 @@ export default function CheckinPage() {
             )}
 
             <div className="rounded-xl border border-blue-200 bg-accent px-4 py-3 text-[13.5px] text-accent-foreground">
-              การสแกนหลังเวลา {startTime} น. ระบบจะสร้างบันทึกความประพฤติ <b>&quot;มาสาย&quot;</b>{" "}
-              อัตโนมัติ และนับรวมในมิติพฤติกรรมของการคัดกรอง
+              เช็คอินวันละ 1 ครั้ง · การสแกนหลังเวลา {startTime} น. ระบบจะสร้างบันทึก <b>&quot;มาสาย&quot;</b>{" "}
+              รอครูประจำชั้นยืนยัน เมื่อยืนยันแล้ว (หรือครบ {store.schoolSettings.pendingAutoConfirmDays} วันทำการ)
+              จึงหักคะแนนและนับรวมในมิติพฤติกรรมของการคัดกรอง ครบ {threshold} ครั้งต่อเดือนระบบแจ้งครูประจำชั้น
             </div>
           </div>
 
@@ -188,7 +203,7 @@ export default function CheckinPage() {
               </div>
 
               <div className="space-y-2.5">
-                {today.map((log) => {
+                {recent.map((log) => {
                   const student = store.getStudent(log.studentId);
                   return (
                     <div
