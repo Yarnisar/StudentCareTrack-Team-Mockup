@@ -22,7 +22,7 @@ export default function ParentAppointmentPage() {
   );
 
   const [phone, setPhone] = useState(appointment?.guardianPhone ?? "");
-  const [caretaker, setCaretaker] = useState(appointment?.caretakerName ?? "");
+  const [caretaker, setCaretaker] = useState(appointment?.awayStayWith ?? "");
   const [note, setNote] = useState(appointment?.guardianNote ?? "");
   const [sent, setSent] = useState(false);
 
@@ -105,7 +105,7 @@ export default function ParentAppointmentPage() {
                 <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="caretaker">ผู้ดูแลหลักกรณีไม่อยู่บ้าน</Label>
+                <Label htmlFor="caretaker">เมื่อผู้ปกครองไม่อยู่บ้าน นักเรียนอยู่กับใคร</Label>
                 <Input
                   id="caretaker"
                   value={caretaker}
@@ -129,7 +129,7 @@ export default function ParentAppointmentPage() {
                 onClick={() => {
                   store.saveGuardianInfo(appointment.appointmentId, {
                     guardianPhone: phone,
-                    caretakerName: caretaker,
+                    awayStayWith: caretaker,
                     guardianNote: note,
                   });
                   setSent(true);

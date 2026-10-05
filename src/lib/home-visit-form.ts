@@ -3,6 +3,15 @@
  * อ้างอิงแบบฟอร์มจริงของ สพฐ. ซึ่งรวมการคัดกรองนักเรียนยากจนไว้ด้วยกัน
  */
 
+import type {
+  HomeVisitForm,
+  HomeVisitPhoto,
+  HomeVisitPhotoType,
+  HomeVisitRecordInput,
+  HouseholdMember,
+  IncomeKey,
+} from "./types";
+
 export interface CheckboxOption {
   id: string;
   label: string;
@@ -202,36 +211,276 @@ export const INFORMANT_OPTIONS = [
   "ทวด", "พ่อเลี้ยง", "แม่เลี้ยง",
 ];
 
-/** ประเภทภาพถ่ายที่แนบ (หน้า 4) */
-export const PHOTO_TYPE_OPTIONS: CheckboxOption[] = [
-  { id: "parents_home", label: "บ้านที่อาศัยอยู่กับพ่อแม่ (เป็นเจ้าของ / เช่า)" },
-  { id: "relative_home", label: "บ้านของญาติ / ผู้ปกครองที่ไม่ใช่ญาติ" },
-  { id: "institution", label: "บ้านหรือที่พักประเภท วัด มูลนิธิ หอพัก โรงงาน อยู่กับนายจ้าง" },
-  {
-    id: "school_sign",
-    label: "ภาพนักเรียนและป้ายชื่อโรงเรียน เนื่องจากถ่ายภาพบ้านไม่ได้",
-  },
+/** ผู้ที่นักเรียนอาศัยอยู่ด้วยจริง (ข้อมูลประกอบ ไม่เปลี่ยนสิทธิ์ของผู้ปกครองในระบบ) */
+export const LIVES_WITH_OPTIONS: CheckboxOption[] = [
+  { id: "บิดาและมารดา", label: "บิดาและมารดา" },
+  { id: "บิดา", label: "บิดา" },
+  { id: "มารดา", label: "มารดา" },
+  { id: "ปู่ / ย่า / ตา / ยาย", label: "ปู่ / ย่า / ตา / ยาย" },
+  { id: "ญาติ", label: "ญาติ" },
+  { id: "อื่น ๆ (วัด มูลนิธิ หอพัก นายจ้าง)", label: "อื่น ๆ (วัด มูลนิธิ หอพัก นายจ้าง)" },
 ];
 
+/** ลำดับช่องภาพถ่าย (หน้า 4) — กรณีเข้าบ้านไม่ได้ใช้ภาพคู่ป้ายโรงเรียนแทน */
+export const PHOTO_SLOTS_HOME: HomeVisitPhotoType[] = ["exterior", "interior"];
+export const PHOTO_SLOTS_INACCESSIBLE: HomeVisitPhotoType[] = ["with_signboard"];
+
 /** ประเภทรายได้ตามแบบฟอร์ม (บาท/เดือน) */
-export const INCOME_COLUMNS = [
+export const INCOME_COLUMNS: readonly { key: IncomeKey; label: string }[] = [
   { key: "wage", label: "ค่าจ้าง / เงินเดือน" },
   { key: "agriculture", label: "ทางการเกษตร (หลังหักค่าใช้จ่าย)" },
   { key: "business", label: "ธุรกิจส่วนตัว (หลังหักค่าใช้จ่าย)" },
   { key: "welfare", label: "สวัสดิการจากรัฐ / เอกชน" },
   { key: "other", label: "รายได้จากแหล่งอื่น" },
-] as const;
+]
 
-export type IncomeKey = (typeof INCOME_COLUMNS)[number]["key"];
-
-export interface HouseholdMemberRow {
-  id: string;
-  relation: string;
-  age: number | "";
-  disability: boolean;
-  income: Record<IncomeKey, number>;
-}
+export type { IncomeKey };
+export type HouseholdMemberRow = HouseholdMember;
 
 export function memberTotal(row: HouseholdMemberRow): number {
   return INCOME_COLUMNS.reduce((sum, col) => sum + (row.income[col.key] || 0), 0);
+}
+
+export function perCapitaIncome(members: HouseholdMember[]): number {
+  if (members.length === 0) return 0;
+  const total = members.reduce((sum, m) => sum + memberTotal(m), 0);
+  return Math.round(total / members.length);
+}
+
+const ZERO_INCOME: Record<IncomeKey, number> = { wage: 0, agriculture: 0, business: 0, welfare: 0, other: 0 };
+
+export function emptyMember(id: string): HouseholdMember {
+  return { id, relation: "", age: "", disability: false, income: { ...ZERO_INCOME } };
+}
+
+export function emptyHomeVisitForm(): HomeVisitForm {
+  return {
+    guardianOccupation: "",
+    guardianEducation: "",
+    members: [emptyMember("m1")],
+    dependencies: [],
+    housingType: "",
+    housingConditions: [],
+    vehicles: {},
+    farmland: "",
+    hoursTogether: "",
+    relations: {},
+    caretakerWhenAway: "",
+    supportRequests: [],
+    welfareReceived: [],
+    guardianConcern: "",
+    healthRisks: [],
+    welfareRisks: [],
+    travelKm: "",
+    travelHours: "",
+    travelMinutes: "",
+    travelMode: "",
+    duties: [],
+    hobbies: [],
+    substances: [],
+    violence: [],
+    sexual: [],
+    gaming: [],
+    internet: "",
+    devices: [],
+  };
+}
+
+export function emptyRecordInput(): HomeVisitRecordInput {
+  return {
+    form: emptyHomeVisitForm(),
+    livesWith: "",
+    informantName: "",
+    informantRelation: "",
+    cannotAccessHome: false,
+    cannotAccessReason: "",
+    photos: [],
+  };
+}
+
+/** ข้อมูลที่ยกมาจากการเยี่ยมครั้งก่อน: สถานะครัวเรือนที่ไม่ค่อยเปลี่ยน (ไม่ยกความเสี่ยงรายปี ภาพ หรือการรับรอง) */
+export const CARRIED_FORM_KEYS = [
+  "guardianOccupation",
+  "guardianEducation",
+  "members",
+  "dependencies",
+  "housingType",
+  "housingConditions",
+  "vehicles",
+  "farmland",
+  "hoursTogether",
+  "caretakerWhenAway",
+  "travelKm",
+  "travelHours",
+  "travelMinutes",
+  "travelMode",
+  "duties",
+  "internet",
+] as const satisfies readonly (keyof HomeVisitForm)[];
+
+export function inputFromPrevious(previous: HomeVisitRecordInput): HomeVisitRecordInput {
+  const form = emptyHomeVisitForm();
+  const carried = Object.fromEntries(
+    CARRIED_FORM_KEYS.map((k) => [k, structuredClone(previous.form[k])])
+  ) as Partial<HomeVisitForm>;
+  return { ...emptyRecordInput(), form: { ...form, ...carried }, livesWith: previous.livesWith };
+}
+
+/** รายการความเสี่ยงที่พบ (ข้อ 6) เป็นข้อความ สำหรับสรุปผล */
+export function riskFindingLabels(form: HomeVisitForm): string[] {
+  const groups: [string[], CheckboxOption[]][] = [
+    [form.healthRisks, HEALTH_RISK_OPTIONS],
+    [form.welfareRisks, WELFARE_RISK_OPTIONS],
+    [form.substances, SUBSTANCE_OPTIONS],
+    [form.violence, VIOLENCE_OPTIONS],
+    [form.sexual, SEXUAL_OPTIONS],
+    [form.gaming, GAMING_OPTIONS],
+    [form.devices, DEVICE_OPTIONS],
+  ];
+  return groups.flatMap(([ids, opts]) =>
+    ids.map((id) => opts.find((o) => o.id === id)?.label ?? id)
+  );
+}
+
+/**
+ * ตรวจก่อนรับรอง — คืนรายการข้อความที่ยังขาด (ว่าง = รับรองได้)
+ * เข้าบ้านไม่ได้: ต้องมีเหตุผลและภาพคู่ป้ายโรงเรียน
+ */
+export function signBlockers(input: HomeVisitRecordInput): string[] {
+  const issues: string[] = [];
+  if (!input.informantRelation) issues.push("เลือกผู้ให้ข้อมูลนักเรียน");
+  if (input.cannotAccessHome) {
+    if (!input.cannotAccessReason.trim()) issues.push("ระบุเหตุผลที่เข้าเยี่ยมที่บ้านไม่ได้");
+    if (!input.photos.some((p) => p.photoType === "with_signboard"))
+      issues.push("แนบภาพนักเรียนคู่ป้ายชื่อโรงเรียน");
+  } else if (!input.photos.some((p) => p.photoType === "exterior")) {
+    issues.push("แนบภาพสภาพบ้านนักเรียน");
+  }
+  return issues;
+}
+
+export function mockPhoto(photoType: HomeVisitPhotoType, uploadedAt: string, seq: number): HomeVisitPhoto {
+  return {
+    photoId: `PH-${seq}-${photoType}`,
+    photoType,
+    fileUrl: `mock://home-visit/${photoType}-${seq}.jpg`,
+    uploadedAt,
+  };
+}
+
+/* ------------------------------------------------------------------ */
+/* เครื่องมือสาธิต: กรอกข้อมูลอัตโนมัติ                                  */
+/* ------------------------------------------------------------------ */
+
+function hashOf(text: string): number {
+  let h = 0;
+  for (const ch of text) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return h;
+}
+
+/**
+ * ข้อมูลตัวอย่างสำหรับปุ่ม "กรอกข้อมูลอัตโนมัติ" ของแผงสาธิต (pure, ผลเหมือนเดิมทุกครั้งต่อนักเรียนคนเดิม)
+ * - มีผลเยี่ยมครั้งก่อน: ยกข้อมูลครัวเรือนเดิมมา แล้วเติมส่วนที่เหลือ
+ * - ไม่มี: สร้างข้อมูลตัวอย่างที่สมจริงจากรหัสนักเรียน
+ * ไม่รับรองให้ — ครูยังต้องตรวจและกดรับรองเอง
+ */
+export function buildDemoAutofill({
+  studentId,
+  now,
+  previous,
+  informant,
+}: {
+  studentId: string;
+  now: string;
+  previous?: HomeVisitRecordInput;
+  /** ผู้ปกครองที่เชื่อมกับนักเรียน (ใช้เป็นผู้ให้ข้อมูล) */
+  informant?: { name: string; relation: string };
+}): HomeVisitRecordInput {
+  const h = hashOf(studentId);
+  const pick = <T,>(list: readonly T[], salt: number): T => list[(h + salt) % list.length];
+
+  const base = previous ? inputFromPrevious(previous) : emptyRecordInput();
+  const form = base.form;
+
+  if (!previous) {
+    const fatherWage = 6000 + (h % 7) * 1500;
+    const motherBusiness = (h >> 3) % 2 === 0 ? 0 : 2000 + ((h >> 5) % 4) * 1000;
+    const withGrandparent = (h >> 2) % 3 === 0;
+    form.guardianOccupation = pick(["รับจ้างทั่วไป", "ค้าขาย", "เกษตรกร", "พนักงานบริษัท"], 1);
+    form.guardianEducation = pick(["ประถมศึกษา", "มัธยมศึกษาตอนต้น", "มัธยมศึกษาตอนปลาย / ปวช.", "ปริญญาตรี"], 2);
+    form.members = [
+      { ...emptyMember("m1"), relation: "บิดา", age: 40 + (h % 9), income: { ...ZERO_INCOME, wage: fatherWage } },
+      { ...emptyMember("m2"), relation: "มารดา", age: 37 + ((h >> 4) % 8), income: { ...ZERO_INCOME, business: motherBusiness } },
+      { ...emptyMember("m3"), relation: "นักเรียน", age: 15 },
+      ...(withGrandparent
+        ? [{ ...emptyMember("m4"), relation: "ยาย", age: 68 + (h % 7), income: { ...ZERO_INCOME, welfare: 600 } }]
+        : []),
+    ];
+    form.dependencies = withGrandparent ? ["dep_elderly"] : [];
+    form.housingType = pick(["own", "own", "rent", "with_others"], 3);
+    form.vehicles = { car: false, pickup: (h >> 1) % 3 === 0, farm: false };
+    form.farmland = pick(["no_land", "under_1_rai"], 4);
+    form.hoursTogether = String(3 + (h % 4));
+    form.caretakerWhenAway = withGrandparent ? "relative" : pick(["relative", "neighbor", "alone"], 5);
+    form.travelKm = ((h % 60) / 10 + 1).toFixed(1);
+    form.travelHours = "0";
+    form.travelMinutes = String(10 + (h % 4) * 5);
+    form.travelMode = pick(["motorcycle", "guardian", "bicycle", "school_bus"], 6);
+    form.duties = ["housework"];
+    form.internet = "can_access";
+  }
+
+  form.relations = Object.fromEntries(
+    FAMILY_MEMBERS.map((m, i) => [
+      m,
+      m === "บิดา" || m === "มารดา" ? "สนิทสนม" : m === "ญาติ" ? "เฉยๆ" : i % 2 === 0 ? "สนิทสนม" : "ไม่มี",
+    ])
+  );
+  form.supportRequests = [pick(["academic", "economic", "behavior"], 7)];
+  form.guardianConcern = pick(
+    [
+      "อยากให้ลูกตั้งใจเรียนมากขึ้น และลดเวลาเล่นโทรศัพท์",
+      "เป็นห่วงเรื่องค่าใช้จ่ายในการเรียนต่อ",
+      "อยากให้ครูช่วยดูเรื่องการคบเพื่อน",
+    ],
+    8
+  );
+  form.hobbies = [pick(["tv", "games", "reading", "friends"], 9)];
+  form.devices = (h >> 6) % 2 === 0 ? ["social_1h"] : [];
+
+  const relation =
+    informant && INFORMANT_OPTIONS.includes(informant.relation)
+      ? informant.relation
+      : form.members.some((m) => m.relation === "มารดา")
+        ? "มารดา"
+        : "บิดา";
+  return {
+    ...base,
+    form,
+    livesWith: previous?.livesWith || (form.members.some((m) => m.relation === "ยาย") ? "ปู่ / ย่า / ตา / ยาย" : "บิดาและมารดา"),
+    informantRelation: relation,
+    informantName: informant?.name ?? "",
+    cannotAccessHome: false,
+    cannotAccessReason: "",
+    photos: PHOTO_SLOTS_HOME.map((t, i) => mockPhoto(t, now, h + i)),
+  };
+}
+
+/* ------------------------------------------------------------------ */
+/* แปลงวันที่ พ.ศ. ↔ ช่องกรอกวันที่ของเบราว์เซอร์ (ค.ศ.)                  */
+/* ------------------------------------------------------------------ */
+
+/** "2570-02-18T15:30:00" → { date: "2027-02-18", time: "15:30" } */
+export function toDateInputs(thaiIso: string): { date: string; time: string } {
+  const [d, t = ""] = thaiIso.split("T");
+  const [y, m, day] = d.split("-");
+  if (!y || !m || !day) return { date: "", time: t.slice(0, 5) };
+  return { date: `${Number(y) - 543}-${m}-${day}`, time: t.slice(0, 5) };
+}
+
+/** { date: "2027-02-18", time: "15:30" } → "2570-02-18T15:30:00" ("" ถ้ากรอกไม่ครบ) */
+export function fromDateInputs(date: string, time: string): string {
+  const [y, m, d] = date.split("-");
+  if (!y || !m || !d || !/^\d{2}:\d{2}$/.test(time)) return "";
+  return `${Number(y) + 543}-${m}-${d}T${time}:00`;
 }

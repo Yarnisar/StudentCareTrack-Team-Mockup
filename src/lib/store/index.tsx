@@ -51,6 +51,7 @@ export type { PlatformSlice } from "./platform";
 export type { RecipientGroup } from "./notifications";
 export type { OperatingWindowInput, SaveWindowResult, SchoolSettingsPatch } from "./settings";
 export type { ConsentStatus, RecordConsentResult } from "./consent";
+export type { CreateAppointmentInput, HomeVisitResult } from "./home-visit";
 export { auditSummary } from "./audit";
 
 const StoreContext = createContext<StoreValue | null>(null);
