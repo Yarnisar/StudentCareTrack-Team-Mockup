@@ -12,7 +12,8 @@ import { useStore } from "@/lib/store";
 import { usePortalStudent } from "@/lib/portal";
 import { ChildSwitcher } from "@/components/portal/child-switcher";
 import { formatThaiDate, formatThaiTime } from "@/lib/format";
-import { APPOINTMENT_STATUS_LABEL } from "@/lib/types";
+import { openAppointmentOf } from "@/components/portal/portal-data";
+import { APPOINTMENT_STATUS_LABEL, VISIT_TYPE_LABEL } from "@/lib/types";
 
 
 /** เปลี่ยนบุตรหลานแล้วเริ่มฟอร์มใหม่ ไม่ให้ค่าที่กรอกค้างไปอยู่กับอีกคน */
@@ -25,14 +26,21 @@ function ParentAppointmentPageContent() {
   const store = useStore();
   const portalStudentId = usePortalStudent().studentId ?? "";
   const student = store.getStudent(portalStudentId);
-  const appointment = store.appointments.find(
-    (a) => a.studentId === portalStudentId && a.status !== "completed"
-  );
+  const appointment = openAppointmentOf(store, portalStudentId);
+  // ที่อยู่แสดงเฉพาะผู้ปกครองของนักเรียนคนนี้
+  const isGuardian = store.guardiansOf(portalStudentId).some((g) => g.user.userId === store.currentUser.userId);
 
   const [phone, setPhone] = useState(appointment?.guardianPhone ?? "");
-  const [caretaker, setCaretaker] = useState(appointment?.awayStayWith ?? "");
+  const [awayStayWith, setAwayStayWith] = useState(appointment?.awayStayWith ?? "");
   const [note, setNote] = useState(appointment?.guardianNote ?? "");
   const [sent, setSent] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const respond = (status: "confirmed" | "reschedule_requested") => {
+    if (!appointment) return;
+    const res = store.setAppointmentStatus(appointment.appointmentId, status);
+    setError(res.ok ? null : res.error);
+  };
 
   if (!student || !appointment) {
     return (
@@ -46,6 +54,7 @@ function ParentAppointmentPageContent() {
   }
 
   const confirmed = appointment.status === "confirmed";
+  const pending = appointment.status === "pending";
 
   return (
     <MobileShell title="นัดหมายเยี่ยมบ้าน" role="parent" back="/portal/parent">
@@ -55,7 +64,7 @@ function ParentAppointmentPageContent() {
           <CardContent className="p-5">
             <div className="flex items-center justify-between">
               <span className="text-[12.5px] font-semibold text-muted-foreground">
-                นัดหมายเยี่ยมบ้าน
+                {VISIT_TYPE_LABEL[appointment.visitType]}
               </span>
               <span
                 className={
@@ -79,30 +88,35 @@ function ParentAppointmentPageContent() {
 
             <div className="space-y-2.5">
               <Row icon={<User className="size-4" />} title={store.nameOf(appointment.teacherId)} sub="ครูประจำชั้น" />
-              <Row icon={<Home className="size-4" />} title={student.address} sub="ที่อยู่ตามทะเบียนนักเรียน" />
+              {isGuardian && (
+                <Row icon={<Home className="size-4" />} title={student.address} sub="ที่อยู่ตามทะเบียนนักเรียน" />
+              )}
             </div>
           </CardContent>
         </Card>
 
-        {!confirmed && (
+        {pending && (
           <div className="flex gap-2.5">
-            <Button
-              variant="outline"
-              className="h-13 flex-1"
-              onClick={() =>
-                store.setAppointmentStatus(appointment.appointmentId, "reschedule_requested")
-              }
-            >
+            <Button variant="outline" className="h-13 flex-1" onClick={() => respond("reschedule_requested")}>
               ขอเปลี่ยนวันเวลา
             </Button>
             <Button
               className="h-13 flex-[1.2] bg-risk-green hover:bg-risk-green/90"
-              onClick={() => store.setAppointmentStatus(appointment.appointmentId, "confirmed")}
+              onClick={() => respond("confirmed")}
             >
               ยืนยันนัดหมาย
             </Button>
           </div>
         )}
+        {appointment.status === "reschedule_requested" && (
+          <p className="rounded-xl bg-risk-amber-bg px-3.5 py-2.5 text-[12.5px] text-risk-amber">
+            ส่งคำขอเปลี่ยนวันเวลาแล้ว รอครูประจำชั้นเสนอวันใหม่
+          </p>
+        )}
+        {pending && (
+          <p className="text-[11.5px] text-muted-foreground">ผู้ปกครองคนใดของนักเรียนก็ยืนยันหรือขอเปลี่ยนวันได้</p>
+        )}
+        {error && <p className="text-[12px] font-semibold text-risk-red">{error}</p>}
 
         <Card>
           <CardContent className="p-5">
@@ -117,13 +131,14 @@ function ParentAppointmentPageContent() {
                 <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="caretaker">เมื่อผู้ปกครองไม่อยู่บ้าน นักเรียนอยู่กับใคร</Label>
+                <Label htmlFor="away-stay-with">ช่วงที่ผู้ปกครองไม่อยู่บ้าน นักเรียนพักอยู่กับใคร</Label>
                 <Input
-                  id="caretaker"
-                  value={caretaker}
-                  onChange={(e) => setCaretaker(e.target.value)}
+                  id="away-stay-with"
+                  value={awayStayWith}
+                  onChange={(e) => setAwayStayWith(e.target.value)}
                   placeholder="เช่น ยาย (นางบุญมา สายใจ)"
                 />
+                <p className="text-[11px] text-muted-foreground">ใช้เป็นข้อมูลประกอบให้ครูเท่านั้น</p>
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="note">สิ่งที่อยากให้ครูช่วยเหลือ</Label>
@@ -139,11 +154,13 @@ function ParentAppointmentPageContent() {
               <Button
                 className="h-13 w-full"
                 onClick={() => {
-                  store.saveGuardianInfo(appointment.appointmentId, {
+                  const res = store.saveGuardianInfo(appointment.appointmentId, {
                     guardianPhone: phone,
-                    awayStayWith: caretaker,
+                    awayStayWith,
                     guardianNote: note,
                   });
+                  setError(res.ok ? null : res.error);
+                  if (!res.ok) return;
                   setSent(true);
                   setTimeout(() => setSent(false), 2500);
                 }}

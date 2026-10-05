@@ -7,33 +7,31 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useStore } from "@/lib/store";
 import { usePortalStudent } from "@/lib/portal";
 import { ChildSwitcher } from "@/components/portal/child-switcher";
+import { ConsentCard } from "@/components/portal/consent-card";
+import { openAppointmentOf } from "@/components/portal/portal-data";
+import { SdqLevelBadge } from "@/components/assessment/sdq-result";
+import { passesAllCriteria } from "@/lib/dc-rules";
 import { formatThaiDate, formatThaiTime } from "@/lib/format";
-import { SDQ_LEVEL_LABEL } from "@/lib/types";
+import { combinedSdqBasisLabel } from "@/lib/rules";
+import { termLabelOf } from "@/lib/terms";
+import { APPOINTMENT_STATUS_LABEL, BEHAVIOR_SCORE_BASE, VISIT_TYPE_LABEL } from "@/lib/types";
 
 
 export default function ParentHomePage() {
   const store = useStore();
   const portalStudentId = usePortalStudent().studentId ?? "";
   const student = store.getStudent(portalStudentId);
-  const appointment = store.appointments.find(
-    (a) => a.studentId === portalStudentId && a.status !== "completed"
-  );
-  const parentSdq = store
-    .sdqFormFor(portalStudentId, "parent");
-  const teacherSdq = store
-    .sdqFormFor(portalStudentId, "teacher");
+  const appointment = openAppointmentOf(store, portalStudentId);
+  const parentSdq = store.sdqFormFor(portalStudentId, "parent");
+  const canTakeSdq = parentSdq?.status === "pending" && store.sdqBlockReason(portalStudentId, "parent") === null;
+  const sdq = store.latestCombinedSdqOf(portalStudentId);
   const dc = store.dcSummaryOf(portalStudentId);
+  const dcLevels = dc ? store.dcCriteria.map((c) => dc.levels[c.criteriaId]) : [];
+  const dcFailed = dcLevels.filter((l) => l != null && l < 1).length;
+  const behaviorScore = store.behaviorScoreOf(portalStudentId);
+  const answeredConsent = Boolean(store.consentOf(portalStudentId));
   const guardian =
     store.currentUser.role === "parent" ? store.currentUser : store.guardiansOf(portalStudentId)[0]?.user;
-  const dcLevels: number[] = dc
-    ? Object.values(dc.levels).flatMap((l) => (l == null ? [] : [l as number]))
-    : [];
-  const dcLabel =
-    dcLevels.length === 0
-      ? "รอประเมิน"
-      : dcLevels.reduce((a, b) => a + b, 0) / dcLevels.length >= 2.5
-        ? "ระดับดีเยี่ยม"
-        : "ระดับดี";
 
   if (!student) return null;
 
@@ -67,32 +65,38 @@ export default function ParentHomePage() {
             href="/portal/parent/appointment"
             tone="warn"
             icon={<Home className="size-5 text-risk-amber" />}
-            title="นัดหมายเยี่ยมบ้าน รอการยืนยัน"
+            title={`${VISIT_TYPE_LABEL[appointment.visitType]} รอการยืนยัน`}
             description={`${store.nameOf(appointment.teacherId)} ขอนัดเยี่ยมบ้านวันที่ ${formatThaiDate(appointment.proposedDate)} เวลา ${formatThaiTime(appointment.proposedDate)}`}
             cta="ดูรายละเอียดและยืนยัน"
           />
         )}
 
-        {appointment && appointment.status === "confirmed" && (
+        {appointment && appointment.status !== "pending" && (
           <ActionCard
             href="/portal/parent/appointment"
             tone="info"
             icon={<Home className="size-5 text-primary" />}
-            title="ยืนยันนัดหมายเยี่ยมบ้านแล้ว"
+            title={`${VISIT_TYPE_LABEL[appointment.visitType]} · ${APPOINTMENT_STATUS_LABEL[appointment.status]}`}
             description={`นัดหมายวันที่ ${formatThaiDate(appointment.proposedDate)} เวลา ${formatThaiTime(appointment.proposedDate)} · เพิ่มข้อมูลประกอบได้`}
             cta="ดูรายละเอียดนัดหมาย"
           />
         )}
 
-        {parentSdq?.status === "pending" && (
+        {canTakeSdq && (
           <ActionCard
             href="/portal/parent/results"
             tone="info"
             icon={<ClipboardList className="size-5 text-primary" />}
             title="แบบประเมิน SDQ ฉบับผู้ปกครอง"
-            description="กรุณาทำแบบประเมินเพื่อให้ครูเห็นภาพรวมของบุตรหลานได้ครบถ้วน (ใช้เวลาประมาณ 10 นาที)"
+            description="กรุณาทำแบบประเมินเพื่อให้ครูเห็นภาพรวมของบุตรหลานได้ครบถ้วน (ใช้เวลาประมาณ 10 นาที) ผู้ปกครองคนใดทำก็ได้ 1 ฉบับ"
             cta="ดูรายละเอียด"
           />
+        )}
+
+        {!answeredConsent && <ConsentCard studentId={portalStudentId} />}
+
+        {!appointment && !canTakeSdq && answeredConsent && (
+          <p className="rounded-xl bg-card px-4 py-3 text-[12.5px] text-muted-foreground">ไม่มีรายการที่ต้องดำเนินการ</p>
         )}
 
         <h2 className="pt-1 text-sm font-bold">ภาพรวมของบุตรหลาน</h2>
@@ -101,42 +105,47 @@ export default function ParentHomePage() {
           <Card>
             <CardContent className="p-4">
               <div className="mb-3 flex items-center justify-between">
-                <span className="text-[13.5px] font-semibold text-muted-foreground">
-                  ผลการประเมินล่าสุด
-                </span>
+                <span className="text-[13.5px] font-semibold text-muted-foreground">ผลล่าสุด</span>
                 <ChevronRight className="size-4 text-muted-foreground" />
               </div>
-              <div className="flex gap-2.5">
-                <div className="flex-1 rounded-xl bg-surface p-3">
-                  <div className="text-[11.5px] text-muted-foreground">SDQ (ครูประเมิน)</div>
+              <div className="grid grid-cols-3 gap-2.5">
+                <div className="rounded-xl bg-surface p-3">
+                  <div className="text-[11.5px] text-muted-foreground">SDQ (ผลรวม)</div>
                   <div className="mt-1.5">
-                    {teacherSdq?.level ? (
-                      <span
-                        className={
-                          teacherSdq.level === "normal"
-                            ? "rounded-full bg-risk-green-bg px-2.5 py-1 text-[11.5px] font-semibold text-risk-green"
-                            : "rounded-full bg-risk-amber-bg px-2.5 py-1 text-[11.5px] font-semibold text-risk-amber"
-                        }
-                      >
-                        {SDQ_LEVEL_LABEL[teacherSdq.level]}
-                      </span>
+                    {sdq?.level ? (
+                      <SdqLevelBadge level={sdq.level} className="text-[11.5px]" />
                     ) : (
-                      <span className="text-[12.5px] text-muted-foreground">รอผล</span>
+                      <span className="text-[12.5px] text-muted-foreground">ยังไม่มีผล</span>
                     )}
                   </div>
+                  {sdq && <div className="mt-1 text-[10.5px] text-muted-foreground">{combinedSdqBasisLabel(sdq)}</div>}
                 </div>
-                <div className="flex-1 rounded-xl bg-surface p-3">
+                <div className="rounded-xl bg-surface p-3">
                   <div className="text-[11.5px] text-muted-foreground">คุณลักษณะฯ</div>
-                  <div className="mt-1.5">
-                    <span className="rounded-full bg-risk-green-bg px-2.5 py-1 text-[11.5px] font-semibold text-risk-green">
-                      {dcLabel}
-                    </span>
+                  <div className="mt-1.5 text-[12.5px] font-semibold">
+                    {!dc ? (
+                      <span className="font-normal text-muted-foreground">รอสรุปผล</span>
+                    ) : passesAllCriteria(dcLevels) ? (
+                      <span className="text-risk-green">ผ่านทุกด้าน</span>
+                    ) : (
+                      <span className="text-risk-amber">ไม่ผ่าน {dcFailed} ด้าน</span>
+                    )}
+                  </div>
+                  {dc && <div className="mt-1 text-[10.5px] text-muted-foreground">{termLabelOf(dc.termId)}</div>}
+                </div>
+                <div className="rounded-xl bg-surface p-3">
+                  <div className="text-[11.5px] text-muted-foreground">ความประพฤติ</div>
+                  <div className="mt-1.5 text-[15px] font-bold">
+                    {behaviorScore}
+                    <span className="text-[11px] font-normal text-muted-foreground">/{BEHAVIOR_SCORE_BASE}</span>
                   </div>
                 </div>
               </div>
             </CardContent>
           </Card>
         </Link>
+
+        {answeredConsent && <ConsentCard studentId={portalStudentId} />}
 
         <p className="rounded-xl border border-dashed border-border bg-surface p-3.5 text-[12px] leading-relaxed text-muted-foreground">
           ผู้ปกครองสามารถดูข้อมูลของบุตรหลานตนเองได้เท่านั้น

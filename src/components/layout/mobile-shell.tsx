@@ -84,8 +84,12 @@ export function MobileShell({
           );
         })}
         <Link
-          href="/login"
-          className="flex h-14 flex-1 flex-col items-center justify-center gap-1 text-muted-foreground"
+          href="/portal/notifications"
+          className={
+            pathname === "/portal/notifications"
+              ? "flex h-14 flex-1 flex-col items-center justify-center gap-1 text-primary"
+              : "flex h-14 flex-1 flex-col items-center justify-center gap-1 text-muted-foreground"
+          }
         >
           <User className="size-5" />
           <span className="text-[10.5px]">โปรไฟล์</span>

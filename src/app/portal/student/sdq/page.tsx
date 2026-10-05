@@ -1,63 +1,70 @@
 "use client";
 
 import { useState } from "react";
-import { HeartHandshake } from "lucide-react";
+import { CheckCircle2, HeartHandshake } from "lucide-react";
 import { MobileShell } from "@/components/layout/mobile-shell";
 import { SdqForm } from "@/components/assessment/sdq-form";
-import { LinkButton } from "@/components/ui/link-button";
+import { HelpBlock } from "@/components/portal/help-block";
 import { Card, CardContent } from "@/components/ui/card";
-import { useStore } from "@/lib/store";
+import { formatThaiDate } from "@/lib/format";
 import { usePortalStudent } from "@/lib/portal";
-import { SDQ_LEVEL_LABEL, SdqAssessment } from "@/lib/types";
+import { isPrimaryGrade } from "@/lib/rules";
+import { useStore } from "@/lib/store";
 
-
+/**
+ * SDQ ฉบับนักเรียน — ทำได้เฉพาะเมื่อมีคำขอรอบนี้และยังไม่ส่ง
+ * นักเรียนไม่เห็นคะแนนหรือผลของตัวเอง เห็นแค่ "ส่งแล้ว" กับวันที่
+ */
 export default function StudentSdqPage() {
   const store = useStore();
-  const portalStudentId = usePortalStudent().studentId ?? "";
-  const [saved, setSaved] = useState<SdqAssessment | null>(null);
+  const studentId = usePortalStudent().studentId ?? "";
+  const student = store.getStudent(studentId);
+  const [error, setError] = useState<string | null>(null);
+
+  const primary = student ? isPrimaryGrade(student.gradeLevel) : false;
+  const form = primary ? undefined : store.sdqFormFor(studentId, "student");
+  const block = form ? store.sdqBlockReason(studentId, "student") : null;
+  const canTake = form?.status === "pending" && block === null;
 
   return (
-    <MobileShell
-      title="แบบประเมิน SDQ"
-      subtitle="ฉบับนักเรียนประเมินตนเอง"
-      role="student"
-      back="/portal/student/card"
-    >
+    <MobileShell title="แบบประเมิน SDQ" subtitle="ฉบับนักเรียนประเมินตนเอง" role="student" back="/portal/student">
       <div className="space-y-4 p-5">
-        <div className="flex gap-2.5 rounded-xl border border-blue-200 bg-accent p-3.5">
-          <HeartHandshake className="size-5 shrink-0 text-primary" />
-          <p className="text-[12.5px] leading-relaxed text-accent-foreground">
-            คำตอบของนักเรียนเป็นความลับ ครูจะเห็นเฉพาะผลสรุปเพื่อใช้ดูแลช่วยเหลือเท่านั้น
-          </p>
-        </div>
-
-        {saved ? (
+        {form?.status === "submitted" ? (
           <Card>
-            <CardContent className="p-6 text-center">
-              <h2 className="text-base font-bold">ส่งแบบประเมินเรียบร้อย</h2>
-              <p className="mt-2 text-[13.5px] text-muted-foreground">
-                คะแนนรวม {saved.totalDifficulties} คะแนน · แปลผล:{" "}
-                {saved.level ? SDQ_LEVEL_LABEL[saved.level] : "-"}
+            <CardContent className="flex flex-col items-center p-6 text-center">
+              <CheckCircle2 className="size-10 text-risk-green" />
+              <h2 className="mt-2 text-base font-bold">ส่งแล้ว</h2>
+              <p className="mt-1 text-[13px] text-muted-foreground">
+                เมื่อ {form.submittedAt ? formatThaiDate(form.submittedAt) : "-"} · ขอบคุณที่ตอบแบบประเมิน
               </p>
-              <p className="mt-3 text-[12.5px] leading-relaxed text-muted-foreground">
-                ขอบคุณที่ตอบแบบประเมิน หากนักเรียนต้องการพูดคุยกับครู
-                สามารถติดต่อครูประจำชั้นได้ตลอดเวลา
-              </p>
-              <LinkButton className="mt-5 w-full" href="/portal/student/card">
-                กลับหน้าบัตรนักเรียน
-              </LinkButton>
             </CardContent>
           </Card>
+        ) : canTake ? (
+          <>
+            <div className="flex gap-2.5 rounded-xl border border-blue-200 bg-accent p-3.5">
+              <HeartHandshake className="size-5 shrink-0 text-primary" />
+              <p className="text-[12.5px] leading-relaxed text-accent-foreground">
+                ไม่มีคำตอบถูกหรือผิด ตอบตามความรู้สึกจริงในช่วง 6 เดือนที่ผ่านมา คำตอบใช้เพื่อการดูแลช่วยเหลือเท่านั้น
+              </p>
+            </div>
+            <SdqForm
+              rater="student"
+              layout="mobile"
+              submitLabel="ส่งแบบประเมิน"
+              onSubmit={(answers) => {
+                const res = store.saveSdq(studentId, "student", answers);
+                setError(res.ok ? null : res.error);
+              }}
+            />
+            {error && <p className="text-[12px] font-semibold text-risk-red">{error}</p>}
+          </>
         ) : (
-          <SdqForm
-            rater="student"
-            layout="mobile"
-            onSubmit={(answers) => {
-              const res = store.saveSdq(portalStudentId, "student", answers);
-              if (res.ok) setSaved(res.form);
-            }}
-          />
+          <p className="rounded-xl bg-card px-4 py-3.5 text-[13px] text-muted-foreground">
+            {form && block ? block : "ตอนนี้ยังไม่มีแบบประเมินที่ต้องทำ"}
+          </p>
         )}
+
+        <HelpBlock />
       </div>
     </MobileShell>
   );
