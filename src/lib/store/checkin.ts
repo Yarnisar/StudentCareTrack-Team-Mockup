@@ -34,7 +34,8 @@ export interface CheckinSlice {
   /** log ของวันที่ (ค่าเริ่มต้น = วันนี้ของ DEMO_TODAY) ใหม่สุดก่อน */
   checkinsOn: (date?: string) => CheckinLog[];
   checkinOf: (studentId: string, date?: string) => CheckinLog | undefined;
-  checkIn: (studentId: string, simulatedTime?: string) => CheckinOutcome | null;
+  /** cardId = บัตรที่ถูกสแกน (ไม่ส่ง = ครูบันทึกเอง) */
+  checkIn: (studentId: string, simulatedTime?: string, cardId?: string) => CheckinOutcome | null;
 }
 
 export function useCheckinSlice(base: PlatformSlice, behavior: BehaviorSlice): CheckinSlice {
@@ -47,7 +48,7 @@ export function useCheckinSlice(base: PlatformSlice, behavior: BehaviorSlice): C
     const checkinOf = (studentId: string, date = today) =>
       checkins.find((c) => c.studentId === studentId && c.checkinDate === date);
 
-    const checkIn: CheckinSlice["checkIn"] = (studentId, simulatedTime) => {
+    const checkIn: CheckinSlice["checkIn"] = (studentId, simulatedTime, cardId) => {
       const student = base.getStudent(studentId);
       if (!student) return null;
 
@@ -79,10 +80,13 @@ export function useCheckinSlice(base: PlatformSlice, behavior: BehaviorSlice): C
         scannedAt: stamp,
         isLate: late,
         scannedBy: base.currentUser.userId,
+        cardId: cardId ?? null,
       };
 
       setCheckins((prev) => [log, ...prev]);
-      base.logAudit("CREATE", "checkin_logs", log.logId, { after: { studentId, isLate: late } });
+      base.logAudit("CREATE", "checkin_logs", log.logId, {
+        after: { studentId, isLate: late, cardId: cardId ?? null },
+      });
 
       // มาสาย -> สร้างบันทึกความประพฤติรอครูยืนยัน (pending ยังไม่มีผลกับคะแนนและยังไม่นับเป็นการมาสาย)
       const pendingRecord = late

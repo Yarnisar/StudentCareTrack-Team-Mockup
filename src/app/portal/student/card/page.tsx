@@ -1,20 +1,25 @@
 "use client";
 
-import { QrCode } from "lucide-react";
+import { useState } from "react";
+import { Maximize2, ShieldCheck, X } from "lucide-react";
 import { MobileShell } from "@/components/layout/mobile-shell";
+import { QrSvg } from "@/components/cards/qr-svg";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { SCHOOL_NAME } from "@/lib/mock-data";
 import { useStore } from "@/lib/store";
 import { usePortalStudent } from "@/lib/portal";
 import { formatThaiDate, formatThaiTime } from "@/lib/format";
 
-/** ต้นแบบ: ผู้ใช้ที่ล็อกอินคือนักเรียนคนแรกในระบบ */
-
+/** บัตรนักเรียนดิจิทัล — QR เป็นรหัสอ้างอิงแบบสุ่มของบัตรที่ใช้งานได้ ไม่ใช่รหัสนักเรียน */
 export default function StudentCardPage() {
   const store = useStore();
   const portalStudentId = usePortalStudent().studentId ?? "";
   const student = store.getStudent(portalStudentId);
+  const card = store.activeCardOfStudent(portalStudentId);
+  const status = store.cardStatusOfStudent(portalStudentId);
   const history = store.checkins.filter((c) => c.studentId === portalStudentId).slice(0, 3);
+  const [enlarged, setEnlarged] = useState(false);
 
   if (!student) return null;
 
@@ -35,25 +40,54 @@ export default function StudentCardPage() {
               {student.roomName} เลขที่ {student.classNo} · รหัส {student.studentId}
             </div>
           </div>
+          {card && (
+            <div className="relative mt-3 text-[12px] text-blue-100">
+              ใช้ได้ถึง {formatThaiDate(store.cardTemplate.expiresOn)}
+            </div>
+          )}
         </div>
 
         <Card>
           <CardContent className="flex flex-col items-center p-6">
-            <div className="rounded-2xl border border-border p-4">
-              <QrCode className="size-44" strokeWidth={1.1} />
-            </div>
-            <p className="mt-4 text-[15px] font-semibold">แสดง QR นี้ให้ครูสแกน</p>
-            <p className="mt-1.5 text-center text-[12.5px] leading-relaxed text-muted-foreground">
-              ระบบจะบันทึกชื่อและเวลาเข้าโรงเรียนอัตโนมัติ
-            </p>
-            <div className="mt-4 flex items-center gap-2 rounded-full bg-surface px-4 py-2">
-              <span className="size-1.5 rounded-full bg-risk-green" />
-              <span className="text-[12px] font-medium text-muted-foreground">
-                รหัสใช้งานได้ · รีเฟรชอัตโนมัติทุก 60 วินาที
-              </span>
-            </div>
+            {card ? (
+              <>
+                <div className="rounded-2xl border border-border bg-white p-3">
+                  <QrSvg value={card.qrCode} size={176} title="รหัส QR บัตรนักเรียนของฉัน" />
+                </div>
+                <p className="mt-4 text-[15px] font-semibold">แสดง QR นี้ให้ครูสแกน</p>
+                <p className="mt-1.5 text-center text-[12.5px] leading-relaxed text-muted-foreground">
+                  ระบบจะบันทึกชื่อและเวลาเข้าโรงเรียนอัตโนมัติ
+                </p>
+                <Button className="mt-4 w-full" onClick={() => setEnlarged(true)}>
+                  <Maximize2 className="size-4" /> ขยาย QR สำหรับสแกน
+                </Button>
+                <div className="mt-4 flex items-center gap-2 rounded-full bg-surface px-4 py-2">
+                  <span className="size-1.5 rounded-full bg-risk-green" />
+                  <span className="text-[12px] font-medium text-muted-foreground">
+                    บัตรใช้งานได้ · ออกบัตรเมื่อ {formatThaiDate(card.issuedAt)}
+                  </span>
+                </div>
+              </>
+            ) : (
+              <div className="text-center">
+                <p className="text-[15px] font-semibold">
+                  {status === "revoked" ? "บัตรถูกเพิกถอนแล้ว" : "ยังไม่มีบัตรนักเรียน"}
+                </p>
+                <p className="mt-1.5 text-[12.5px] leading-relaxed text-muted-foreground">
+                  ติดต่อห้องกิจการนักเรียนเพื่อออกบัตรใหม่ ระหว่างนี้ให้ครูบันทึกการมาเรียนด้วยตนเอง
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
+
+        <div className="flex gap-2 rounded-xl bg-surface px-4 py-3 text-[12.5px] text-muted-foreground">
+          <ShieldCheck className="size-4 shrink-0" />
+          <span>
+            รหัสใน QR เป็นรหัสอ้างอิงแบบสุ่มที่เพิกถอนได้ ไม่มีชื่อ รหัสนักเรียน
+            หรือข้อมูลส่วนตัวอยู่ในรหัส
+          </span>
+        </div>
 
         <Card>
           <CardContent className="p-5">
@@ -87,6 +121,20 @@ export default function StudentCardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {enlarged && card && (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-5 bg-black/80 p-6">
+          <div className="rounded-2xl bg-white p-4">
+            <QrSvg value={card.qrCode} size={280} title="รหัส QR บัตรนักเรียนของฉัน (ขยาย)" />
+          </div>
+          <p className="text-center text-[13.5px] text-white">
+            {student.fullName} · {student.roomName}
+          </p>
+          <Button variant="secondary" onClick={() => setEnlarged(false)}>
+            <X className="size-4" /> ปิด
+          </Button>
+        </div>
+      )}
     </MobileShell>
   );
 }
