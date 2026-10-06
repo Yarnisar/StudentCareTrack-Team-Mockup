@@ -92,4 +92,6 @@ export interface CheckinLog {
   isLate: boolean;
   /** userId ของผู้สแกน */
   scannedBy: string;
+  /** บัตรที่ถูกสแกน (ไม่มี = ครูบันทึกเอง หรือข้อมูลตัวอย่างก่อนมีโมดูลบัตร) */
+  cardId?: string | null;
 }

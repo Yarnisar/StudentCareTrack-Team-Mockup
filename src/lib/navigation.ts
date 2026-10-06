@@ -22,6 +22,7 @@ export const STAFF_NAV: NavItem[] = [
   { href: "/characteristics", label: "คุณลักษณะฯ", roles: ALL_STAFF },
   { href: "/documents", label: "เอกสาร ปพ.", roles: ALL_STAFF },
   { href: "/checkin", label: "บัตร / QR", roles: ALL_STAFF },
+  { href: "/cards", label: "ออกบัตรนักเรียน", roles: ["admin_school"] },
   { href: "/care-cases", label: "ติดตามช่วยเหลือ", roles: SENSITIVE_STAFF },
   { href: "/approvals", label: "อนุมัติเอกสารส่งต่อ", roles: ["admin_school"] },
 ];

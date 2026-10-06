@@ -20,9 +20,29 @@ export default function CheckinPage() {
   const [simTime, setSimTime] = useState("");
 
   const scan = (value: string) => {
-    const result = store.checkIn(value.trim(), simTime || undefined);
+    const input = value.trim();
+
+    // รหัส QR บนบัตรเป็นรหัสอ้างอิงแบบสุ่ม ต้องค้นในตาราง id_cards เพื่อหาว่าเป็นของใคร
+    if (store.cardByToken(input)) {
+      const lookup = store.resolveCardToken(input);
+      if (!lookup.ok) {
+        setError(lookup.error);
+        setLast(null);
+        return;
+      }
+      const scanned = store.checkIn(lookup.student.studentId, simTime || undefined, lookup.card.cardId);
+      if (scanned) {
+        setError("");
+        setLast(scanned);
+        setCode("");
+      }
+      return;
+    }
+
+    // ครูพิมพ์เลขประจำตัวแทนเมื่อนักเรียนไม่มีบัตร (บันทึกเองโดยไม่มี cardId)
+    const result = store.checkIn(input, simTime || undefined);
     if (!result) {
-      setError(`ไม่พบบัตรที่ตรงกับรหัส "${value}" — ให้ครูบันทึกชื่อด้วยตนเองแทน`);
+      setError(`ไม่พบบัตรหรือนักเรียนที่ตรงกับรหัส "${value}" — ให้ครูบันทึกชื่อด้วยตนเองแทน`);
       setLast(null);
       return;
     }
@@ -74,7 +94,7 @@ export default function CheckinPage() {
                 <div className="mt-7 w-full max-w-sm space-y-2.5">
                   <div className="flex items-center justify-between gap-3">
                     <Label htmlFor="code" className="text-slate-300">
-                      เลขประจำตัวนักเรียนจากบัตร
+                      รหัส QR จากบัตร (หรือเลขประจำตัวเมื่อไม่มีบัตร)
                     </Label>
                     <select
                       aria-label="เวลาที่สแกน (สำหรับสาธิต)"
@@ -101,15 +121,18 @@ export default function CheckinPage() {
                     </Button>
                   </div>
                   <div className="flex flex-wrap gap-1.5 pt-1">
-                    {store.students.slice(0, 5).map((s) => (
-                      <button
-                        key={s.studentId}
-                        onClick={() => scan(s.studentId)}
-                        className="rounded-md bg-slate-800 px-2.5 py-1 text-[11.5px] font-medium text-slate-300 hover:bg-slate-700"
-                      >
-                        {s.studentId} · {s.fullName.split(" ")[1]}
-                      </button>
-                    ))}
+                    {store.students.slice(0, 5).map((s) => {
+                      const card = store.activeCardOfStudent(s.studentId);
+                      return (
+                        <button
+                          key={s.studentId}
+                          onClick={() => scan(card ? card.qrCode : s.studentId)}
+                          className="rounded-md bg-slate-800 px-2.5 py-1 text-[11.5px] font-medium text-slate-300 hover:bg-slate-700"
+                        >
+                          {card ? "QR" : "ไม่มีบัตร"} · {s.fullName.split(" ")[1]}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               </CardContent>

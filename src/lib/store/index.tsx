@@ -10,7 +10,7 @@
  * แล้วรวมเป็นค่าเดียว — หน้าจอใช้ useStore() เหมือนเดิม
  *
  * ลำดับ: core → audit → notifications → settings → consent  (รวมเป็น base: PlatformSlice)
- *        → behavior → checkin → care → assessment → screening → home-visit → dc → documents
+ *        → behavior → checkin → cards → care → assessment → screening → home-visit → dc → documents
  * (assessment ส่งเหตุเปิด case ผ่าน care; screening อ่านผล Red Flag/9S จาก assessment และมาสายจาก behavior)
  * slice ของโมดูลรับ base เป็นอาร์กิวเมนต์แรก (base.logAudit / base.notify / base.isWindowOpen /
  * base.schoolSettings / base.consentOf) slice ที่ต้องเรียก slice โมดูลอื่น (เช่น เปิด case อัตโนมัติ)
@@ -25,6 +25,7 @@ import type { PlatformSlice } from "./platform";
 import { useSettingsSlice, type SettingsSlice } from "./settings";
 import { useAssessmentSlice, type AssessmentSlice } from "./assessment";
 import { useBehaviorSlice, type BehaviorSlice } from "./behavior";
+import { useCardsSlice, type CardsSlice } from "./cards";
 import { useCareSlice, type CareSlice } from "./care";
 import { useCheckinSlice, type CheckinSlice } from "./checkin";
 import { useCoreSlice, type CoreSlice } from "./core";
@@ -40,6 +41,7 @@ export type StoreValue = CoreSlice &
   ConsentSlice &
   BehaviorSlice &
   CheckinSlice &
+  CardsSlice &
   CareSlice &
   ScreeningSlice &
   AssessmentSlice &
@@ -48,6 +50,7 @@ export type StoreValue = CoreSlice &
   DocumentsSlice;
 
 export type { CheckinOutcome } from "./checkin";
+export type { CardLookup, CardResult, CardTemplatePatch } from "./cards";
 export type {
   AddBehaviorRecordResult,
   BehaviorActionResult,
@@ -87,6 +90,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const behavior = useBehaviorSlice(base);
   const checkin = useCheckinSlice(base, behavior);
+  const cards = useCardsSlice(base);
   const care = useCareSlice(base, behavior);
   const assessment = useAssessmentSlice(base, care);
   const screening = useScreeningSlice(base, behavior, care, assessment);
@@ -99,6 +103,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       ...base,
       ...behavior,
       ...checkin,
+      ...cards,
       ...care,
       ...screening,
       ...assessment,
@@ -106,7 +111,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       ...dc,
       ...documents,
     }),
-    [base, behavior, checkin, care, screening, assessment, homeVisit, dc, documents]
+    [base, behavior, checkin, cards, care, screening, assessment, homeVisit, dc, documents]
   );
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
