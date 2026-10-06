@@ -1,4 +1,8 @@
-import { LoginForm } from "@/components/auth/login-form";
+import Link from "next/link";
+import { LinkButton } from "@/components/ui/link-button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { LoginRolePicker } from "@/components/layout/role-switcher";
 import { SCHOOL_NAME } from "@/lib/mock-data";
 
 export default function LoginPage() {
@@ -39,7 +43,38 @@ export default function LoginPage() {
             กรอกข้อมูลบัญชีของโรงเรียนเพื่อเข้าใช้งาน
           </p>
 
-          <LoginForm />
+          <form className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="username">ชื่อผู้ใช้ / อีเมล</Label>
+              <Input id="username" name="username" defaultValue="somying.j" autoComplete="username" />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="password">รหัสผ่าน</Label>
+              <Input
+                id="password"
+                name="password"
+                type="password"
+                defaultValue="password"
+                autoComplete="current-password"
+              />
+            </div>
+            <div className="flex justify-end">
+              <Link href="#" className="text-[13px] font-semibold text-primary hover:underline">
+                ลืมรหัสผ่าน?
+              </Link>
+            </div>
+            <LinkButton className="w-full" size="lg" href="/dashboard">
+              เข้าสู่ระบบ
+            </LinkButton>
+          </form>
+
+          <div className="my-7 flex items-center gap-3">
+            <span className="h-px flex-1 bg-border" />
+            <span className="text-xs text-muted-foreground">เลือกผู้ใช้เพื่อดูต้นแบบตามบทบาท</span>
+            <span className="h-px flex-1 bg-border" />
+          </div>
+
+          <LoginRolePicker />
         </div>
       </div>
     </div>
