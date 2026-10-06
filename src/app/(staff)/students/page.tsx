@@ -1,8 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
+import { PagerNumbered, usePagination } from "@/components/shared/pagination";
 import { RiskBadge } from "@/components/shared/risk-badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { CLASS_SIZE } from "@/lib/mock-data";
@@ -13,6 +15,8 @@ import { DIMENSION_LABEL } from "@/lib/types";
 export default function StudentsPage() {
   const store = useStore();
   const anySensitive = store.students.some((s) => store.canSeeSensitive(s.studentId));
+  const [pageSize, setPageSize] = useState(10);
+  const pager = usePagination(store.students, pageSize);
 
   return (
     <>
@@ -35,7 +39,7 @@ export default function StudentsPage() {
 
         <Card>
           <CardContent className="divide-y divide-border p-6">
-            {store.students.map((student) => {
+            {pager.slice.map((student) => {
               const sensitive = store.canSeeSensitive(student.studentId);
               const risk = sensitive ? store.overallRiskOf(student.studentId) : null;
               const screening = sensitive ? store.latestScreening(student.studentId) : undefined;
@@ -74,6 +78,20 @@ export default function StudentsPage() {
             })}
           </CardContent>
         </Card>
+
+        <PagerNumbered
+          page={pager.page}
+          totalPages={pager.totalPages}
+          setPage={pager.setPage}
+          from={pager.from}
+          to={pager.to}
+          total={pager.total}
+          pageSize={pageSize}
+          onPageSize={(n) => {
+            setPageSize(n);
+            pager.reset();
+          }}
+        />
       </div>
     </>
   );

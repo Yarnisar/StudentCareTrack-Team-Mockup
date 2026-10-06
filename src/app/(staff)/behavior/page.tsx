@@ -12,12 +12,13 @@
  * ฟีดด้านล่างแสดงเฉพาะบันทึกที่มีผล (confirmed)
  */
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { BehaviorPendingQueue } from "@/components/behavior/pending-queue";
 import { NewRecordFields, RulesList, useBehaviorForm } from "@/components/behavior/record-form";
 import { BehaviorRecordFeed, BehaviorStats } from "@/components/behavior/record-feed";
 import { BehaviorRecordManager } from "@/components/behavior/record-manager";
 import { PageHeader } from "@/components/layout/page-header";
+import { PagerNumbered, usePagination } from "@/components/shared/pagination";
 import { Card, CardContent } from "@/components/ui/card";
 import { CURRENT_TERM } from "@/lib/mock-data";
 import { useStore } from "@/lib/store";
@@ -31,6 +32,10 @@ export default function BehaviorPage() {
     () => store.behaviorRecords.filter((r) => r.status === "confirmed"),
     [store.behaviorRecords]
   );
+
+  // แบ่งหน้าก่อนจัดกลุ่มตามวันที่ ฟีดจึงแสดงเฉพาะบันทึกของหน้าปัจจุบัน
+  const [pageSize, setPageSize] = useState(10);
+  const pager = usePagination(records, pageSize);
 
   return (
     <>
@@ -52,7 +57,20 @@ export default function BehaviorPage() {
             <p className="mt-1 mb-3 text-xs text-muted-foreground">
               ครูทั่วไปบันทึกได้ทุกห้องที่สอน · ครูประจำชั้นดูแลนักเรียนในห้องตนเอง
             </p>
-            <BehaviorRecordFeed records={records} />
+            <BehaviorRecordFeed records={pager.slice} />
+            <PagerNumbered
+              page={pager.page}
+              totalPages={pager.totalPages}
+              setPage={pager.setPage}
+              from={pager.from}
+              to={pager.to}
+              total={pager.total}
+              pageSize={pageSize}
+              onPageSize={(n) => {
+                setPageSize(n);
+                pager.reset();
+              }}
+            />
           </div>
 
           <div className="space-y-5">

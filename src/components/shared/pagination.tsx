@@ -1,9 +1,16 @@
 "use client";
 
 /**
- * PROTOTYPE ONLY — การแบ่งหน้า (ทิ้งได้)
- * ตรรกะการแบ่งหน้าใช้ร่วมกันทุกแบบร่าง ส่วนหน้าตาของแถบเลื่อนหน้า
- * แต่ละแบบทำต่างกัน เพราะนั่นคือสิ่งที่กำลังเปรียบเทียบ
+ * การแบ่งหน้าที่ใช้ร่วมกันทุกรายการยาวในระบบ
+ * usePagination คำนวณช่วงที่แสดง (หนีบหน้าปัจจุบันตอน render ไม่ใช้ effect)
+ * PagerNumbered คือแถบเลื่อนหน้ามาตรฐาน: ปุ่มเลขหน้า + ไปหน้าแรก/สุดท้าย + เลือกจำนวนแถวต่อหน้า
+ *
+ * วิธีใช้:
+ *   const [pageSize, setPageSize] = useState(10);
+ *   const pager = usePagination(items, pageSize);
+ *   ... pager.slice.map(...)
+ *   <PagerNumbered {...pager} pageSize={pageSize} onPageSize={(n) => { setPageSize(n); pager.reset(); }} />
+ * เมื่อตัวกรองเปลี่ยนให้เรียก pager.reset() เพื่อกลับไปหน้าแรก
  */
 
 import { useMemo, useState } from "react";
@@ -150,100 +157,6 @@ export function PagerNumbered({
           <ChevronsRight className="size-4" />
         </button>
       </div>
-    </div>
-  );
-}
-
-/** แบบเรียบ: ก่อนหน้า / ถัดไป พร้อมบอกช่วงที่กำลังดู */
-export function PagerSimple({
-  page,
-  totalPages,
-  setPage,
-  from,
-  to,
-  total,
-}: {
-  page: number;
-  totalPages: number;
-  setPage: (p: number) => void;
-  from: number;
-  to: number;
-  total: number;
-}) {
-  return (
-    <div className="mt-4 flex items-center gap-3 border-t border-border pt-4">
-      <button
-        type="button"
-        className={BTN}
-        onClick={() => setPage(page - 1)}
-        disabled={page === 0}
-      >
-        <ChevronLeft className="size-4" /> ก่อนหน้า
-      </button>
-      <span className="flex-1 text-center text-[13px] text-muted-foreground">
-        แสดง <b className="text-foreground">{from}–{to}</b> จาก{" "}
-        {total.toLocaleString("th-TH")} คน · หน้า {page + 1} / {totalPages}
-      </span>
-      <button
-        type="button"
-        className={BTN}
-        onClick={() => setPage(page + 1)}
-        disabled={page >= totalPages - 1}
-      >
-        ถัดไป <ChevronRight className="size-4" />
-      </button>
-    </div>
-  );
-}
-
-/** แบบกระโดดหน้า: ก่อนหน้า/ถัดไป + ช่องพิมพ์เลขหน้า เหมาะกับคิวงานยาว ๆ */
-export function PagerJump({
-  page,
-  totalPages,
-  setPage,
-  from,
-  to,
-  total,
-}: {
-  page: number;
-  totalPages: number;
-  setPage: (p: number) => void;
-  from: number;
-  to: number;
-  total: number;
-}) {
-  return (
-    <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-border pt-4">
-      <span className="text-[13px] text-muted-foreground">
-        เหลืออีก {(total - to).toLocaleString("th-TH")} รายการ · กำลังดู {from}–{to}
-      </span>
-      <span className="flex-1" />
-      <button type="button" className={BTN} onClick={() => setPage(page - 1)} disabled={page === 0}>
-        <ChevronLeft className="size-4" /> ก่อนหน้า
-      </button>
-      <label className="flex items-center gap-1.5 text-[13px] text-muted-foreground">
-        ไปหน้า
-        <input
-          type="number"
-          min={1}
-          max={totalPages}
-          value={page + 1}
-          onChange={(e) => {
-            const n = Number(e.target.value);
-            if (n >= 1 && n <= totalPages) setPage(n - 1);
-          }}
-          className="h-9 w-16 rounded-lg border border-border bg-card px-2 text-center text-[13px]"
-        />
-        <span>/ {totalPages}</span>
-      </label>
-      <button
-        type="button"
-        className={BTN}
-        onClick={() => setPage(page + 1)}
-        disabled={page >= totalPages - 1}
-      >
-        ถัดไป <ChevronRight className="size-4" />
-      </button>
     </div>
   );
 }

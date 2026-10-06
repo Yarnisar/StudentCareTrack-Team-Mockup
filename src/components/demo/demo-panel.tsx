@@ -3,17 +3,15 @@
 /**
  * แผงสาธิต — การ์ดลอยมุมขวาล่าง (จอกว้าง) / ปุ่มกลม + bottom sheet (จอโทรศัพท์)
  * - สวมบทบาทเป็น: สลับผู้ใช้สาธิตโดยไม่ reload
- * - แบบที่กำลังเปรียบเทียบ: แกน ?variant= ของหน้าที่มีแบบร่าง (ดู components/prototype/prototype-switcher.tsx)
  * - เครื่องมือของหน้านี้: ปุ่มที่หน้าลงทะเบียนผ่าน useDemoPageTool (lib/demo/page-tools.ts)
  * แสดงทุก build; ซ่อนทั้งหมดด้วย ?demo=0 จำเฉพาะผู้ใช้ที่เลือกและสถานะย่อ/ขยายข้าม reload
  */
 
 import { Suspense, useEffect, useState, useSyncExternalStore } from "react";
 import { useSearchParams } from "next/navigation";
-import { Check, ChevronDown, ChevronLeft, ChevronRight, FlaskConical, Wrench, X } from "lucide-react";
+import { Check, ChevronDown, FlaskConical, Wrench, X } from "lucide-react";
 import { cn } from "cn";
 import { demoUsers, useSwitchUser } from "@/components/layout/role-switcher";
-import { usePrototypeAxes, usePrototypeNavigation } from "@/components/prototype/prototype-switcher";
 import { useDemoPageTools } from "@/lib/demo/page-tools";
 import { storedPanelCollapsed } from "@/lib/demo/persisted";
 import { initialOf } from "@/lib/format";
@@ -175,7 +173,6 @@ function PanelBody({ onAction }: { onAction?: () => void }) {
   return (
     <div className="flex-1 space-y-4 overflow-y-auto px-3 py-3">
       <UserSection onAction={onAction} />
-      <PrototypeSection />
       <ToolsSection onAction={onAction} />
     </div>
   );
@@ -250,50 +247,6 @@ function UserSection({ onAction }: { onAction?: () => void }) {
             </div>
           );
         })}
-      </div>
-    </section>
-  );
-}
-
-function PrototypeSection() {
-  const axes = usePrototypeAxes();
-  const { current, move } = usePrototypeNavigation();
-  if (axes.length === 0) return null;
-
-  return (
-    <section>
-      <SectionTitle>แบบที่กำลังเปรียบเทียบ</SectionTitle>
-      <div className="space-y-1.5 rounded-lg border border-border p-2">
-        {axes.map((axis) => {
-          const v = current(axis);
-          return (
-            <div key={axis.param} className="flex items-center gap-1">
-              <span className="w-16 shrink-0 text-[11.5px] text-muted-foreground">{axis.label}</span>
-              <button
-                type="button"
-                onClick={() => move(axis, -1)}
-                aria-label={`${axis.label}: แบบก่อนหน้า`}
-                className="flex size-7 shrink-0 items-center justify-center rounded-full hover:bg-muted"
-              >
-                <ChevronLeft className="size-4" />
-              </button>
-              <span className="min-w-0 flex-1 truncate text-center text-[12.5px] font-semibold" title={v.name}>
-                {v.key} · {v.name}
-              </span>
-              <button
-                type="button"
-                onClick={() => move(axis, 1)}
-                aria-label={`${axis.label}: แบบถัดไป`}
-                className="flex size-7 shrink-0 items-center justify-center rounded-full hover:bg-muted"
-              >
-                <ChevronRight className="size-4" />
-              </button>
-            </div>
-          );
-        })}
-        <p className="px-1 text-[10.5px] text-muted-foreground">
-          ใช้ปุ่มลูกศร ← → {axes.length > 1 && "และ ↑ ↓ "}บนคีย์บอร์ดได้
-        </p>
       </div>
     </section>
   );

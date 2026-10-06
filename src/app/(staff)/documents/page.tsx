@@ -5,6 +5,7 @@ import { Check, Download, FileText, Info } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { DcLevelChip } from "@/components/characteristics/dc-level";
 import { GradeSourceBadge } from "@/components/documents/grade-source-badge";
+import { PagerNumbered, usePagination } from "@/components/shared/pagination";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useStore } from "@/lib/store";
@@ -144,6 +145,8 @@ function DocumentsContent() {
     () => teachingOptions[0]?.teachingId ?? store.subjectTeachings.find((t) => t.termId === termId)?.teachingId ?? ""
   );
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
+  const [historySize, setHistorySize] = useState(10);
+  const historyPager = usePagination(store.educationDocuments, historySize);
 
   const doc = DOCS.find((d) => d.code === selected)!;
   const kind = DOCUMENT_SCOPE_KIND[selected];
@@ -240,7 +243,7 @@ function DocumentsContent() {
                 <span className="text-[12.5px] text-muted-foreground">บันทึกใน audit log ทุกครั้ง</span>
               </div>
               <div className="divide-y divide-border">
-                {store.educationDocuments.map((d) => (
+                {historyPager.slice.map((d) => (
                   <div key={d.docId} className="flex items-center gap-3 py-3">
                     <span className="w-36 shrink-0 text-[12.5px] text-muted-foreground">
                       {formatThaiDateTime(d.generatedAt)}
@@ -261,7 +264,24 @@ function DocumentsContent() {
                     </span>
                   </div>
                 ))}
+                {store.educationDocuments.length === 0 && (
+                  <p className="py-6 text-center text-[13px] text-muted-foreground">ยังไม่มีเอกสารที่จัดทำไว้</p>
+                )}
               </div>
+
+              <PagerNumbered
+                page={historyPager.page}
+                totalPages={historyPager.totalPages}
+                setPage={historyPager.setPage}
+                from={historyPager.from}
+                to={historyPager.to}
+                total={historyPager.total}
+                pageSize={historySize}
+                onPageSize={(n) => {
+                  setHistorySize(n);
+                  historyPager.reset();
+                }}
+              />
             </CardContent>
           </Card>
         </div>
