@@ -13,6 +13,7 @@
 import { evaluateNineS, RED_FLAG_QUESTIONS, scoreSdq, SDQ_QUESTIONS } from "../rules";
 import type { NineSAssessment, RedFlagAssessment, SdqAssessment, SdqRater } from "../types";
 import { CURRENT_TERM, PREVIOUS_TERM, USER, studentUserId } from "./core";
+import { generatedNineS, generatedRedFlags, generatedSdq } from "./generated-class";
 
 const SEM1 = PREVIOUS_TERM.termId;
 const SEM2 = CURRENT_TERM.termId;
@@ -29,7 +30,7 @@ const redFlag = (studentId: string, assessedAt: string, assessedBy: string = USE
 
 const PREV_YEAR_TERM = "T2568-2";
 
-export const redFlagAssessments: RedFlagAssessment[] = [
+const baseRedFlags: RedFlagAssessment[] = [
   {
     id: `RF-${PREV_YEAR_TERM}-30118`,
     studentId: "30118",
@@ -58,7 +59,7 @@ const nineS = (
   return { id: `NS-${SEM1}-${studentId}`, studentId, termId: SEM1, clusterScores, clusterResults, result, assessedBy, assessedAt };
 };
 
-export const nineSAssessments: NineSAssessment[] = [
+const baseNineS: NineSAssessment[] = [
   {
     ...nineS("30118", { s7: 1, s9: 2, s2: 1 }, "2568-11-12T10:10:00", USER.wichai),
     id: `NS-${PREV_YEAR_TERM}-30118`,
@@ -135,7 +136,7 @@ function sdq(
 
 const S = studentUserId;
 
-export const sdqAssessments: SdqAssessment[] = [
+const baseSdq: SdqAssessment[] = [
   // ---------------- ปีการศึกษา 2568 (ฉบับครู โดยครูประจำชั้นคนเดิม) ----------------
   sdq("30118", PREV_YEAR_TERM, "teacher", "2568-11-12T10:10:00", { by: USER.wichai, at: "2568-11-20T14:00:00", total: 15 }),
 
@@ -170,3 +171,8 @@ export const sdqAssessments: SdqAssessment[] = [
   sdq("30152", SEM2, "student", "2570-02-10T09:00:00", { by: S("30152"), at: "2570-02-12T10:00:00", total: 10 }),
   sdq("30152", SEM2, "parent", "2570-02-10T09:00:00", null),
 ];
+
+/** 8 คนตัวอย่างหลัก + นักเรียนที่สร้างเพิ่ม (ดู generated-class.ts) */
+export const redFlagAssessments: RedFlagAssessment[] = [...baseRedFlags, ...generatedRedFlags];
+export const nineSAssessments: NineSAssessment[] = [...baseNineS, ...generatedNineS];
+export const sdqAssessments: SdqAssessment[] = [...baseSdq, ...generatedSdq];

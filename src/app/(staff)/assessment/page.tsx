@@ -17,7 +17,7 @@ import {
   type AssessmentOutcome,
   type SdqAssessment,
 } from "@/lib/types";
-import { initialOf } from "@/lib/format";
+import { byClassNo, initialOf } from "@/lib/format";
 
 const shortRater = (f: SdqAssessment) =>
   SDQ_RATER_LABEL[f.rater].replace("ประเมินตนเอง", "").replace("ประเมิน", "");
@@ -26,7 +26,7 @@ export default function AssessmentPage() {
   const store = useStore();
   const term = store.currentTerm;
   const round = term.semester;
-  const students = store.students.filter((s) => store.canSeeSensitive(s.studentId));
+  const students = store.students.filter((s) => store.canSeeSensitive(s.studentId)).sort(byClassNo);
   const [pageSize, setPageSize] = useState(10);
   const pager = usePagination(students, pageSize);
 

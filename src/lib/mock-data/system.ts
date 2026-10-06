@@ -6,7 +6,7 @@
  * และช่วง SDQ (ปิด 20 ก.พ. แจ้งล่วงหน้า 5 วัน) อยู่ในช่วง "ใกล้ปิด"
  */
 
-import { addHoursThai } from "../format";
+import { addDaysThai, addHoursThai } from "../format";
 import { buildNotificationContent } from "../notifications";
 import type {
   AuditLog,
@@ -20,7 +20,8 @@ import type {
 } from "../types";
 import { behaviorRecords, checkinLogs } from "./behavior";
 import { careCases, signatureRequests } from "./care";
-import { CURRENT_TERM, PREVIOUS_TERM, students, SYSTEM_USER_ID, USER, users } from "./core";
+import { CURRENT_TERM, DEMO_TODAY, generatedRoster, PREVIOUS_TERM, students, SYSTEM_USER_ID, USER, users } from "./core";
+import { autoOpenedCases, generatedAppointments, generatedBehaviorRecords, generatedSdq } from "./generated-class";
 import { appointments } from "./home-visit";
 import { screenings } from "./screening";
 import { nineSAssessments, redFlagAssessments, sdqAssessments } from "./assessment";
@@ -49,13 +50,27 @@ export const operatingWindows: OperatingWindow[] = [
 ];
 
 /** ความยินยอมปีการศึกษา 2569 — นักเรียนที่ไม่มีแถว = ยังไม่ได้ความยินยอม (เช่น 30183 ผู้ปกครองยังไม่ตอบ) */
-export const guardianConsents: GuardianConsent[] = [
+const baseGuardianConsents: GuardianConsent[] = [
   { consentId: "GC-001", studentId: "30125", guardianUserId: USER.ratana, academicYear: 2569, granted: true, respondedAt: "2569-05-20T19:12:00" },
   { consentId: "GC-002", studentId: "30118", guardianUserId: "U-G03", academicYear: 2569, granted: true, respondedAt: "2569-05-21T20:05:00" },
   { consentId: "GC-003", studentId: "30131", guardianUserId: USER.pimjai, academicYear: 2569, granted: false, respondedAt: "2569-05-22T18:40:00" },
   { consentId: "GC-004", studentId: "30140", guardianUserId: "U-G05", academicYear: 2569, granted: true, respondedAt: "2569-05-23T07:55:00" },
   { consentId: "GC-005", studentId: "30152", guardianUserId: "U-G06", academicYear: 2569, granted: true, respondedAt: "2569-05-25T12:30:00" },
 ];
+
+/** นักเรียนที่สร้างเพิ่ม: ส่วนใหญ่ยินยอม บางคนไม่ยินยอม และบางคนผู้ปกครองยังไม่ตอบ (ไม่มีแถว) */
+const generatedConsents: GuardianConsent[] = generatedRoster.profiles
+  .filter((p) => p.consent !== "none")
+  .map((p, i) => ({
+    consentId: `GC-${String(6 + i).padStart(3, "0")}`,
+    studentId: p.studentId,
+    guardianUserId: p.guardianUserId,
+    academicYear: 2569,
+    granted: p.consent === "granted",
+    respondedAt: `${addDaysThai("2569-05-20", (i * 7) % 20)}T${String(18 + (i % 4)).padStart(2, "0")}:${String((i * 13) % 60).padStart(2, "0")}:00`,
+  }));
+
+export const guardianConsents: GuardianConsent[] = [...baseGuardianConsents, ...generatedConsents];
 
 /** ค่าที่ผู้ใช้ปรับเอง — ผู้ใช้ที่ไม่มีแถวรับอีเมลตามค่าเริ่มต้น (เปิด) */
 export const notificationSettings: NotificationSetting[] = [
@@ -127,6 +142,51 @@ export const seedNotifications: Notification[] = [
   seedNotification("visit_scheduled", USER.ekachai, "30125", "2570-02-10T16:00:00", null, {
     date: hv001.proposedDate,
   }),
+  // ---- นักเรียนที่สร้างเพิ่ม (ดู generated-class.ts) ----
+  // ระบบเปิด care case ให้อัตโนมัติ → ครูประจำชั้นทั้ง 2 คน
+  ...autoOpenedCases.flatMap((c) =>
+    [USER.somying, USER.theerapong].map((userId, i) =>
+      seedNotification("case_opened", userId, c.studentId, c.openedAt.includes("T") ? c.openedAt : `${c.openedAt}T09:00:00`, i === 0 ? addHoursThai(c.openedAt.includes("T") ? c.openedAt : `${c.openedAt}T09:00:00`, 2) : null)
+    )
+  ),
+  // มาสายครบเกณฑ์ / คะแนนความประพฤติต่ำกว่าเกณฑ์
+  ...generatedRoster.profiles.flatMap((p) => {
+    if (p.scenario === "amber_late")
+      return [USER.somying, USER.theerapong].map((userId) =>
+        seedNotification("late_threshold", userId, p.studentId, "2570-02-12T07:45:00", null, { count: 5 })
+      );
+    if (p.scenario === "green_low_score") {
+      const last = generatedBehaviorRecords
+        .filter((r) => r.studentId === p.studentId && r.status === "confirmed")
+        .map((r) => r.occurredAt)
+        .sort()
+        .pop();
+      return last
+        ? [USER.somying, USER.theerapong].map((userId) => seedNotification("behavior_score_low", userId, p.studentId, last, null))
+        : [];
+    }
+    return [];
+  }),
+  // ผู้ปกครองได้รับแจ้งทันทีเมื่อบันทึกระดับกลางขึ้นไป / ความดี ถูกยืนยัน (สัปดาห์ที่ผ่านมา)
+  ...generatedBehaviorRecords
+    .filter((r) => r.source === "manual" && r.status === "confirmed" && ["BR-03", "BR-04", "BR-05", "BR-06", "BR-07"].includes(r.ruleId) && r.occurredAt >= addDaysThai(DEMO_TODAY, -7))
+    .flatMap((r) =>
+      generatedRoster.guardians
+        .filter((g) => g.studentId === r.studentId)
+        .map((g) => seedNotification("behavior_confirmed", g.guardianUserId, r.studentId, r.createdAt, null))
+    ),
+  // SDQ ครั้งที่ 2: ผู้ปกครองที่ยังไม่ได้ส่งฉบับผู้ปกครอง
+  ...generatedSdq
+    .filter((f) => f.termId === CURRENT_TERM.termId && f.rater === "parent" && f.status === "pending")
+    .map((f) => seedNotification("sdq_requested", generatedRoster.guardians.find((g) => g.studentId === f.studentId)!.guardianUserId, f.studentId, f.requestedAt, null)),
+  // นัดเยี่ยมบ้านที่ยังไม่ถึงวัน → ผู้ปกครอง
+  ...generatedAppointments
+    .filter((a) => a.academicYear === 2569 && a.visitType === "annual" && (a.status === "pending" || a.status === "confirmed") && a.proposedDate > DEMO_TODAY)
+    .flatMap((a) =>
+      generatedRoster.guardians
+        .filter((g) => g.studentId === a.studentId)
+        .map((g) => seedNotification("visit_scheduled", g.guardianUserId, a.studentId, `${addDaysThai(DEMO_TODAY, -3)}T16:00:00`, null, { date: a.proposedDate }))
+    ),
 ].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 
 /* ------------------------------------------------------------------ */

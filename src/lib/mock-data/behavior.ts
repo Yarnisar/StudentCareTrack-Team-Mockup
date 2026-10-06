@@ -2,6 +2,7 @@
 
 import type { BehaviorRecord, BehaviorRule, CheckinLog } from "../types";
 import { SYSTEM_USER_ID, USER } from "./core";
+import { generatedBehaviorRecords, generatedCheckinLogs } from "./generated-class";
 
 export const behaviorRules: BehaviorRule[] = [
   { ruleId: "BR-01", name: "มาสาย", severity: "minor", scoreDelta: -2, notifyGuardian: false, isActive: true },
@@ -71,7 +72,7 @@ function late(
   };
 }
 
-export const behaviorRecords: BehaviorRecord[] = [
+const baseBehaviorRecords: BehaviorRecord[] = [
   // วันนี้ — รอยืนยัน
   late("BH-001", "30118", "CI-001", "2570-02-16T07:52:00"),
   late("BH-002", "30125", "CI-002", "2570-02-16T07:55:00"),
@@ -126,7 +127,7 @@ function scan(logId: string, studentId: string, scannedAt: string, isLate: boole
   return { logId, studentId, checkinDate: scannedAt.slice(0, 10), scannedAt, isLate, scannedBy: USER.somying };
 }
 
-export const checkinLogs: CheckinLog[] = [
+const baseCheckinLogs: CheckinLog[] = [
   scan("CI-001", "30118", "2570-02-16T07:52:00", true),
   scan("CI-002", "30125", "2570-02-16T07:55:00", true),
   scan("CI-003", "30171", "2570-02-16T07:58:00", true),
@@ -139,3 +140,7 @@ export const checkinLogs: CheckinLog[] = [
   scan("CI-007", "30118", "2570-02-04T07:38:00", true),
   scan("CI-006", "30118", "2570-02-02T07:51:00", true),
 ];
+
+/** 8 คนตัวอย่างหลัก + นักเรียนที่สร้างเพิ่ม (ดู generated-class.ts) */
+export const behaviorRecords: BehaviorRecord[] = [...baseBehaviorRecords, ...generatedBehaviorRecords];
+export const checkinLogs: CheckinLog[] = [...baseCheckinLogs, ...generatedCheckinLogs];

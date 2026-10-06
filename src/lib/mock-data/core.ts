@@ -3,6 +3,7 @@
  * จำลองการอ่านจากตารางของ Team A / Team B (ADR-0001) — ระบบนี้อ่านอย่างเดียว
  */
 
+import { generateRoster } from "./generated-roster";
 import type {
   AcademicTerm,
   Classroom,
@@ -138,7 +139,8 @@ const staffUser = (
   isActive: true,
 });
 
-export const students: Student[] = [
+/** นักเรียนตัวอย่าง 8 คนที่เขียนมือ — ใช้เป็นกรณีสาธิตที่มีชื่อ (30125, 30118, 30131, 30140, 30152, 30160, 30171, 30183) */
+const baseStudents: Student[] = [
   {
     studentId: "30125",
     fullName: "ด.ญ. แพรวา สายใจ",
@@ -238,11 +240,23 @@ export const students: Student[] = [
   },
 ];
 
+/**
+ * นักเรียนที่สร้างเพิ่มให้ ม.3/1 ครบ 38 คน (กำหนดผลได้ — ดู generated-roster.ts)
+ * เอาต์พุตเหมือนเดิมทุกครั้งที่โหลด
+ */
+export const generatedRoster = generateRoster(baseStudents);
+
+/** นักเรียนทั้งห้อง: 8 คนตัวอย่างหลักก่อน แล้วตามด้วยส่วนที่สร้างเพิ่ม */
+export const students: Student[] = [...baseStudents, ...generatedRoster.students];
+
 /** ห้องเรียนรายปี: ปี 2568 อยู่ ม.2/1 แล้วเลื่อนชั้นเป็น ม.3/1 ในปี 2569 */
-export const studentEnrollments: StudentEnrollment[] = students.flatMap((s) => [
-  { studentId: s.studentId, roomId: "R-201", academicYear: 2568 },
-  { studentId: s.studentId, roomId: s.roomId, academicYear: 2569 },
-]);
+export const studentEnrollments: StudentEnrollment[] = [
+  ...baseStudents.flatMap((s) => [
+    { studentId: s.studentId, roomId: "R-201", academicYear: 2568 },
+    { studentId: s.studentId, roomId: s.roomId, academicYear: 2569 },
+  ]),
+  ...generatedRoster.enrollments,
+];
 
 const guardianUser = (
   userId: string,
@@ -267,7 +281,7 @@ export const users: User[] = [
   staffUser(USER.janpen, "S-12", "janpen.s", "teacher_homeroom", "ครูประจำชั้น ม.3/2", null),
   staffUser(USER.admin, "S-A1", "admin", "admin_school", "แอดมินโรงเรียน", "admin@school.example"),
   staffUser(USER.director, "S-A2", "director", "admin_school", "ผู้อำนวยการ", "director@school.example"),
-  ...students.map<User>((s) => ({
+  ...baseStudents.map<User>((s) => ({
     userId: `U-S${s.studentId}`,
     username: s.studentId,
     role: "student",
@@ -285,6 +299,7 @@ export const users: User[] = [
   guardianUser("U-G06", "somsri.k", "นางสมศรี ขยันดี", "08x-xxx-6621", null),
   guardianUser("U-G07", "orathai.p", "นางอรทัย พากเพียร", "08x-xxx-3312", null),
   guardianUser("U-G08", "prasert.r", "นายประเสริฐ รักเรียน", "08x-xxx-7788", null),
+  ...generatedRoster.users,
 ];
 
 /** userId ของบัญชีนักเรียน */
@@ -300,10 +315,8 @@ export const studentGuardians: StudentGuardian[] = [
   { studentId: "30152", guardianUserId: "U-G06", relation: "มารดา" },
   { studentId: "30160", guardianUserId: "U-G07", relation: "มารดา" },
   { studentId: "30171", guardianUserId: "U-G08", relation: "บิดา" },
+  ...generatedRoster.guardians,
 ];
-
-/** จำนวนนักเรียนทั้งห้องตามทะเบียน (ใช้แสดงในสถิติภาพรวม) */
-export const CLASS_SIZE = 38;
 
 /** ผู้ใช้ที่แสดงในตัวเลือกบทบาท (หน้า login และท้าย sidebar) พร้อมคำอธิบายสิ่งที่ใช้สาธิต */
 export const DEMO_USERS: { userId: string; note: string }[] = [

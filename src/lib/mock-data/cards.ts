@@ -7,7 +7,8 @@
  */
 
 import type { CardTemplateSettings, IdCard } from "../types";
-import { students, studentUserId, USER } from "./core";
+import { generatedRoster, students, studentUserId, USER } from "./core";
+import { hashText, Rng } from "./prng";
 
 const ISSUED_AT = "2569-05-18T08:30";
 
@@ -47,7 +48,7 @@ const card = (
  * สถานะเริ่มต้น: นักเรียน 6 คนมีบัตรใช้งานได้, 30131 มีใบที่เพิกถอน (บัตรหาย) + ใบใหม่,
  * และ 30183 ยังไม่เคยออกบัตร (ใช้สาธิตการออกบัตรให้นักเรียนที่ยังไม่มี)
  */
-export const idCards: IdCard[] = [
+const baseIdCards: IdCard[] = [
   card("IDC-001", "30125", SEED_TOKENS["30125"]),
   card("IDC-002", "30118", SEED_TOKENS["30118"]),
   card("IDC-003", "30131", SEED_TOKENS["30131"], {
@@ -61,6 +62,34 @@ export const idCards: IdCard[] = [
   card("IDC-007", "30171", SEED_TOKENS["30171"]),
   card("IDC-008", "30131", REISSUED_TOKEN, { issuedAt: "2570-01-12T10:20" }),
 ];
+
+/**
+ * นักเรียนที่สร้างเพิ่ม: ส่วนใหญ่มีบัตรใช้งานได้ ออกวันเดียวกับ 8 คนแรก
+ * 1 คนบัตรชำรุดแล้วออกใบใหม่ และ 1 คนยังไม่เคยออกบัตร
+ */
+const QR_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+const cardRng = new Rng(hashText("sct-class-38:cards"));
+const usedTokens = new Set<string>([...Object.values(SEED_TOKENS), REISSUED_TOKEN]);
+const newToken = (): string => {
+  let token = "";
+  do {
+    token = "SCTC-" + Array.from({ length: 16 }, () => QR_ALPHABET[cardRng.int(0, QR_ALPHABET.length - 1)]).join("");
+  } while (usedTokens.has(token));
+  usedTokens.add(token);
+  return token;
+};
+let cardSeq = baseIdCards.length;
+const generatedCards: IdCard[] = generatedRoster.profiles.flatMap((p) => {
+  if (p.card === "none") return [];
+  const first = card(`IDC-${String(++cardSeq).padStart(3, "0")}`, p.studentId, newToken());
+  if (p.card === "active") return [first];
+  return [
+    { ...first, status: "revoked" as const, revokedAt: "2569-11-20T09:40", revokeReason: "บัตรชำรุด" },
+    card(`IDC-${String(++cardSeq).padStart(3, "0")}`, p.studentId, newToken(), { issuedAt: "2569-11-20T09:45" }),
+  ];
+});
+
+export const idCards: IdCard[] = [...baseIdCards, ...generatedCards];
 
 export const initialCardTemplate: CardTemplateSettings = {
   academicYear: 2569,

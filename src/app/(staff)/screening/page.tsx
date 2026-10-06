@@ -8,13 +8,13 @@ import { WindowNotice } from "@/components/shared/window-notice";
 import { LinkButton } from "@/components/ui/link-button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useStore } from "@/lib/store";
-import { formatThaiDate, initialOf } from "@/lib/format";
+import { byClassNo, formatThaiDate, initialOf } from "@/lib/format";
 import { overallRisk } from "@/lib/rules";
 import { DIMENSION_LABEL, SCREENING_STATUS_LABEL } from "@/lib/types";
 
 export default function ScreeningListPage() {
   const store = useStore();
-  const students = store.students.filter((s) => store.canSeeSensitive(s.studentId));
+  const students = store.students.filter((s) => store.canSeeSensitive(s.studentId)).sort(byClassNo);
   const certified = students.filter((s) => store.screeningOf(s.studentId)?.status === "certified").length;
   const [pageSize, setPageSize] = useState(10);
   const pager = usePagination(students, pageSize);

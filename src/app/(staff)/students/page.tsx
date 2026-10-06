@@ -1,28 +1,28 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { PagerNumbered, usePagination } from "@/components/shared/pagination";
 import { RiskBadge } from "@/components/shared/risk-badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { CLASS_SIZE } from "@/lib/mock-data";
 import { useStore } from "@/lib/store";
-import { initialOf } from "@/lib/format";
+import { byClassNo, initialOf } from "@/lib/format";
 import { DIMENSION_LABEL } from "@/lib/types";
 
 export default function StudentsPage() {
   const store = useStore();
   const anySensitive = store.students.some((s) => store.canSeeSensitive(s.studentId));
   const [pageSize, setPageSize] = useState(10);
-  const pager = usePagination(store.students, pageSize);
+  const sorted = useMemo(() => [...store.students].sort(byClassNo), [store.students]);
+  const pager = usePagination(sorted, pageSize);
 
   return (
     <>
       <PageHeader
         title="ข้อมูลนักเรียน"
-        subtitle={`${store.currentUser.title ?? ""} · แสดง ${store.students.length} จาก ${CLASS_SIZE} คน`}
+        subtitle={`${store.currentUser.title ?? ""} · นักเรียน ${store.students.length} คน`}
       />
 
       <div className="flex-1 overflow-y-auto p-8">
