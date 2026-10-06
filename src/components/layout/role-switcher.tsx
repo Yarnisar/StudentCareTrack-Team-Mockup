@@ -1,12 +1,11 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { cn } from "cn";
 import { DEMO_USERS } from "@/lib/mock-data";
 import { canAccessStaffPath } from "@/lib/navigation";
 import { HOME_BY_ROLE, isStaff } from "@/lib/permissions";
 import { useStore } from "@/lib/store";
-import { ROLE_LABEL, type User } from "@/lib/types";
+import type { User } from "@/lib/types";
 
 const within = (pathname: string, base: string) => pathname === base || pathname.startsWith(`${base}/`);
 
@@ -37,34 +36,4 @@ export function demoUsers(users: User[]) {
     const user = users.find((u) => u.userId === userId);
     return user ? [{ user, note }] : [];
   });
-}
-
-/** ตัวเลือกบทบาทในหน้า login */
-export function LoginRolePicker() {
-  const store = useStore();
-  const switchUser = useSwitchUser();
-
-  return (
-    <div className="grid gap-2">
-      {demoUsers(store.users).map(({ user, note }) => (
-        <button
-          key={user.userId}
-          type="button"
-          onClick={() => switchUser(user, { stay: false })}
-          className={cn(
-            "flex items-center justify-between gap-3 rounded-lg border px-3.5 py-2.5 text-left transition-colors hover:bg-muted",
-            user.userId === store.currentUser.userId ? "border-primary bg-accent" : "border-border"
-          )}
-        >
-          <span className="min-w-0">
-            <span className="block truncate text-[13.5px] font-semibold">{user.name}</span>
-            <span className="block truncate text-[11.5px] text-muted-foreground">{note}</span>
-          </span>
-          <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">
-            {ROLE_LABEL[user.role]}
-          </span>
-        </button>
-      ))}
-    </div>
-  );
 }
