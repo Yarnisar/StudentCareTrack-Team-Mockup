@@ -38,6 +38,10 @@ export interface CardsSlice {
   cardsOfStudent: (studentId: string) => IdCard[];
   /** บัตรใบนี้หมดอายุหรือไม่ (ปีการศึกษาไม่ตรงภาคเรียนปัจจุบัน หรือเลยวันหมดอายุบนบัตร) */
   isCardExpired: (card: IdCard) => boolean;
+  /** รหัสบัตรที่แผงสาธิตจำลองให้หมดอายุ (ไม่เปลี่ยนข้อมูลบัตรจริง) */
+  simulatedExpiredCardIds: string[];
+  /** สำหรับแผงสาธิต: จำลองให้บัตรใบนี้หมดอายุ/ยกเลิกการจำลอง (แอดมินเท่านั้น, เขียน audit) */
+  setCardSimulatedExpiry: (cardId: string, expired: boolean) => { ok: true } | { ok: false; error: string };
   /** บัตรที่ใช้งานได้ของนักเรียน (ไม่มี = ยังไม่ได้ออกบัตร เพิกถอนหมด หรือหมดอายุ) */
   activeCardOfStudent: (studentId: string) => IdCard | undefined;
   /** สถานะบัตรของนักเรียนสำหรับแสดงผล */
@@ -74,6 +78,7 @@ function randomToken(): string {
 export function useCardsSlice(base: PlatformSlice): CardsSlice {
   const [idCards, setIdCards] = useState<IdCard[]>(seedCards);
   const [cardTemplate, setCardTemplate] = useState<CardTemplateSettings>(initialCardTemplate);
+  const [simulatedExpired, setSimulatedExpired] = useState<string[]>([]);
 
   return useMemo<CardsSlice>(() => {
     const sorted = [...idCards].sort((a, b) => b.issuedAt.localeCompare(a.issuedAt));
@@ -86,6 +91,7 @@ export function useCardsSlice(base: PlatformSlice): CardsSlice {
     };
 
     const isCardExpired: CardsSlice["isCardExpired"] = (card) =>
+      simulatedExpired.includes(card.cardId) ||
       card.academicYear !== base.currentTerm.academicYear ||
       nowThaiIso().slice(0, 10) > cardTemplate.expiresOn;
 
@@ -227,6 +233,21 @@ export function useCardsSlice(base: PlatformSlice): CardsSlice {
       return { ok: true };
     };
 
+    const setCardSimulatedExpiry: CardsSlice["setCardSimulatedExpiry"] = (cardId, expired) => {
+      const denied = adminOnly();
+      if (denied) return { ok: false, error: denied };
+      if (!idCards.some((c) => c.cardId === cardId)) return { ok: false, error: "ไม่พบบัตรใบนี้" };
+      const was = simulatedExpired.includes(cardId);
+      if (was === expired) return { ok: true };
+      setSimulatedExpired((prev) => (expired ? [...prev, cardId] : prev.filter((id) => id !== cardId)));
+      base.logAudit("UPDATE", "id_cards", cardId, {
+        before: { simulatedExpired: was },
+        after: { simulatedExpired: expired },
+        reason: "จำลองจากแผงสาธิต (ไม่เปลี่ยนข้อมูลบัตรจริง)",
+      });
+      return { ok: true };
+    };
+
     const studentsWithoutCard = base.students.filter(
       (s) => s.status === "studying" && !activeCardOfStudent(s.studentId)
     );
@@ -236,6 +257,8 @@ export function useCardsSlice(base: PlatformSlice): CardsSlice {
       cardTemplate,
       cardsOfStudent,
       isCardExpired,
+      simulatedExpiredCardIds: simulatedExpired,
+      setCardSimulatedExpiry,
       activeCardOfStudent,
       cardStatusOfStudent,
       studentsWithoutCard,
@@ -246,5 +269,5 @@ export function useCardsSlice(base: PlatformSlice): CardsSlice {
       reissueCard,
       updateCardTemplate,
     };
-  }, [base, idCards, cardTemplate]);
+  }, [base, idCards, cardTemplate, simulatedExpired]);
 }

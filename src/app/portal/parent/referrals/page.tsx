@@ -99,6 +99,15 @@ function SignCard({ entry }: { entry: ReferralEntry }) {
     "ติ๊กยืนยันว่าอ่านแล้วและใส่ชื่อผู้ลงนาม"
   );
 
+  useDemoPageTool(
+    "จำลอง: ผู้ปกครองไม่ลงนาม",
+    () => {
+      if (!pending) return;
+      store.declineSignatureRequest(pending.requestId, "ขอปรึกษาครอบครัวก่อนตัดสินใจ จึงยังไม่ลงนามในหนังสือส่งต่อ");
+    },
+    "ให้ผู้ปกครองที่กำลังลงนามปฏิเสธคำขอด้วยเหตุผลตัวอย่าง — เอกสารกลับเป็นร่าง ขั้นตอนเป็นสีแดง และครูประจำชั้นได้รับแจ้งเตือน"
+  );
+
   if (!pending || !student) return null;
   const blocked = store.signBlockReason(pending.requestId);
   const nameOk = name.trim().length > 0;

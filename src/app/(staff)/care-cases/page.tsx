@@ -11,6 +11,7 @@ import { OpenCaseForm } from "@/components/care/open-case-form";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useStore } from "@/lib/store";
+import { useDemoPageTool } from "@/lib/demo/page-tools";
 import { formatThaiDate } from "@/lib/format";
 import { CASE_CLOSE_REASON_LABEL, CASE_TRIGGER_SOURCE_LABEL } from "@/lib/types";
 
@@ -28,6 +29,19 @@ type Selection =
   | { kind: "none" };
 
 const selectClass = "h-10 w-full rounded-lg border border-border bg-card px-3 text-sm";
+
+/** ปุ่มสาธิต: ลงทะเบียนเฉพาะเมื่อ case ที่เลือกยังเปิดอยู่ (ถอดออกเมื่อ case ปิดแล้ว) */
+function TransferDemoTool({ studentId, studentName }: { studentId: string; studentName: string }) {
+  const store = useStore();
+  useDemoPageTool(
+    "จำลอง: นักเรียนย้ายออก",
+    () => {
+      store.applyStudentStatusChange(studentId, "transferred");
+    },
+    `จำลองว่า ${studentName} ย้ายออก เพื่อดูกฎปิด case อัตโนมัติ (เหตุผล "ย้ายออก" บันทึกโดยระบบ) — เป็นการจำลองเท่านั้น สถานะนักเรียนจริงไม่เปลี่ยน; ของจริงสัญญาณนี้มาจากทะเบียนนักเรียนของทีม B`
+  );
+  return null;
+}
 
 function CareCasesContent() {
   const store = useStore();
@@ -70,6 +84,13 @@ function CareCasesContent() {
 
   return (
     <>
+      {selectedCase?.status === "active" && (
+        <TransferDemoTool
+          key={selectedCase.caseId}
+          studentId={selectedCase.studentId}
+          studentName={store.getStudent(selectedCase.studentId)?.fullName ?? selectedCase.studentId}
+        />
+      )}
       <PageHeader title="ติดตามและช่วยเหลือนักเรียน" subtitle="care case แผนช่วยเหลือ และประวัติการติดตามผล" />
 
       <div className="flex-1 overflow-y-auto p-4 md:p-8">
