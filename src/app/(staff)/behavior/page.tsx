@@ -3,52 +3,30 @@
 /**
  * หน้าการจัดการความประพฤติ
  *
- * PROTOTYPE: หน้านี้กำลังโฮสต์แบบร่าง 3 แบบของการจัดวางรายการบันทึก
- * เพื่อตอบคำถามว่า "จัดวางอย่างไรให้ชื่อพฤติกรรมและรายละเอียดเหตุการณ์ไม่ถูกตัด"
- * สลับด้วย ?variant=A|B|C จากแถบลอยด้านล่าง (แสดงเฉพาะตอน dev)
- * เมื่อเลือกแบบได้แล้ว ให้ยุบเหลือแบบเดียวและลบโฟลเดอร์ _prototype/ ทิ้ง
+ * จัดวางแบบ "ฟีดการ์ด" จัดกลุ่มตามวันที่ — ชื่อพฤติกรรมและรายละเอียดเหตุการณ์แสดงครบ ไม่ถูกตัด
+ * แถบด้านขวาเก็บฟอร์มบันทึกใหม่และกฎความประพฤติไว้ให้ครูใช้ได้ทันที
  *
- * ส่วนที่ไม่ขึ้นกับการตัดสินใจด้านการจัดวาง อยู่นอก _prototype/ และวางไว้เหนือแบบร่าง:
+ * ส่วนบนเป็นงานที่ต้องตัดสินใจก่อน:
  * - BehaviorPendingQueue: บันทึกมาสายรอยืนยัน (ยืนยัน / ยกเว้นพร้อมเหตุผล)
- * - BehaviorRecordManager: แก้ไขภายใน 24 ชม. / ยกเลิกพร้อมเหตุผล
- * แบบร่างแสดงเฉพาะบันทึกที่มีผล (confirmed)
+ * - BehaviorRecordManager: แก้ไขภายใน 24 ชม. / ยกเลิกพร้อมเหตุผล (ไม่มีการลบ)
+ * ฟีดด้านล่างแสดงเฉพาะบันทึกที่มีผล (confirmed)
  */
 
-import { Suspense, useMemo } from "react";
-import { useSearchParams } from "next/navigation";
+import { useMemo } from "react";
 import { BehaviorPendingQueue } from "@/components/behavior/pending-queue";
+import { NewRecordFields, RulesList, useBehaviorForm } from "@/components/behavior/record-form";
+import { BehaviorRecordFeed, BehaviorStats } from "@/components/behavior/record-feed";
 import { BehaviorRecordManager } from "@/components/behavior/record-manager";
 import { PageHeader } from "@/components/layout/page-header";
-import { PrototypeSwitcher } from "@/components/prototype/prototype-switcher";
+import { Card, CardContent } from "@/components/ui/card";
 import { CURRENT_TERM } from "@/lib/mock-data";
 import { useStore } from "@/lib/store";
-import { useBehaviorForm } from "./_prototype/shared";
-import { VariantA, VARIANT_A_NAME } from "./_prototype/variant-a";
-import { VariantB, VARIANT_B_NAME } from "./_prototype/variant-b";
-import { VariantC, VARIANT_C_NAME } from "./_prototype/variant-c";
-
-const VARIANTS = [
-  { key: "A", name: VARIANT_A_NAME },
-  { key: "B", name: VARIANT_B_NAME },
-  { key: "C", name: VARIANT_C_NAME },
-];
 
 export default function BehaviorPage() {
-  return (
-    <Suspense fallback={null}>
-      <BehaviorContent />
-    </Suspense>
-  );
-}
-
-function BehaviorContent() {
-  const params = useSearchParams();
-  const variant = params.get("variant") ?? "A";
-
   const store = useStore();
   const form = useBehaviorForm();
 
-  // แบบร่างแสดงเฉพาะบันทึกที่มีผลกับคะแนน — รอยืนยัน/ยกเว้น/ยกเลิก อยู่ในส่วนด้านบน
+  // ฟีดแสดงเฉพาะบันทึกที่มีผลกับคะแนน — รอยืนยัน/ยกเว้น/ยกเลิก อยู่ในส่วนด้านบน
   const records = useMemo(
     () => store.behaviorRecords.filter((r) => r.status === "confirmed"),
     [store.behaviorRecords]
@@ -61,19 +39,45 @@ function BehaviorContent() {
         subtitle={`บันทึกและติดตามพฤติกรรมนักเรียน · ${CURRENT_TERM.label}`}
       />
 
-      {/* block (ไม่ใช่ flex) เพื่อให้แบบร่างขยายตามเนื้อหาและเลื่อนพร้อมกันทั้งหน้า */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="space-y-5 px-8 pt-8">
+      <div className="flex-1 overflow-y-auto p-8 pb-24">
+        <div className="space-y-5">
           <BehaviorPendingQueue />
           <BehaviorRecordManager />
+          <BehaviorStats records={records} />
         </div>
 
-        {variant === "A" && <VariantA records={records} form={form} />}
-        {variant === "B" && <VariantB records={records} form={form} />}
-        {variant === "C" && <VariantC records={records} form={form} />}
-      </div>
+        <div className="mt-5 grid gap-5 xl:grid-cols-[1.8fr_1fr]">
+          <div>
+            <h2 className="text-[15.5px] font-bold">ประวัติการบันทึกความประพฤติ</h2>
+            <p className="mt-1 mb-3 text-xs text-muted-foreground">
+              ครูทั่วไปบันทึกได้ทุกห้องที่สอน · ครูประจำชั้นดูแลนักเรียนในห้องตนเอง
+            </p>
+            <BehaviorRecordFeed records={records} />
+          </div>
 
-      <PrototypeSwitcher variants={VARIANTS} />
+          <div className="space-y-5">
+            <Card>
+              <CardContent className="p-6">
+                <h2 className="mb-4 text-[15.5px] font-bold">บันทึกพฤติกรรมใหม่</h2>
+                <NewRecordFields form={form} />
+                <p className="mt-3 text-[11.5px] leading-relaxed text-muted-foreground">
+                  กฎที่ตั้งค่าให้แจ้งผู้ปกครอง ระบบจะแจ้งผู้ปกครองของนักเรียนทันทีเมื่อบันทึกมีผล
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-6">
+                <div className="mb-2 flex items-center justify-between">
+                  <h2 className="text-[15.5px] font-bold">กฎความประพฤติ</h2>
+                  <span className="text-xs text-muted-foreground">จัดการโดยแอดมิน</span>
+                </div>
+                <RulesList />
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
     </>
   );
 }
