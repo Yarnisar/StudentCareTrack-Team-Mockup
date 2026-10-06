@@ -145,6 +145,11 @@ export function CardRoster({
                         <BadgeCheck className="size-3.5" /> {ID_CARD_STATUS_LABEL.active}
                       </Badge>
                     )}
+                    {status === "expired" && (
+                      <Badge variant="outline">
+                        <AlertTriangle className="size-3.5" /> หมดอายุ
+                      </Badge>
+                    )}
                     {status === "revoked" && (
                       <Badge variant="destructive">{ID_CARD_STATUS_LABEL.revoked}</Badge>
                     )}
@@ -279,7 +284,10 @@ function CardHistory({ history }: { history: IdCard[] }) {
     <ul className="mt-2 space-y-1 border-l-2 border-border pl-3 text-[12px] text-muted-foreground">
       {history.map((card) => (
         <li key={card.cardId}>
-          {formatThaiDate(card.issuedAt)} · {ID_CARD_STATUS_LABEL[card.status]}
+          {formatThaiDate(card.issuedAt)} ·{" "}
+          {card.status === "active" && store.isCardExpired(card)
+            ? "หมดอายุ"
+            : ID_CARD_STATUS_LABEL[card.status]}
           {card.status === "revoked" && card.revokedAt
             ? ` ${formatThaiDate(card.revokedAt)} (${card.revokeReason})`
             : ""}{" "}

@@ -6,7 +6,7 @@
  * ใช้ซ้ำในหน้า case ของครู คิวอนุมัติของผู้บริหาร และหน้าลงนามของผู้ปกครอง
  */
 
-import { Check } from "lucide-react";
+import { Check, X } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { formatThaiDateTime } from "@/lib/format";
 import {
@@ -51,29 +51,55 @@ export function ReferralStatusChip({ referral }: { referral: ReferralDocument })
 }
 
 export function ReferralChain({ referral }: { referral: ReferralDocument }) {
+  const store = useStore();
   const done = completedSteps(referral);
+  // ร่างที่ถูกตีกลับเพราะผู้ลงนามปฏิเสธ — คำขอล่าสุดเป็น declined (เหตุผลอยู่ในประวัติการลงนาม)
+  const requests = store.signatureRequestsOf(referral.referralId);
+  const latest = requests[requests.length - 1];
+  const declinedStep =
+    referral.status === "draft" && latest?.status === "declined" ? latest.step : null;
+  const declinedIndex = declinedStep ? REFERRAL_CHAIN_STEPS.findIndex((s) => s.key === (declinedStep === "guardian" ? "awaiting_guardian" : "awaiting_executive")) : -1;
+
   return (
-    <ol className="flex flex-wrap gap-1.5" aria-label="สายการลงนามเอกสารส่งต่อ">
-      {REFERRAL_CHAIN_STEPS.map((step, i) => {
-        const complete = i < done;
-        const current = i === done && referral.status !== "voided";
-        return (
-          <li
-            key={step.key}
-            className={
-              complete
-                ? "flex items-center gap-1 rounded-lg bg-accent px-2.5 py-1.5 text-[12px] font-semibold text-primary"
-                : current
-                  ? "flex items-center gap-1 rounded-lg bg-risk-amber-bg px-2.5 py-1.5 text-[12px] font-semibold text-risk-amber"
-                  : "flex items-center gap-1 rounded-lg bg-surface px-2.5 py-1.5 text-[12px] text-muted-foreground"
-            }
-          >
-            {complete && <Check className="size-3.5" />}
-            {i + 1}. {step.label}
-          </li>
-        );
-      })}
-    </ol>
+    <div>
+      <ol className="flex flex-wrap gap-1.5" aria-label="สายการลงนามเอกสารส่งต่อ">
+        {REFERRAL_CHAIN_STEPS.map((step, i) => {
+          if (i === declinedIndex) {
+            return (
+              <li
+                key={step.key}
+                className="flex items-center gap-1 rounded-lg bg-risk-red-bg px-2.5 py-1.5 text-[12px] font-semibold text-risk-red"
+              >
+                <X className="size-3.5" />
+                {i + 1}. {step.label} · {declinedStep === "guardian" ? "ไม่ลงนาม" : "ไม่อนุมัติ"}
+              </li>
+            );
+          }
+          const complete = declinedIndex >= 0 ? i < declinedIndex : i < done;
+          const current = declinedIndex < 0 && i === done && referral.status !== "voided";
+          return (
+            <li
+              key={step.key}
+              className={
+                complete
+                  ? "flex items-center gap-1 rounded-lg bg-accent px-2.5 py-1.5 text-[12px] font-semibold text-primary"
+                  : current
+                    ? "flex items-center gap-1 rounded-lg bg-risk-amber-bg px-2.5 py-1.5 text-[12px] font-semibold text-risk-amber"
+                    : "flex items-center gap-1 rounded-lg bg-surface px-2.5 py-1.5 text-[12px] text-muted-foreground"
+              }
+            >
+              {complete && <Check className="size-3.5" />}
+              {i + 1}. {step.label}
+            </li>
+          );
+        })}
+      </ol>
+      {declinedStep && (
+        <p className="mt-1.5 text-[12px] font-semibold text-risk-red">
+          เอกสารถูกตีกลับเป็นร่าง — แก้ไขแล้วส่งขอลงนามใหม่ได้ (ดูเหตุผลในประวัติการลงนาม)
+        </p>
+      )}
+    </div>
   );
 }
 

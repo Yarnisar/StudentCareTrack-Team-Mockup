@@ -202,7 +202,7 @@ export function AssessmentRouteDiagram({
         {/* ---- กล่องที่ 3ก: จบรอบคัดกรอง ---- */}
         <Node x={10} y={184} w={108} h={40} state={route.endRound}>
           <NodeTitle x={64} y={202} state={route.endRound}>
-            จบรอบคัดกรอง
+            จบการประเมินรอบนี้
           </NodeTitle>
           <NodeSub x={64} y={215}>
             ไม่ต้องทำ SDQ
@@ -278,7 +278,7 @@ const HERE_TEXT: Record<string, string> = {
   wait_sdq_window: "รอเปิดช่วงดำเนินงาน SDQ",
   sdq: "รอฉบับ SDQ ที่ยังไม่ส่ง",
   done: "ได้ผล SDQ รวมแล้ว",
-  not_required: "จบรอบคัดกรอง — ไม่ต้องทำ SDQ รอบนี้",
+  not_required: "จบการประเมินรอบนี้ — ไม่ต้องทำ SDQ รอบนี้",
 };
 
 function Node({

@@ -9,16 +9,17 @@
     margin: 10mm;
   }
 
-  body * {
+  /* ทุกกฎผูกกับ body:has([data-print-sheet]) — มีผลเฉพาะตอนมีแผ่นบัตรอยู่ในหน้า ไม่รั่วไปหน้าอื่น */
+  body:has([data-print-sheet]) * {
     visibility: hidden;
   }
 
-  [data-print-sheet],
-  [data-print-sheet] * {
+  body:has([data-print-sheet]) [data-print-sheet],
+  body:has([data-print-sheet]) [data-print-sheet] * {
     visibility: visible;
   }
 
-  [data-print-sheet] {
+  body:has([data-print-sheet]) [data-print-sheet] {
     position: fixed;
     inset: 0;
     margin: 0;

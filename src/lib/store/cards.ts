@@ -24,7 +24,10 @@ export type CardTemplatePatch = Partial<Omit<CardTemplateSettings, "updatedBy" |
 /** ผลการแปลงรหัส QR เป็นนักเรียน (ใช้โดยหน้าเช็คอิน) */
 export type CardLookup =
   | { ok: true; card: IdCard; student: Student }
-  | { ok: false; error: string; card?: IdCard };
+  | { ok: false; error: string; card?: IdCard; kind: "not_a_card" | "invalid" };
+
+/** สถานะบัตรที่แสดงผล — "expired" = ยังไม่เพิกถอน แต่ไม่ใช่ปีการศึกษาปัจจุบันหรือเลยวันหมดอายุ */
+export type CardDisplayStatus = IdCardStatus | "expired" | "none";
 
 export interface CardsSlice {
   /** บัตรทั้งหมด ใหม่สุดก่อน (รวมใบที่เพิกถอนแล้ว) */
@@ -33,10 +36,12 @@ export interface CardsSlice {
 
   /** บัตรทุกใบของนักเรียน ใหม่สุดก่อน */
   cardsOfStudent: (studentId: string) => IdCard[];
-  /** บัตรที่ใช้งานได้ของนักเรียน (ไม่มี = ยังไม่ได้ออกบัตร หรือเพิกถอนหมดแล้ว) */
+  /** บัตรใบนี้หมดอายุหรือไม่ (ปีการศึกษาไม่ตรงภาคเรียนปัจจุบัน หรือเลยวันหมดอายุบนบัตร) */
+  isCardExpired: (card: IdCard) => boolean;
+  /** บัตรที่ใช้งานได้ของนักเรียน (ไม่มี = ยังไม่ได้ออกบัตร เพิกถอนหมด หรือหมดอายุ) */
   activeCardOfStudent: (studentId: string) => IdCard | undefined;
   /** สถานะบัตรของนักเรียนสำหรับแสดงผล */
-  cardStatusOfStudent: (studentId: string) => IdCardStatus | "none";
+  cardStatusOfStudent: (studentId: string) => CardDisplayStatus;
   /** นักเรียนที่กำลังศึกษาและยังไม่มีบัตรที่ใช้งานได้ */
   studentsWithoutCard: Student[];
 
@@ -80,12 +85,17 @@ export function useCardsSlice(base: PlatformSlice): CardsSlice {
       return userId ? sorted.filter((c) => c.userId === userId) : [];
     };
 
+    const isCardExpired: CardsSlice["isCardExpired"] = (card) =>
+      card.academicYear !== base.currentTerm.academicYear ||
+      nowThaiIso().slice(0, 10) > cardTemplate.expiresOn;
+
     const activeCardOfStudent: CardsSlice["activeCardOfStudent"] = (studentId) =>
-      cardsOfStudent(studentId).find((c) => c.status === "active");
+      cardsOfStudent(studentId).find((c) => c.status === "active" && !isCardExpired(c));
 
     const cardStatusOfStudent: CardsSlice["cardStatusOfStudent"] = (studentId) => {
       const all = cardsOfStudent(studentId);
-      if (all.some((c) => c.status === "active")) return "active";
+      if (all.some((c) => c.status === "active" && !isCardExpired(c))) return "active";
+      if (all.some((c) => c.status === "active")) return "expired";
       return all.length > 0 ? "revoked" : "none";
     };
 
@@ -101,15 +111,24 @@ export function useCardsSlice(base: PlatformSlice): CardsSlice {
 
     const resolveCardToken: CardsSlice["resolveCardToken"] = (token) => {
       const found = cardByToken(token);
-      if (!found) return { ok: false, error: "ไม่พบบัตรที่ตรงกับรหัส QR นี้" };
+      if (!found) return { ok: false, kind: "not_a_card", error: "ไม่พบบัตรที่ตรงกับรหัส QR นี้" };
       if (found.status === "revoked")
         return {
           ok: false,
+          kind: "invalid",
           error: `บัตรใบนี้ถูกเพิกถอนแล้ว${found.revokeReason ? ` (${found.revokeReason})` : ""} — ให้ติดต่อแอดมินเพื่อออกบัตรใหม่`,
           card: found,
         };
+      if (isCardExpired(found))
+        return {
+          ok: false,
+          kind: "invalid",
+          error: "บัตรหมดอายุ — ให้ติดต่อแอดมินเพื่อออกบัตรใหม่ ระหว่างนี้ให้ครูบันทึกการมาเรียนด้วยตนเอง",
+          card: found,
+        };
       const student = studentOfCard(found);
-      if (!student) return { ok: false, error: "บัตรใบนี้ไม่ได้ผูกกับนักเรียนในระบบ", card: found };
+      if (!student)
+        return { ok: false, kind: "invalid", error: "บัตรใบนี้ไม่ได้ผูกกับนักเรียนในระบบ", card: found };
       return { ok: true, card: found, student };
     };
 
@@ -216,6 +235,7 @@ export function useCardsSlice(base: PlatformSlice): CardsSlice {
       idCards: sorted,
       cardTemplate,
       cardsOfStudent,
+      isCardExpired,
       activeCardOfStudent,
       cardStatusOfStudent,
       studentsWithoutCard,

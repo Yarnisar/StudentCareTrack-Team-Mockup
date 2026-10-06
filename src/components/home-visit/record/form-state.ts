@@ -8,6 +8,7 @@ import { nextSeq } from "@/lib/store/ids";
 import type {
   HomeVisitForm,
   HomeVisitPhotoType,
+  HomeVisitRecord,
   HomeVisitRecordInput,
   HouseholdMember,
 } from "@/lib/types";
@@ -17,6 +18,19 @@ import type { FillSource } from "../field-shell";
 export type ListKey = {
   [K in keyof HomeVisitForm]: HomeVisitForm[K] extends string[] ? K : never;
 }[keyof HomeVisitForm];
+
+/** ส่วนที่ครูกรอกของบันทึกเดิม (ตัด metadata ออก) */
+export function pickInput(r: HomeVisitRecord): HomeVisitRecordInput {
+  return {
+    form: r.form,
+    livesWith: r.livesWith,
+    informantName: r.informantName,
+    informantRelation: r.informantRelation,
+    cannotAccessHome: r.cannotAccessHome,
+    cannotAccessReason: r.cannotAccessReason,
+    photos: r.photos,
+  };
+}
 
 /** ตัวช่วยกรอกแบบบันทึก ส่งต่อให้คอมโพเนนต์ของแต่ละส่วน */
 export interface RecordFormApi {
@@ -46,10 +60,14 @@ export function useRecordForm({
   initial: () => HomeVisitRecordInput;
   readOnly: boolean;
   autoFilled: Map<string, FillSource>;
-  previous: HomeVisitRecordInput | undefined;
+  /** บันทึกการเยี่ยมครั้งก่อน (ฉบับรับรองแล้ว) — ใช้คำนวณสถานะข้อมูลที่ยกมา */
+  previous: HomeVisitRecord | undefined;
 }): RecordFormApi {
   const [input, setInputState] = useState<HomeVisitRecordInput>(initial);
-  const carry = useMemo(() => carryStates(input.form, previous), [input.form, previous]);
+  const carry = useMemo(
+    () => carryStates(input.form, previous ? pickInput(previous) : undefined),
+    [input.form, previous]
+  );
 
   const api: RecordFormApi = {
     input,
