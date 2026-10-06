@@ -7,6 +7,7 @@ import { Check, ChevronLeft, Info, Lock, Sparkles, X } from "lucide-react";
 import { cn } from "cn";
 import { PageHeader } from "@/components/layout/page-header";
 import { RiskBadge } from "@/components/shared/risk-badge";
+import { ScreeningDemoTools } from "@/components/screening/demo-tools";
 import { WindowNotice } from "@/components/shared/window-notice";
 import { Button } from "@/components/ui/button";
 import { LinkButton } from "@/components/ui/link-button";
@@ -128,6 +129,15 @@ export default function ScreeningFormPage({
         </Link>
 
         <WindowNotice activity="screening" className="mb-4" />
+        {!readOnly && (
+          <ScreeningDemoTools
+            onFill={(ids) => {
+              setChecked(ids);
+              setAdjust({});
+              setError(null);
+            }}
+          />
+        )}
 
         {readOnly && (
           <div className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-border bg-muted px-4 py-3 text-[13px] text-muted-foreground">
