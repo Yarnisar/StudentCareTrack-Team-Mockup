@@ -54,12 +54,11 @@ export function Sidebar() {
   return (
     <aside className="flex w-[264px] shrink-0 flex-col border-r border-border bg-card max-md:w-[68px]">
       <div className="flex items-center gap-3 px-5 pt-5 pb-4 max-md:justify-center max-md:px-0">
-        <div className="flex size-11 shrink-0 items-center justify-center rounded-[14px] bg-foreground text-background">
-          <HeartHandshake className="size-6" strokeWidth={1.75} />
+        <div className="flex size-9 shrink-0 items-center justify-center rounded-[10px] bg-primary text-sm font-bold text-primary-foreground">
+          SC
         </div>
         <div className="max-md:hidden">
-          <div className="text-[17px] leading-tight font-bold text-foreground">Student Care</div>
-          <div className="text-[11px] font-semibold tracking-[0.28em] text-muted-foreground">TRACK</div>
+          <div className="text-[15px] leading-tight font-bold">Student Care Track</div>
         </div>
       </div>
 
