@@ -10,7 +10,8 @@ import type {
   Subject,
   SubjectTeaching,
 } from "../types";
-import { USER } from "./core";
+import { generatedRoster, USER } from "./core";
+import { hashText, Rng } from "./prng";
 
 export const dcCriteria: DcCriteria[] = [
   { criteriaId: 1, name: "รักชาติ ศาสน์ กษัตริย์", shortName: "รักชาติฯ", description: "" },
@@ -113,6 +114,27 @@ const PROFILE: Record<string, DcLevel[]> = {
   "30183": [3, 3, 3, 3, 2, 3, 3, 3],
 };
 
+/**
+ * นักเรียนที่สร้างเพิ่ม (generated-roster.ts): ระดับฐานนิยมต่อคุณลักษณะสุ่มแบบกำหนดผลได้ตามบทบาท
+ * ภาคเรียนที่ 1 (สรุปแล้ว) ต่างจากฐานปัจจุบันเล็กน้อยบางคุณลักษณะ
+ */
+const dcRng = new Rng(hashText("sct-class-38:dc"));
+const LEVEL_POOL: Record<"strong" | "mid" | "weak", DcLevel[]> = {
+  strong: [3, 3, 3, 2],
+  mid: [3, 2, 2, 3, 1],
+  weak: [2, 1, 2, 1, 0],
+};
+const PREVIOUS_GENERATED: Record<string, DcLevel[]> = {};
+const MATH_GENERATED: string[] = [];
+generatedRoster.profiles.forEach((p, i) => {
+  const kind = p.scenario.startsWith("green") ? "strong" : p.scenario.startsWith("red") ? "weak" : "mid";
+  const levels = Array.from({ length: 8 }, () => dcRng.pick(LEVEL_POOL[kind]));
+  PROFILE[p.studentId] = levels;
+  PREVIOUS_GENERATED[p.studentId] = levels.map((l) => (dcRng.chance(0.15) ? (Math.max(0, Math.min(3, l + (dcRng.chance(0.5) ? 1 : -1))) as DcLevel) : l));
+  // คณิตศาสตร์ยังให้คะแนนไม่ครบทั้งห้อง: 4 คนที่ยังไม่ได้ให้คะแนน
+  if (i % 8 !== 5) MATH_GENERATED.push(p.studentId);
+});
+
 /** ค่าสุ่มแบบคงที่จากข้อความ (ให้ข้อมูลตัวอย่างเหมือนเดิมทุกครั้ง) */
 const hash = (text: string) => [...text].reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) % 9973, 7);
 
@@ -129,7 +151,7 @@ const levelFor = (studentId: string, ind: DcIndicator, subjectId: string): DcLev
  * การงานอาชีพยังไม่ให้คะแนน
  * (ภาคเรียนที่ 1 สรุปไปแล้ว — ต้นแบบเก็บเฉพาะ dc_summary ของภาคนั้น)
  */
-const MATH_FILLED = ["30118", "30125", "30131", "30140", "30152"];
+const MATH_FILLED = ["30118", "30125", "30131", "30140", "30152", ...MATH_GENERATED];
 
 export const dcScores: DcScore[] = Object.keys(PROFILE).flatMap((studentId) =>
   subjects.flatMap((s) => {
@@ -162,7 +184,7 @@ const PREVIOUS: Record<string, DcLevel[]> = {
   "30183": [3, 3, 3, 3, 2, 3, 3, 3],
 };
 
-export const dcSummaryRows: DcSummaryRow[] = Object.entries(PREVIOUS).flatMap(([studentId, levels]) =>
+export const dcSummaryRows: DcSummaryRow[] = Object.entries({ ...PREVIOUS, ...PREVIOUS_GENERATED }).flatMap(([studentId, levels]) =>
   levels.map(
     (level, i): DcSummaryRow => ({
       summaryId: `DSM-${studentId}-T2569-1-${i + 1}`,

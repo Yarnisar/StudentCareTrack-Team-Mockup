@@ -148,3 +148,8 @@ export function businessDaysBetweenThai(from: string, to: string): number {
   }
   return count;
 }
+
+/** เรียงนักเรียนตามห้องแล้วเลขที่ (ใช้ใส่ .sort(byClassNo) ในรายการที่แสดงทั้งห้อง) */
+export function byClassNo(a: { roomName: string; classNo: number }, b: { roomName: string; classNo: number }): number {
+  return a.roomName.localeCompare(b.roomName, "th") || a.classNo - b.classNo;
+}

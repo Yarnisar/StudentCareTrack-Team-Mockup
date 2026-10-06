@@ -2,6 +2,7 @@
 
 import type { CareCase, CaseSuggestion, ReferralDocument, SignatureRequest } from "../types";
 import { SYSTEM_USER_ID, USER } from "./core";
+import { generatedCareCases, generatedCaseSuggestions } from "./generated-class";
 
 /** เอกสารส่งต่อของ CASE-2570-014 — ร่างแล้ว ส่งให้ผู้ปกครองลงนาม รอลายมือชื่อ */
 const referral014: ReferralDocument = {
@@ -92,7 +93,7 @@ export const signatureRequests: SignatureRequest[] = [
   },
 ];
 
-export const careCases: CareCase[] = [
+const baseCareCases: CareCase[] = [
   {
     // ครูประจำชั้นเปิดเองจากการสังเกต ต่อมาผลคัดกรองเป็น "เสี่ยง" จึงเพิ่มเป็นเหตุใน case เดิม
     caseId: "CASE-2570-014",
@@ -363,7 +364,7 @@ export const careCases: CareCase[] = [
 ];
 
 /** คำแนะนำให้เปิด case จากผลคัดกรอง "เสี่ยง" ของนักเรียนที่ยังไม่มี case เปิดอยู่ */
-export const caseSuggestions: CaseSuggestion[] = [
+const baseCaseSuggestions: CaseSuggestion[] = [
   {
     suggestionId: "SUG-2570-001",
     studentId: "30140",
@@ -383,3 +384,7 @@ export const caseSuggestions: CaseSuggestion[] = [
     status: "pending",
   },
 ];
+
+/** 8 คนตัวอย่างหลัก + นักเรียนที่สร้างเพิ่ม (ดู generated-class.ts) */
+export const careCases: CareCase[] = [...baseCareCases, ...generatedCareCases];
+export const caseSuggestions: CaseSuggestion[] = [...baseCaseSuggestions, ...generatedCaseSuggestions];

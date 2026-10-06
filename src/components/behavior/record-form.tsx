@@ -9,6 +9,7 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { byClassNo } from "@/lib/format";
 import { useStore } from "@/lib/store";
 import { BEHAVIOR_SEVERITY_LABEL } from "@/lib/types";
 
@@ -73,7 +74,7 @@ export function NewRecordFields({ form }: { form: BehaviorForm }) {
           className="h-10 w-full rounded-lg border border-border bg-card px-3 text-sm"
         >
           <option value="">เลือกนักเรียน...</option>
-          {store.students.map((s) => (
+          {[...store.students].sort(byClassNo).map((s) => (
             <option key={s.studentId} value={s.studentId}>
               {s.fullName} ({s.roomName} เลขที่ {s.classNo})
             </option>

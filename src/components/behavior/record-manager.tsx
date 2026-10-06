@@ -13,7 +13,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { isAutoConfirmed } from "@/lib/behavior";
-import { formatThaiDate, formatThaiDateTime } from "@/lib/format";
+import { byClassNo, formatThaiDate, formatThaiDateTime } from "@/lib/format";
 import { useStore } from "@/lib/store";
 import { BEHAVIOR_SCORE_BASE, BEHAVIOR_STATUS_LABEL, type BehaviorRecord, type BehaviorRecordStatus } from "@/lib/types";
 
@@ -56,7 +56,7 @@ export function BehaviorRecordManager() {
               className="h-9 rounded-lg border border-border bg-card px-3 text-sm"
             >
               <option value={MINE}>บันทึกของฉัน (ล่าสุด)</option>
-              {store.students.map((s) => (
+              {[...store.students].sort(byClassNo).map((s) => (
                 <option key={s.studentId} value={s.studentId}>
                   {s.fullName} ({s.roomName})
                 </option>

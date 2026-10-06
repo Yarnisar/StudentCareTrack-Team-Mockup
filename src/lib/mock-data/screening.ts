@@ -11,6 +11,7 @@ import {
   type ScreeningStatus,
 } from "../types";
 import { CURRENT_TERM, USER } from "./core";
+import { generatedScreenings } from "./generated-class";
 
 interface SeedInput {
   screeningId: string;
@@ -66,7 +67,7 @@ function seed(input: SeedInput): Screening {
  * ภาคเรียนที่ 2/2569: 30125–30152 รับรองแล้ว, 30160 ยังเป็นร่าง, 30171 และ 30183 ยังไม่คัดกรอง
  * รายการอัตโนมัติ (mt3/mt4) สอดคล้องกับผล Red Flag/9S ภาคเรียนที่ 1 ใน mock-data/assessment.ts
  */
-export const screenings: Screening[] = [
+const baseScreenings: Screening[] = [
   seed({
     screeningId: "SC-001",
     studentId: "30125",
@@ -143,3 +144,6 @@ export const screenings: Screening[] = [
     items: ["ac3", "bh2", "mt3"],
   }),
 ];
+
+/** 8 คนตัวอย่างหลัก + นักเรียนที่สร้างเพิ่ม (ดู generated-class.ts) */
+export const screenings: Screening[] = [...baseScreenings, ...generatedScreenings];

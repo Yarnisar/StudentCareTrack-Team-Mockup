@@ -13,8 +13,9 @@
 
 import type { HomeVisitAppointment, HomeVisitForm, HomeVisitRecord } from "../types";
 import { USER } from "./core";
+import { generatedAppointments, generatedHomeVisitRecords } from "./generated-class";
 
-export const appointments: HomeVisitAppointment[] = [
+const baseAppointments: HomeVisitAppointment[] = [
   {
     appointmentId: "HV-0568-118",
     studentId: "30118",
@@ -273,7 +274,7 @@ const form30140: HomeVisitForm = {
   confideIn: ["keep_to_self"],
 };
 
-export const homeVisitRecords: HomeVisitRecord[] = [
+const baseHomeVisitRecords: HomeVisitRecord[] = [
   {
     recordId: "HVR-0568-118",
     appointmentId: "HV-0568-118",
@@ -389,3 +390,7 @@ export const homeVisitRecords: HomeVisitRecord[] = [
     signedAt: null,
   },
 ];
+
+/** 8 คนตัวอย่างหลัก + นักเรียนที่สร้างเพิ่ม (ดู generated-class.ts) */
+export const appointments: HomeVisitAppointment[] = [...baseAppointments, ...generatedAppointments];
+export const homeVisitRecords: HomeVisitRecord[] = [...baseHomeVisitRecords, ...generatedHomeVisitRecords];

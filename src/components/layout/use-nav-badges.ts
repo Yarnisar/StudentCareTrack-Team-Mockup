@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useStore } from "@/lib/store";
 import type { AssessmentNextStep } from "@/lib/types";
 
@@ -16,6 +17,11 @@ export interface NavBadges {
 /** ตัวเลขกำกับเมนูข้าง คำนวณจาก selector ของ store และเคารพสิทธิ์ของผู้ใช้ปัจจุบัน */
 export function useNavBadges(): NavBadges {
   const store = useStore();
+  // เลือกคำนวณใหม่เฉพาะเมื่อ store เปลี่ยน (ห้อง 38 คน: ต้องวนทุกคนต่อการ render ของ sidebar)
+  return useMemo(() => computeNavBadges(store), [store]);
+}
+
+function computeNavBadges(store: ReturnType<typeof useStore>): NavBadges {
   const sensitiveStudents = store.students.filter((s) => store.canSeeSensitive(s.studentId));
 
   const visits = store.appointments.filter(

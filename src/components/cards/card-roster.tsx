@@ -17,7 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { formatThaiDate } from "@/lib/format";
+import { byClassNo, formatThaiDate } from "@/lib/format";
 import { useStore } from "@/lib/store";
 import { ID_CARD_STATUS_LABEL, REVOKE_REASONS, type IdCard } from "@/lib/types";
 
@@ -44,7 +44,7 @@ export function CardRoster({
   const [message, setMessage] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
 
-  const students = store.students.filter((s) => s.status === "studying");
+  const students = store.students.filter((s) => s.status === "studying").sort(byClassNo);
   const [pageSize, setPageSize] = useState(10);
   const pager = usePagination(students, pageSize);
 
