@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { sdqAnswersFor } from "@/lib/demo/assessment-autofill";
+import { InlineAutofill } from "@/components/demo/inline-autofill";
 import { useDemoPageTool } from "@/lib/demo/page-tools";
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -65,6 +66,7 @@ export function SdqForm({
   readOnly = false,
   initialAnswers,
   submitLabel = "บันทึกผลการประเมิน",
+  inlineAutofill = true,
 }: {
   rater: SdqRater;
   onSubmit: (answers: Record<number, 0 | 1 | 2>) => void;
@@ -72,6 +74,8 @@ export function SdqForm({
   readOnly?: boolean;
   initialAnswers?: Record<number, 0 | 1 | 2>;
   submitLabel?: string;
+  /** false = หน้าที่เรียกใช้วางปุ่มกรอกอัตโนมัติ (<InlineAutofill />) เองในตำแหน่งที่เห็นก่อน */
+  inlineAutofill?: boolean;
 }) {
   const [answers, setAnswers] = useState<Record<number, 0 | 1 | 2>>(() => initialAnswers ?? {});
   const [page, setPage] = useState(0);
@@ -119,7 +123,12 @@ export function SdqForm({
 
   return (
     <div className="space-y-4">
-      {!readOnly && <SdqAutofillTools neutral={rater === "student"} onFill={autofill} />}
+      {!readOnly && (
+        <>
+          <SdqAutofillTools neutral={rater === "student"} onFill={autofill} />
+          {inlineAutofill && <InlineAutofill className="mb-0" />}
+        </>
+      )}
       <Card>
         <CardContent className={mobile ? "p-4" : "p-5"}>
           <div className="mb-2 flex items-center justify-between text-[13px]">

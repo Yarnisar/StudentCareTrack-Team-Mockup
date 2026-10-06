@@ -9,6 +9,7 @@ import { SdqForm } from "@/components/assessment/sdq-form";
 import { SdqRaterComparison } from "@/components/assessment/sdq-comparison";
 import { CombinedSdqSummary, SdqAnswersToggle, SdqLevelBadge } from "@/components/assessment/sdq-result";
 import { CaseTriggerOutcome } from "@/components/assessment/trigger-outcome";
+import { InlineAutofill } from "@/components/demo/inline-autofill";
 import { WindowNotice } from "@/components/shared/window-notice";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -83,6 +84,7 @@ function SdqContent({ studentId }: { studentId: string }) {
             skipNineS={plan.redFlag?.result === "needs_care"}
           />
           <WindowNotice activity="sdq" className="mb-4" />
+          <InlineAutofill />
 
           {triggerText && set.length > 0 && (
             <div className="mb-4 flex items-center gap-3 rounded-xl border border-blue-200 bg-accent px-4 py-3">
@@ -220,7 +222,7 @@ function SdqContent({ studentId }: { studentId: string }) {
               {teacherBlocked}
             </div>
           ) : (
-            <SdqForm rater="teacher" onSubmit={submit} submitLabel="ส่งแบบประเมิน (แก้ไขไม่ได้หลังส่ง)" />
+            <SdqForm rater="teacher" inlineAutofill={false} onSubmit={submit} submitLabel="ส่งแบบประเมิน (แก้ไขไม่ได้หลังส่ง)" />
           )}
         </div>
       </div>

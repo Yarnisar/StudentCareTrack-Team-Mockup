@@ -2,9 +2,10 @@
 
 import { use, useMemo, useState } from "react";
 import { nineSAnswersFor } from "@/lib/demo/assessment-autofill";
-import { useDemoPageTool } from "@/lib/demo/page-tools";
 import { useRouter } from "next/navigation";
 import { CheckCircle2, Lock } from "lucide-react";
+import { NineSDemoTools } from "@/components/assessment/demo-tools";
+import { InlineAutofill } from "@/components/demo/inline-autofill";
 import { CaseTriggerOutcome } from "@/components/assessment/trigger-outcome";
 import { WindowNotice } from "@/components/shared/window-notice";
 import { LinkButton } from "@/components/ui/link-button";
@@ -46,8 +47,6 @@ export default function NineSPage({ params }: { params: Promise<{ studentId: str
     setAnswers(nineSAnswersFor(target));
     missing.reset();
   };
-  useDemoPageTool("กรอกอัตโนมัติ · ผลปกติ", () => autofill("normal"), "ทุกกลุ่มต่ำกว่า 3 คะแนน");
-  useDemoPageTool("กรอกอัตโนมัติ · ควรดูแล", () => autofill("needs_care"), "กลุ่มซึมเศร้า/วิตกกังวลได้ 3 คะแนน → เปิด SDQ");
   const answeredCount = Object.keys(answers).length;
 
   const unanswered = NINE_S_QUESTIONS.map((q, index) => ({ q, index })).filter(
@@ -146,6 +145,13 @@ export default function NineSPage({ params }: { params: Promise<{ studentId: str
               {clusters.map((c) => `${NINE_S_CLUSTER_LABEL[c]} ${existing.clusterScores[c]}`).join(" · ")})
               {!blocked && " — ตอบใหม่ทั้งชุดเพื่อแก้ไข ได้จนปิดช่วงดำเนินงานคัดกรอง"}
             </p>
+          )}
+
+          {!blocked && (
+            <>
+              <NineSDemoTools onFill={autofill} />
+              <InlineAutofill />
+            </>
           )}
 
           <Card className="mb-4">

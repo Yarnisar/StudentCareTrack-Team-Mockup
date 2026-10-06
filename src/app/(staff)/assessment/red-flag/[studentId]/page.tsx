@@ -2,9 +2,10 @@
 
 import { use, useState } from "react";
 import { redFlagAnswersFor } from "@/lib/demo/assessment-autofill";
-import { useDemoPageTool } from "@/lib/demo/page-tools";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, CheckCircle2, Lock } from "lucide-react";
+import { RedFlagDemoTools } from "@/components/assessment/demo-tools";
+import { InlineAutofill } from "@/components/demo/inline-autofill";
 import { CaseTriggerOutcome } from "@/components/assessment/trigger-outcome";
 import { WindowNotice } from "@/components/shared/window-notice";
 import { LinkButton } from "@/components/ui/link-button";
@@ -43,8 +44,6 @@ export default function RedFlagPage({ params }: { params: Promise<{ studentId: s
     setAnswers(redFlagAnswersFor(target));
     missing.reset();
   };
-  useDemoPageTool("กรอกอัตโนมัติ · ผลปกติ", () => autofill("normal"), "ตอบ \"ไม่ใช่\" ทุกข้อ → ไปทำ 9S ต่อ");
-  useDemoPageTool("กรอกอัตโนมัติ · ควรดูแล", () => autofill("needs_care"), "ตอบ \"ใช่\" 1 ข้อ → เปิด SDQ ทันที");
 
   const unanswered = RED_FLAG_QUESTIONS.map((q, index) => ({ q, index })).filter(
     ({ q }) => answers[q.id] === undefined
@@ -153,6 +152,12 @@ export default function RedFlagPage({ params }: { params: Promise<{ studentId: s
             <p className="mb-4 text-[12.5px] text-muted-foreground">
               บันทึกไว้แล้วเมื่อ {existing.assessedAt.split("T")[0]} — แก้ไขได้จนปิดช่วงดำเนินงานคัดกรอง
             </p>
+          )}
+          {!blocked && (
+            <>
+              <RedFlagDemoTools onFill={autofill} />
+              <InlineAutofill />
+            </>
           )}
           <div className="mb-4 flex items-center gap-3 rounded-xl border border-amber-200 bg-risk-amber-bg px-4 py-3">
             <AlertTriangle className="size-5 shrink-0 text-risk-amber" />

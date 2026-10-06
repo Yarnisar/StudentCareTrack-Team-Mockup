@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { LinkButton } from "@/components/ui/link-button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { WindowNotice } from "@/components/shared/window-notice";
+import { InlineAutofill } from "@/components/demo/inline-autofill";
 import { useDemoPageTool } from "@/lib/demo/page-tools";
 import { useSensitiveView, useStore } from "@/lib/store";
 import { formatThaiDate, formatThaiDateTime, nowThaiIso } from "@/lib/format";
@@ -34,6 +35,16 @@ import {
 
 /** หน่วงเวลาก่อนบันทึกร่างอัตโนมัติหลังหยุดแก้ไข (มิลลิวินาที) */
 const AUTOSAVE_DELAY_MS = 20_000;
+
+/** ลงทะเบียนเครื่องมือสาธิต (mount เฉพาะเมื่อแก้ไขได้) */
+function HomeVisitDemoTool({ onFill }: { onFill: () => void }) {
+  useDemoPageTool(
+    "กรอกข้อมูลอัตโนมัติ",
+    onFill,
+    "เติมแบบบันทึกเยี่ยมบ้านของนักเรียนคนนี้ (จากผลเยี่ยมครั้งก่อนถ้ามี) ยังต้องกดรับรองเอง"
+  );
+  return null;
+}
 
 export default function HomeVisitRecordPage({
   params,
@@ -144,27 +155,6 @@ export default function HomeVisitRecordPage({
   // ผู้ดูแลระบบเปิดผลเยี่ยมบ้านรายคน → VIEW_SENSITIVE
   useSensitiveView("home_visit_records", appointmentId, { enabled: canOpen, note: "เปิดแบบบันทึกการเยี่ยมบ้าน" });
 
-  // เครื่องมือสาธิต: กรอกข้อมูลอัตโนมัติ (ไม่รับรองให้ — ครูต้องตรวจและรับรองเอง)
-  useDemoPageTool(
-    "กรอกข้อมูลอัตโนมัติ",
-    () => {
-      if (!appointment || readOnly) return;
-      const g = guardians[0];
-      api.setInput(
-        buildDemoAutofill({
-          studentId: appointment.studentId,
-          now: nowThaiIso(),
-          previous: previous ? pickInput(previous) : undefined,
-          informant: g ? { name: g.user.name, relation: g.relation } : undefined,
-          registryAddress: student?.address,
-        })
-      );
-      setConfirmSign(false);
-      setMessage({ tone: "ok", text: "กรอกข้อมูลตัวอย่างแล้ว — ตรวจสอบ แล้วบันทึกร่างหรือรับรองเอง" });
-    },
-    "เติมแบบบันทึกเยี่ยมบ้านของนักเรียนคนนี้ (จากผลเยี่ยมครั้งก่อนถ้ามี) ยังต้องกดรับรองเอง"
-  );
-
   if (!appointment || !student) {
     return (
       <div className="p-8">
@@ -199,6 +189,23 @@ export default function HomeVisitRecordPage({
   const parent = guardianRows.find((g) => g.relation === "บิดา" || g.relation === "มารดา");
   const lastSavedAt = autoSavedAt ?? existing?.updatedAt ?? null;
 
+  // เครื่องมือสาธิต: กรอกข้อมูลอัตโนมัติ (ไม่รับรองให้ — ครูต้องตรวจและรับรองเอง)
+  const fillDemo = () => {
+    if (readOnly) return;
+    const g = guardians[0];
+    api.setInput(
+      buildDemoAutofill({
+        studentId: appointment.studentId,
+        now: nowThaiIso(),
+        previous: previous ? pickInput(previous) : undefined,
+        informant: g ? { name: g.user.name, relation: g.relation } : undefined,
+        registryAddress: student?.address,
+      })
+    );
+    setConfirmSign(false);
+    setMessage({ tone: "ok", text: "กรอกข้อมูลตัวอย่างแล้ว — ตรวจสอบ แล้วบันทึกร่างหรือรับรองเอง" });
+  };
+
   const save = (sign: boolean) => {
     const result = store.saveHomeVisitRecord(appointmentId, collected, { sign });
     if (!result.ok) {
@@ -230,6 +237,13 @@ export default function HomeVisitRecordPage({
           >
             <ChevronLeft className="size-4" /> กลับไปรายการนัดหมาย
           </Link>
+
+          {!readOnly && (
+            <>
+              <HomeVisitDemoTool onFill={fillDemo} />
+              <InlineAutofill className="mb-0" />
+            </>
+          )}
 
           {/* สรุปการกรอกอัตโนมัติ */}
           <div className="rounded-xl border border-blue-200 bg-accent p-5">

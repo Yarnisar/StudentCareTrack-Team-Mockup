@@ -5,15 +5,16 @@ import { screeningItemIdsFor } from "@/lib/demo/screening-autofill";
 
 /** ลงทะเบียนเครื่องมือสาธิตของแบบคัดกรอง (แสดงเฉพาะเมื่อแก้ไขได้) — กรอกในฟอร์มเท่านั้น ไม่บันทึก/รับรอง */
 export function ScreeningDemoTools({ onFill }: { onFill: (ids: string[]) => void }) {
-  useDemoPageTool(
-    "กรอกอัตโนมัติ · ปกติทุกมิติ",
-    () => onFill(screeningItemIdsFor("normal")),
-    "ไม่ติ๊กรายการใด — ผลปกติ บันทึกแล้วไม่มีเคสให้ติดตาม"
-  );
+  // ชุดแรกคือค่าเริ่มต้นของปุ่มบนหน้า: เลือก "เสี่ยง" เพื่อให้เห็นการติ๊กจริงและตรวจ/รับรองต่อได้ (ปกติ = ไม่ติ๊กอะไรเลย)
   useDemoPageTool(
     "กรอกอัตโนมัติ · มีบางมิติเสี่ยง",
     () => onFill(screeningItemIdsFor("risk")),
     "ติ๊กเกณฑ์เสี่ยงในมิติการเรียนและเศรษฐกิจ — ผลเสี่ยง รับรองแล้วระบบไม่เปิด care case"
+  );
+  useDemoPageTool(
+    "กรอกอัตโนมัติ · ปกติทุกมิติ",
+    () => onFill(screeningItemIdsFor("normal")),
+    "ไม่ติ๊กรายการใด — ผลปกติ บันทึกแล้วไม่มีเคสให้ติดตาม"
   );
   useDemoPageTool(
     "กรอกอัตโนมัติ · มีมิติที่มีปัญหา",

@@ -7,6 +7,7 @@ import { Check, ChevronLeft, Info, Lock, Sparkles, X } from "lucide-react";
 import { cn } from "cn";
 import { PageHeader } from "@/components/layout/page-header";
 import { RiskBadge } from "@/components/shared/risk-badge";
+import { InlineAutofill } from "@/components/demo/inline-autofill";
 import { ScreeningDemoTools } from "@/components/screening/demo-tools";
 import { WindowNotice } from "@/components/shared/window-notice";
 import { Button } from "@/components/ui/button";
@@ -129,6 +130,7 @@ export default function ScreeningFormPage({
         </Link>
 
         <WindowNotice activity="screening" className="mb-4" />
+        {!readOnly && <InlineAutofill />}
         {!readOnly && (
           <ScreeningDemoTools
             onFill={(ids) => {

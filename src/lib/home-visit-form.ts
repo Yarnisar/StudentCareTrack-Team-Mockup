@@ -659,17 +659,24 @@ export function buildDemoAutofill({
     form.friendInSchoolPhone = "08x-xxx-" + String(1000 + (h % 9000));
     form.friendOutsideName = (h >> 8) % 2 === 0 ? "เพื่อนบ้านวัยเดียวกัน (ไม่ได้เรียนที่โรงเรียนนี้)" : "";
     form.friendOutsidePhone = "";
-    form.parentStatus = withGrandparent ? pick(["separated", "divorced"], 15) : "together";
-    form.siblingKind = (h >> 9) % 3 === 0 ? "only" : "order";
-    form.birthOrder = form.siblingKind === "order" ? String(1 + (h % 2)) : "";
-    if (form.siblingKind === "order") {
-      form.siblingsBrothers = String(h % 2);
-      form.siblingsSisters = String(1 - (h % 2));
-      form.siblingsStudying = "1";
+  }
+  // ส่วนที่เพิ่มภายหลัง: ผลเยี่ยมครั้งก่อนอาจยังไม่มี → เติมเฉพาะช่องที่ว่าง (ไม่ทับค่าที่ยกมา)
+  {
+    const withGrandparent = form.members.some((m) => m.relation === "ยาย");
+    const isEmpty = (v: string | string[]) => (Array.isArray(v) ? v.length === 0 : !v.trim());
+    if (isEmpty(form.parentStatus)) form.parentStatus = withGrandparent ? pick(["separated", "divorced"], 15) : "together";
+    if (isEmpty(form.siblingKind)) {
+      form.siblingKind = (h >> 9) % 3 === 0 ? "only" : "order";
+      form.birthOrder = form.siblingKind === "order" ? String(1 + (h % 2)) : "";
+      if (form.siblingKind === "order") {
+        form.siblingsBrothers = String(h % 2);
+        form.siblingsSisters = String(1 - (h % 2));
+        form.siblingsStudying = "1";
+      }
     }
-    form.houseBuilding = pick(["single_storey", "single_storey", "two_storey", "townhouse"], 16);
-    form.closestTo = [pick(["mother", "father", "older_sister"], 17)];
-    form.confideIn = [pick(["friend", "mother", "teacher"], 18)];
+    if (isEmpty(form.houseBuilding)) form.houseBuilding = pick(["single_storey", "single_storey", "two_storey", "townhouse"], 16);
+    if (isEmpty(form.closestTo)) form.closestTo = [pick(["mother", "father", "older_sister"], 17)];
+    if (isEmpty(form.confideIn)) form.confideIn = [pick(["friend", "mother", "teacher"], 18)];
   }
   form.photoSource = "teacher";
 
