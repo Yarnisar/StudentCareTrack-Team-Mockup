@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { AlertTriangle, CheckCircle2, QrCode, ScanLine } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
+import { CheckinCardsTabs } from "@/components/layout/checkin-cards-tabs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -62,6 +63,8 @@ export default function CheckinPage() {
         title="สแกน QR เช็คอิน"
         subtitle="บันทึกการมาเรียน / มาสายด้วยบัตรนักเรียนดิจิทัล"
       />
+
+      <CheckinCardsTabs />
 
       <div className="flex-1 overflow-y-auto p-8">
         <div className="grid gap-5 xl:grid-cols-[1.25fr_1fr]">

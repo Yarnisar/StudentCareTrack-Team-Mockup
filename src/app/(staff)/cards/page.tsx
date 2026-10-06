@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { CreditCard, Printer, ShieldCheck } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
+import { CheckinCardsTabs } from "@/components/layout/checkin-cards-tabs";
 import { CardRoster } from "@/components/cards/card-roster";
 import { CardTemplateForm } from "@/components/cards/card-template-form";
 import { CardPrintSheet, StudentIdCard } from "@/components/cards/student-id-card";
@@ -58,6 +59,8 @@ export default function CardsPage() {
           </Button>
         }
       />
+
+      <CheckinCardsTabs />
 
       <div className="flex-1 overflow-y-auto p-8">
         <div className="space-y-5">
