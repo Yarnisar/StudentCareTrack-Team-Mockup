@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronRight, ClipboardList, Home } from "lucide-react";
+import { ChevronRight, ClipboardList, FileSignature, Home } from "lucide-react";
 import { MobileShell } from "@/components/layout/mobile-shell";
 import { Card, CardContent } from "@/components/ui/card";
 import { useStore } from "@/lib/store";
@@ -30,6 +30,7 @@ export default function ParentHomePage() {
   const dcFailed = dcLevels.filter((l) => l != null && l < 1).length;
   const behaviorScore = store.behaviorScoreOf(portalStudentId);
   const answeredConsent = Boolean(store.consentOf(portalStudentId));
+  const pendingSignatures = store.myPendingSignatures;
   const guardian =
     store.currentUser.role === "parent" ? store.currentUser : store.guardiansOf(portalStudentId)[0]?.user;
 
@@ -93,9 +94,20 @@ export default function ParentHomePage() {
           />
         )}
 
+        {pendingSignatures.length > 0 && (
+          <ActionCard
+            href="/portal/parent/referrals"
+            tone="warn"
+            icon={<FileSignature className="size-5 text-risk-amber" />}
+            title={`เอกสารส่งต่อรอลงนาม ${pendingSignatures.length} ฉบับ`}
+            description="โปรดตรวจเนื้อหาที่โรงเรียนจะส่งให้หน่วยงานภายนอก แล้วลงนามหรือแจ้งเหตุผลที่ไม่ลงนาม"
+            cta="ตรวจและลงนาม"
+          />
+        )}
+
         {!answeredConsent && <ConsentCard studentId={portalStudentId} />}
 
-        {!appointment && !canTakeSdq && answeredConsent && (
+        {!appointment && !canTakeSdq && answeredConsent && pendingSignatures.length === 0 && (
           <p className="rounded-xl bg-card px-4 py-3 text-[12.5px] text-muted-foreground">ไม่มีรายการที่ต้องดำเนินการ</p>
         )}
 

@@ -23,6 +23,7 @@ export const STAFF_NAV: NavItem[] = [
   { href: "/documents", label: "เอกสาร ปพ.", roles: ALL_STAFF },
   { href: "/checkin", label: "บัตร / QR", roles: ALL_STAFF },
   { href: "/care-cases", label: "ติดตามช่วยเหลือ", roles: SENSITIVE_STAFF },
+  { href: "/approvals", label: "อนุมัติเอกสารส่งต่อ", roles: ["admin_school"] },
 ];
 
 export const SETTINGS_NAV: NavItem = { href: "/settings", label: "ตั้งค่าระบบ", roles: ["admin_school"] };

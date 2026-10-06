@@ -12,9 +12,15 @@
  */
 
 import { useMemo, useState } from "react";
-import { careCases as seedCareCases, caseSuggestions as seedSuggestions, SYSTEM_USER_ID } from "../mock-data";
+import {
+  careCases as seedCareCases,
+  caseSuggestions as seedSuggestions,
+  signatureRequests as seedSignatureRequests,
+  SYSTEM_USER_ID,
+} from "../mock-data";
 import { nowThaiIso } from "../format";
 import { isBehaviorScoreLow } from "../care-rules";
+import * as perm from "../permissions";
 import {
   CARE_METHODS_MAX,
   CARE_METHODS_MIN,
@@ -26,6 +32,8 @@ import {
   type CaseSuggestion,
   type CaseTriggerSource,
   type ReferralDocument,
+  type SignatureRequest,
+  type SignatureStep,
   type StudentStatus,
   type SupportType,
   type TriggerMode,
@@ -134,11 +142,52 @@ export interface CareSlice {
   applyStudentStatusChange: (studentId: string, status: StudentStatus) => CareCase | null;
 
   referralBlockReason: (caseId: string) => BlockReason;
+  /** จัดทำร่างเอกสารส่งต่อ (ยังส่งไม่ได้จนกว่าสายการลงนามจะครบ) */
   createReferral: (
     caseId: string,
     externalAgency: string,
     content: string
   ) => CareResult<{ referral: ReferralDocument }>;
+
+  /* --------- สายการลงนามเอกสารส่งต่อ (signature_requests) --------- */
+
+  signatureRequests: SignatureRequest[];
+  /** คำขอลงนามของเอกสารฉบับหนึ่ง เรียงตามเวลาที่ขอ (เก่าก่อน) */
+  signatureRequestsOf: (referralId: string) => SignatureRequest[];
+  /** คำขอที่ยังรอดำเนินการของเอกสารฉบับนั้น (มีได้ไม่เกิน 1) */
+  pendingSignatureOf: (referralId: string) => SignatureRequest | undefined;
+  getReferral: (referralId: string) => ReferralEntry | undefined;
+  /** เอกสารส่งต่อที่ผู้ใช้ปัจจุบันเห็นได้ (ครูประจำชั้น/แอดมิน = ของนักเรียนที่ดูข้อมูลอ่อนไหวได้, ผู้ปกครอง = ของบุตรหลาน) */
+  visibleReferrals: ReferralEntry[];
+  /** คำขอลงนามที่รอผู้ใช้ปัจจุบัน (ผู้ปกครอง = ของนักเรียนที่ผูกอยู่, ผู้บริหาร/แอดมิน = คิวอนุมัติ) */
+  myPendingSignatures: ReferralEntry[];
+
+  requestSignatureBlockReason: (referralId: string) => BlockReason;
+  /** ครูประจำชั้นส่งเอกสารร่างให้ผู้ปกครองลงนาม */
+  requestGuardianSignature: (referralId: string) => CareResult<{ request: SignatureRequest }>;
+  /** เหตุผลที่ผู้ใช้ปัจจุบันลงนาม/อนุมัติคำขอนี้ไม่ได้ */
+  signBlockReason: (requestId: string) => BlockReason;
+  /** ผู้ปกครองลงนาม หรือผู้บริหารอนุมัติ (ขั้นผู้ปกครองสำเร็จ → ระบบสร้างคำขอขั้นผู้บริหารต่อให้) */
+  signSignatureRequest: (requestId: string) => CareResult<{ request: SignatureRequest }>;
+  /** ปฏิเสธการลงนาม/ไม่อนุมัติ ต้องระบุเหตุผล → เอกสารกลับเป็นร่าง */
+  declineSignatureRequest: (requestId: string, reason: string) => CareResult<{ request: SignatureRequest }>;
+  /** ครูประจำชั้นยกเลิกคำขอที่ค้างอยู่ (ยกเลิกพร้อมเหตุผล ไม่ลบ) */
+  voidSignatureRequest: (requestId: string, reason: string) => CareResult<{ request: SignatureRequest }>;
+
+  sendReferralBlockReason: (referralId: string) => BlockReason;
+  /** ส่งเอกสารให้หน่วยงานภายนอก (ต้องมีความยินยอมของปีนี้ และสายการลงนามครบ) */
+  sendReferral: (referralId: string) => CareResult<{ referral: ReferralDocument }>;
+  /** ยกเลิกเอกสารส่งต่อพร้อมเหตุผล (ยกเลิกคำขอลงนามที่ค้างอยู่ด้วย) */
+  voidReferral: (referralId: string, reason: string) => CareResult<{ referral: ReferralDocument }>;
+}
+
+/** เอกสารส่งต่อพร้อมบริบทที่หน้าจอต้องใช้ */
+export interface ReferralEntry {
+  referral: ReferralDocument;
+  careCase: CareCase;
+  studentId: string;
+  /** คำขอที่ยังรอดำเนินการของเอกสารฉบับนี้ */
+  pending?: SignatureRequest;
 }
 
 const BEHAVIOR_SUGGESTION_PREFIX = "SUG-BH-";
@@ -149,11 +198,12 @@ export function useCareSlice(base: PlatformSlice, behavior: BehaviorSlice): Care
   const [suggestions, setSuggestions] = useState<CaseSuggestion[]>(seedSuggestions);
   /** คำแนะนำจากคะแนนความประพฤติที่ครูปิดไปแล้ว: `${studentId}:${score}` (คะแนนเปลี่ยน → แนะนำใหม่) */
   const [dismissedBehavior, setDismissedBehavior] = useState<string[]>([]);
+  const [signatureRequests, setSignatureRequests] = useState<SignatureRequest[]>(seedSignatureRequests);
 
   return useMemo<CareSlice>(() => {
     // สำเนาล่าสุดภายใน closure นี้ — การเรียกหลายครั้งในเหตุการณ์เดียว (เช่น บันทึกคัดกรองแล้วส่ง 2 เหตุ)
     // จะเห็นผลของครั้งก่อนทันที ไม่ต้องรอ re-render (ป้องกันเปิด case ซ้ำ)
-    const working = { cases: careCases, sugs: suggestions };
+    const working = { cases: careCases, sugs: suggestions, signatures: signatureRequests };
     const commitCases = (next: CareCase[]) => {
       working.cases = next;
       setCareCases(next);
@@ -579,14 +629,320 @@ export function useCareSlice(base: PlatformSlice, behavior: BehaviorSlice): Care
         content: content.trim(),
         createdBy: base.currentUser.userId,
         createdAt: nowThaiIso(),
+        status: "draft",
+        sentBy: null,
+        sentAt: null,
+        voidedBy: null,
+        voidedAt: null,
+        voidReason: null,
       };
       // การส่งต่อภายนอกไม่ทำให้ case ปิด
       updateCase(caseId, (c) => ({ ...c, referrals: [referral, ...c.referrals] }));
       base.logAudit("CREATE", "referral_documents", referral.referralId, {
-        after: { caseId, externalAgency: referral.externalAgency },
+        after: { caseId, externalAgency: referral.externalAgency, status: "draft" },
       });
       return { ok: true, referral };
     };
+
+    /* --------------------- สายการลงนามเอกสารส่งต่อ --------------------- */
+
+    const commitSignatures = (next: SignatureRequest[]) => {
+      working.signatures = next;
+      setSignatureRequests(next);
+    };
+    const updateSignature = (requestId: string, fn: (r: SignatureRequest) => SignatureRequest) =>
+      commitSignatures(working.signatures.map((r) => (r.requestId === requestId ? fn(r) : r)));
+
+    const findReferral = (referralId: string): ReferralEntry | undefined => {
+      for (const c of working.cases) {
+        const referral = c.referrals.find((r) => r.referralId === referralId);
+        if (referral)
+          return {
+            referral,
+            careCase: c,
+            studentId: c.studentId,
+            pending: working.signatures.find((s) => s.referralId === referralId && s.status === "pending"),
+          };
+      }
+      return undefined;
+    };
+
+    const updateReferral = (referralId: string, fn: (r: ReferralDocument) => ReferralDocument) => {
+      const entry = findReferral(referralId);
+      if (!entry) return;
+      updateCase(entry.careCase.caseId, (c) => ({
+        ...c,
+        referrals: c.referrals.map((r) => (r.referralId === referralId ? fn(r) : r)),
+      }));
+    };
+
+    const signatureRequestsOf: CareSlice["signatureRequestsOf"] = (referralId) =>
+      working.signatures
+        .filter((s) => s.referralId === referralId)
+        .sort((a, b) => a.requestedAt.localeCompare(b.requestedAt));
+
+    const pendingSignatureOf: CareSlice["pendingSignatureOf"] = (referralId) =>
+      working.signatures.find((s) => s.referralId === referralId && s.status === "pending");
+
+    const allReferrals = (): ReferralEntry[] =>
+      working.cases
+        .flatMap((c) =>
+          c.referrals.map<ReferralEntry>((referral) => ({
+            referral,
+            careCase: c,
+            studentId: c.studentId,
+            pending: pendingSignatureOf(referral.referralId),
+          }))
+        )
+        .sort((a, b) => b.referral.createdAt.localeCompare(a.referral.createdAt));
+
+    const adminUserIds = () =>
+      base.users.filter((u) => u.role === "admin_school" && u.isActive).map((u) => u.userId);
+
+    const createSignatureRequest = (
+      referralId: string,
+      step: SignatureStep,
+      requestedBy: string
+    ): SignatureRequest => {
+      const request: SignatureRequest = {
+        requestId: nextId("SR"),
+        referralId,
+        step,
+        signerRole: step === "guardian" ? "parent" : "admin_school",
+        requestedBy,
+        requestedAt: nowThaiIso(),
+        signerUserId: null,
+        signedAt: null,
+        status: "pending",
+        declinedAt: null,
+        declineReason: null,
+        voidedBy: null,
+        voidedAt: null,
+        voidReason: null,
+      };
+      commitSignatures([...working.signatures, request]);
+      base.logAudit(
+        "CREATE",
+        "signature_requests",
+        request.requestId,
+        { after: { referralId, step, signerRole: request.signerRole } },
+        requestedBy
+      );
+      return request;
+    };
+
+    const requestSignatureBlockReason: CareSlice["requestSignatureBlockReason"] = (referralId) => {
+      const entry = findReferral(referralId);
+      if (!entry) return "ไม่พบเอกสารส่งต่อ";
+      if (!canManageCase(entry.studentId)) return "เฉพาะครูประจำชั้นของนักเรียน";
+      if (entry.referral.status === "voided") return "เอกสารนี้ถูกยกเลิกแล้ว";
+      if (entry.referral.status !== "draft") return "เอกสารนี้อยู่ในสายการลงนามแล้ว";
+      if (!base.canReferExternally(entry.studentId))
+        return "ยังไม่ได้รับความยินยอมจากผู้ปกครองสำหรับปีการศึกษานี้";
+      if (base.recipientsOf(entry.studentId, ["guardians"]).length === 0)
+        return "นักเรียนคนนี้ยังไม่มีบัญชีผู้ปกครองในระบบ";
+      return null;
+    };
+
+    const requestGuardianSignature: CareSlice["requestGuardianSignature"] = (referralId) => {
+      const blocked = requestSignatureBlockReason(referralId);
+      if (blocked) return { ok: false, error: blocked };
+      const entry = findReferral(referralId)!;
+      const request = createSignatureRequest(referralId, "guardian", base.currentUser.userId);
+      updateReferral(referralId, (r) => ({ ...r, status: "awaiting_guardian" }));
+      base.logAudit("UPDATE", "referral_documents", referralId, {
+        before: { status: "draft" },
+        after: { status: "awaiting_guardian" },
+      });
+      base.notify(
+        "referral_signature_requested",
+        base.recipientsOf(entry.studentId, ["guardians"]),
+        entry.studentId
+      );
+      return { ok: true, request };
+    };
+
+    const canActOn = (request: SignatureRequest, studentId: string) =>
+      request.step === "guardian"
+        ? perm.isGuardianOf(base.permissionContext, base.currentUser, studentId)
+        : perm.isAdmin(base.currentUser);
+
+    const signBlockReason: CareSlice["signBlockReason"] = (requestId) => {
+      const request = working.signatures.find((s) => s.requestId === requestId);
+      if (!request) return "ไม่พบคำขอลงนาม";
+      if (request.status !== "pending") return "คำขอนี้ดำเนินการไปแล้ว";
+      const entry = findReferral(request.referralId);
+      if (!entry) return "ไม่พบเอกสารส่งต่อ";
+      if (!canActOn(request, entry.studentId))
+        return request.step === "guardian"
+          ? "เฉพาะผู้ปกครองของนักเรียนคนนี้เท่านั้นที่ลงนามได้"
+          : "เฉพาะผู้บริหาร/แอดมินโรงเรียนเท่านั้นที่อนุมัติได้";
+      if (!base.canReferExternally(entry.studentId))
+        return "ความยินยอมของผู้ปกครองในปีการศึกษานี้ไม่ครอบคลุมการส่งต่อข้อมูล";
+      return null;
+    };
+
+    const signSignatureRequest: CareSlice["signSignatureRequest"] = (requestId) => {
+      const blocked = signBlockReason(requestId);
+      if (blocked) return { ok: false, error: blocked };
+      const request = working.signatures.find((s) => s.requestId === requestId)!;
+      const entry = findReferral(request.referralId)!;
+      const now = nowThaiIso();
+      const signed: SignatureRequest = {
+        ...request,
+        status: "signed",
+        signerUserId: base.currentUser.userId,
+        signedAt: now,
+      };
+      updateSignature(requestId, () => signed);
+      base.logAudit("UPDATE", "signature_requests", requestId, {
+        before: { status: "pending" },
+        after: { status: "signed", step: request.step },
+      });
+
+      if (request.step === "guardian") {
+        updateReferral(request.referralId, (r) => ({ ...r, status: "awaiting_executive" }));
+        base.logAudit("UPDATE", "referral_documents", request.referralId, {
+          before: { status: "awaiting_guardian" },
+          after: { status: "awaiting_executive" },
+        });
+        // ระบบส่งต่อให้ผู้บริหารเองเมื่อผู้ปกครองลงนามแล้ว
+        createSignatureRequest(request.referralId, "executive", SYSTEM_USER_ID);
+        base.notify("referral_signed", homeroomIds(entry.studentId), entry.studentId);
+        base.notify("referral_approval_requested", adminUserIds(), entry.studentId);
+      } else {
+        updateReferral(request.referralId, (r) => ({ ...r, status: "approved" }));
+        base.logAudit("UPDATE", "referral_documents", request.referralId, {
+          before: { status: "awaiting_executive" },
+          after: { status: "approved" },
+        });
+        base.notify("referral_approved", homeroomIds(entry.studentId), entry.studentId);
+      }
+      return { ok: true, request: signed };
+    };
+
+    const declineSignatureRequest: CareSlice["declineSignatureRequest"] = (requestId, reason) => {
+      const blocked = signBlockReason(requestId);
+      if (blocked) return { ok: false, error: blocked };
+      if (!reason.trim()) return { ok: false, error: "ระบุเหตุผลที่ไม่ลงนาม" };
+      const request = working.signatures.find((s) => s.requestId === requestId)!;
+      const entry = findReferral(request.referralId)!;
+      const declined: SignatureRequest = {
+        ...request,
+        status: "declined",
+        signerUserId: base.currentUser.userId,
+        declinedAt: nowThaiIso(),
+        declineReason: reason.trim(),
+      };
+      updateSignature(requestId, () => declined);
+      base.logAudit("UPDATE", "signature_requests", requestId, {
+        before: { status: "pending" },
+        after: { status: "declined", step: request.step },
+        reason: declined.declineReason ?? undefined,
+      });
+      // เอกสารกลับไปเป็นร่าง ครูประจำชั้นแก้แล้วขอลงนามใหม่ หรือยกเลิกเอกสารได้
+      updateReferral(request.referralId, (r) => ({ ...r, status: "draft" }));
+      base.logAudit("UPDATE", "referral_documents", request.referralId, {
+        before: { status: entry.referral.status },
+        after: { status: "draft" },
+      });
+      base.notify("referral_declined", homeroomIds(entry.studentId), entry.studentId);
+      return { ok: true, request: declined };
+    };
+
+    const voidSignatureRequest: CareSlice["voidSignatureRequest"] = (requestId, reason) => {
+      const request = working.signatures.find((s) => s.requestId === requestId);
+      if (!request) return { ok: false, error: "ไม่พบคำขอลงนาม" };
+      if (request.status !== "pending") return { ok: false, error: "ยกเลิกได้เฉพาะคำขอที่ยังรอดำเนินการ" };
+      const entry = findReferral(request.referralId);
+      if (!entry) return { ok: false, error: "ไม่พบเอกสารส่งต่อ" };
+      if (!canManageCase(entry.studentId)) return { ok: false, error: "เฉพาะครูประจำชั้นของนักเรียน" };
+      if (!reason.trim()) return { ok: false, error: "ระบุเหตุผลที่ยกเลิกคำขอ" };
+      const voided: SignatureRequest = {
+        ...request,
+        status: "voided",
+        voidedBy: base.currentUser.userId,
+        voidedAt: nowThaiIso(),
+        voidReason: reason.trim(),
+      };
+      updateSignature(requestId, () => voided);
+      base.logAudit("VOID", "signature_requests", requestId, {
+        before: { status: "pending", step: request.step },
+        reason: voided.voidReason ?? undefined,
+      });
+      updateReferral(request.referralId, (r) => ({ ...r, status: "draft" }));
+      base.logAudit("UPDATE", "referral_documents", request.referralId, {
+        before: { status: entry.referral.status },
+        after: { status: "draft" },
+      });
+      return { ok: true, request: voided };
+    };
+
+    const sendReferralBlockReason: CareSlice["sendReferralBlockReason"] = (referralId) => {
+      const entry = findReferral(referralId);
+      if (!entry) return "ไม่พบเอกสารส่งต่อ";
+      if (!canManageCase(entry.studentId)) return "เฉพาะครูประจำชั้นของนักเรียน";
+      if (entry.referral.status === "sent") return "ส่งเอกสารนี้ไปแล้ว";
+      if (entry.referral.status === "voided") return "เอกสารนี้ถูกยกเลิกแล้ว";
+      if (!base.canReferExternally(entry.studentId))
+        return "ยังไม่ได้รับความยินยอมจากผู้ปกครองสำหรับปีการศึกษานี้";
+      if (entry.referral.status !== "approved")
+        return "สายการลงนามยังไม่ครบ (ต้องมีลายมือชื่อผู้ปกครองและการอนุมัติของผู้บริหาร)";
+      return null;
+    };
+
+    const sendReferral: CareSlice["sendReferral"] = (referralId) => {
+      const blocked = sendReferralBlockReason(referralId);
+      if (blocked) return { ok: false, error: blocked };
+      const entry = findReferral(referralId)!;
+      const sent: ReferralDocument = {
+        ...entry.referral,
+        status: "sent",
+        sentBy: base.currentUser.userId,
+        sentAt: nowThaiIso(),
+      };
+      updateReferral(referralId, () => sent);
+      base.logAudit("UPDATE", "referral_documents", referralId, {
+        before: { status: "approved" },
+        after: { status: "sent", externalAgency: sent.externalAgency },
+      });
+      base.notify("referral_sent", base.recipientsOf(entry.studentId, ["homeroom", "guardians"]), entry.studentId);
+      return { ok: true, referral: sent };
+    };
+
+    const voidReferral: CareSlice["voidReferral"] = (referralId, reason) => {
+      const entry = findReferral(referralId);
+      if (!entry) return { ok: false, error: "ไม่พบเอกสารส่งต่อ" };
+      if (!canManageCase(entry.studentId)) return { ok: false, error: "เฉพาะครูประจำชั้นของนักเรียน" };
+      if (entry.referral.status === "sent") return { ok: false, error: "ส่งเอกสารนี้ไปแล้ว ยกเลิกไม่ได้" };
+      if (entry.referral.status === "voided") return { ok: false, error: "เอกสารนี้ถูกยกเลิกแล้ว" };
+      if (!reason.trim()) return { ok: false, error: "ระบุเหตุผลที่ยกเลิกเอกสาร" };
+      if (entry.pending) voidSignatureRequest(entry.pending.requestId, reason);
+      const voided: ReferralDocument = {
+        ...entry.referral,
+        status: "voided",
+        voidedBy: base.currentUser.userId,
+        voidedAt: nowThaiIso(),
+        voidReason: reason.trim(),
+      };
+      updateReferral(referralId, () => voided);
+      base.logAudit("VOID", "referral_documents", referralId, {
+        before: { status: entry.referral.status },
+        reason: voided.voidReason ?? undefined,
+      });
+      return { ok: true, referral: voided };
+    };
+
+    // ครูประจำชั้น/แอดมินเห็นของนักเรียนที่ดูข้อมูลอ่อนไหวได้ ส่วนผู้ปกครองเห็นเฉพาะของบุตรหลานตนเอง
+    const visibleReferrals = allReferrals().filter(
+      (e) =>
+        base.canSeeSensitive(e.studentId) ||
+        perm.isGuardianOf(base.permissionContext, base.currentUser, e.studentId)
+    );
+
+    const myPendingSignatures = allReferrals().filter(
+      (e) => e.pending !== undefined && signBlockReason(e.pending.requestId) === null
+    );
 
     return {
       careCases,
@@ -611,6 +967,22 @@ export function useCareSlice(base: PlatformSlice, behavior: BehaviorSlice): Care
       applyStudentStatusChange,
       referralBlockReason,
       createReferral,
+
+      signatureRequests,
+      signatureRequestsOf,
+      pendingSignatureOf,
+      getReferral: findReferral,
+      visibleReferrals,
+      myPendingSignatures,
+      requestSignatureBlockReason,
+      requestGuardianSignature,
+      signBlockReason,
+      signSignatureRequest,
+      declineSignatureRequest,
+      voidSignatureRequest,
+      sendReferralBlockReason,
+      sendReferral,
+      voidReferral,
     };
-  }, [base, behavior, careCases, suggestions, dismissedBehavior]);
+  }, [base, behavior, careCases, suggestions, dismissedBehavior, signatureRequests]);
 }

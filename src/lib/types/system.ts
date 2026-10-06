@@ -109,7 +109,13 @@ export type NotificationEventType =
   | "visit_rescheduled"
   | "behavior_confirmed"
   | "late_weekly_digest"
-  | "dc_scores_requested";
+  | "dc_scores_requested"
+  | "referral_signature_requested"
+  | "referral_signed"
+  | "referral_approval_requested"
+  | "referral_approved"
+  | "referral_declined"
+  | "referral_sent";
 
 /**
  * ค่าที่แม่แบบข้อความรับได้ — มีเฉพาะตัวเลข วันที่ และชื่อกิจกรรม/รายวิชา
