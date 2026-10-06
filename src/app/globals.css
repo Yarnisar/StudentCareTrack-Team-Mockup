@@ -6,32 +6,32 @@
 :root {
   --radius: 0.75rem;
 
-  --background: #ffffff;
-  --foreground: #0f172a;
+  --background: #f8fbff;
+  --foreground: #102a43;
 
   --card: #ffffff;
-  --card-foreground: #0f172a;
+  --card-foreground: #102a43;
   --popover: #ffffff;
-  --popover-foreground: #0f172a;
+  --popover-foreground: #102a43;
 
-  --primary: #2563eb;
+  --primary: #1473e6;
   --primary-foreground: #ffffff;
 
-  --secondary: #f1f5f9;
-  --secondary-foreground: #0f172a;
+  --secondary: #eaf3ff;
+  --secondary-foreground: #164e87;
 
-  --muted: #f1f5f9;
-  --muted-foreground: #64748b;
+  --muted: #edf5fd;
+  --muted-foreground: #5c7390;
 
-  --accent: #eff6ff;
-  --accent-foreground: #1e40af;
+  --accent: #e4f0ff;
+  --accent-foreground: #1556a3;
 
   --destructive: #dc2626;
   --destructive-foreground: #ffffff;
 
-  --border: #e2e8f0;
-  --input: #e2e8f0;
-  --ring: #2563eb;
+  --border: #d6e5f5;
+  --input: #c8dcf2;
+  --ring: #1473e6;
 
   /* สีกลุ่มความเสี่ยง ตามเกณฑ์ HERO OBEC CARE */
   --risk-green: #16a34a;
@@ -41,7 +41,7 @@
   --risk-red: #dc2626;
   --risk-red-bg: #fee2e2;
 
-  --surface: #f8fafc;
+  --surface: #f1f7fe;
 }
 
 @theme inline {
@@ -87,7 +87,9 @@
   }
 
   body {
-    background: var(--surface);
+    background:
+      radial-gradient(circle at 12% -10%, rgb(191 219 254 / 0.38), transparent 32rem),
+      var(--surface);
     color: var(--foreground);
     font-family: var(--font-sarabun), system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;

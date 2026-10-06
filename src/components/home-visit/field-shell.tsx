@@ -19,7 +19,7 @@ export const SOURCE_STYLE: Record<FillSource, string> = {
   registry: "bg-accent text-primary",
   guardian: "bg-risk-green-bg text-risk-green",
   previous: "bg-risk-amber-bg text-risk-amber",
-  screening: "bg-[#ede9fe] text-[#6d28d9]",
+  screening: "bg-accent text-accent-foreground",
 };
 
 export function AutoBadge({ source }: { source: FillSource }) {
