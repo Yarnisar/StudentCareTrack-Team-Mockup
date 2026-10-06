@@ -105,6 +105,33 @@ export interface HomeVisitForm {
   /** เพื่อนสนิทของนักเรียนนอกโรงเรียน */
   friendOutsideName: string;
   friendOutsidePhone: string;
+  /** สถานภาพของบิดา-มารดา (ตอบข้อเดียว) รหัสจาก PARENT_STATUS_OPTIONS */
+  parentStatus: string;
+  /** ระบุเมื่อ parentStatus = other */
+  parentStatusOther: string;
+  /** ข้อมูลพี่น้อง: only = เป็นบุตรคนเดียว · order = เป็นบุตรคนที่ birthOrder */
+  siblingKind: string;
+  birthOrder: string;
+  /** จำนวนพี่น้อง (บิดา-มารดาเดียวกัน) เก็บเป็นข้อความตัวเลข */
+  siblingsBrothers: string;
+  siblingsSisters: string;
+  /** พี่/น้องต่างบิดา-มารดา */
+  siblingsHalfOlder: string;
+  siblingsHalfYounger: string;
+  /** พี่น้องที่ศึกษาอยู่ (ไม่นับรวมตัวนักเรียน) */
+  siblingsStudying: string;
+  /** ลักษณะกายภาพของบ้าน (ตอบข้อเดียว) รหัสจาก HOUSE_BUILDING_OPTIONS */
+  houseBuilding: string;
+  houseBuildingOther: string;
+  /** ในครอบครัวนักเรียนสนิทสนมกับใครมากที่สุด (ไม่บังคับ) */
+  closestTo: string[];
+  closestToOther: string;
+  /** เมื่อทุกข์ใจ/มีปัญหา ส่วนใหญ่นักเรียนปรึกษาใคร (ไม่บังคับ) */
+  confideIn: string[];
+  confideInOther: string;
+  confideInHotline: string;
+  /** ที่มาของภาพถ่ายที่พักอาศัย (ต่อการเยี่ยม): teacher = ครูลงเยี่ยมเอง · student = นักเรียนถ่ายมาให้ */
+  photoSource: string;
 }
 
 export type HomeVisitPhotoType = "exterior" | "interior" | "with_signboard";

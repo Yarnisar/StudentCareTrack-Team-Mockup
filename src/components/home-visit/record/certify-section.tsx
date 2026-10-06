@@ -2,12 +2,14 @@
 
 import { Camera, Check } from "lucide-react";
 import { CopyButton, Field, ReadOnly, SectionCard } from "../field-shell";
+import { ChipSelect } from "../option-inputs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
   INFORMANT_OPTIONS,
   PHOTO_SLOTS_HOME,
+  PHOTO_SOURCE_OPTIONS,
   PHOTO_SLOTS_INACCESSIBLE,
 } from "@/lib/home-visit-form";
 import { PHOTO_TYPE_LABEL } from "@/lib/types";
@@ -116,6 +118,15 @@ export function CertifySection({
             </div>
           )}
         </div>
+
+        <ChipSelect
+          label="ภาพที่พักอาศัยของนักเรียนได้มาจาก (ต่อการเยี่ยม — ไม่ยกจากภาคเรียนก่อน)"
+          options={PHOTO_SOURCE_OPTIONS}
+          value={api.form.photoSource}
+          onChange={(v) => api.setForm("photoSource", v)}
+          source={api.sourceOf("photoSource")}
+          columns={2}
+        />
 
         <div>
           <p className="mb-2 text-[12.5px] text-muted-foreground">

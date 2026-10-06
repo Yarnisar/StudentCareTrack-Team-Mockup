@@ -5,7 +5,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useStore } from "@/lib/store";
 import { formatBaht, formatThaiDateTime } from "@/lib/format";
 import {
+  CLOSEST_TO_OPTIONS,
+  CONFIDE_IN_OPTIONS,
   DISABILITY_OPTIONS,
+  HOUSE_BUILDING_OPTIONS,
+  PARENT_STATUS_OPTIONS,
+  PHOTO_SOURCE_OPTIONS,
+  SIBLING_COUNT_FIELDS,
   DISADVANTAGE_OPTIONS,
   DISASTER_OPTIONS,
   memberTotal,
@@ -23,6 +29,40 @@ export function VisitRecordSummary({ record }: { record: HomeVisitRecord }) {
   const disadvantages = labelsOf(record.form.disadvantages, DISADVANTAGE_OPTIONS);
   const disabilities = labelsOf(record.form.disabilities, DISABILITY_OPTIONS);
   const disasters = labelsOf(record.form.disasterRisks, DISASTER_OPTIONS);
+  const f = record.form;
+  const labelOf = (id: string, options: CheckboxOption[], other: string) => {
+    const label = options.find((o) => o.id === id)?.label ?? id;
+    return id === "other" && other ? `อื่น ๆ: ${other}` : label;
+  };
+  const withOther = (ids: string[], options: CheckboxOption[], other: string, hotline = "") =>
+    ids.map((id) =>
+      id === "hotline" && hotline ? `Hotline: ${hotline}` : labelOf(id, options, other)
+    );
+  const siblingText = (() => {
+    if (f.siblingKind === "only") return "เป็นบุตรคนเดียว";
+    if (f.siblingKind !== "order") return "";
+    const counts = SIBLING_COUNT_FIELDS.filter((c) => f[c.key]).map((c) => `${c.label} ${f[c.key]} คน`);
+    return [f.birthOrder ? `เป็นบุตรคนที่ ${f.birthOrder}` : "เป็นบุตรลำดับไม่ระบุ", ...counts].join(" · ");
+  })();
+  const familyRows: [string, string][] = [
+    [
+      "สถานภาพบิดา-มารดา",
+      f.parentStatus ? labelOf(f.parentStatus, PARENT_STATUS_OPTIONS, f.parentStatusOther) : "",
+    ],
+    ["พี่น้อง", siblingText],
+    [
+      "ลักษณะกายภาพของบ้าน",
+      f.houseBuilding ? labelOf(f.houseBuilding, HOUSE_BUILDING_OPTIONS, f.houseBuildingOther) : "",
+    ],
+    ["สนิทกับใครมากที่สุด", withOther(f.closestTo, CLOSEST_TO_OPTIONS, f.closestToOther).join(", ")],
+    [
+      "ปรึกษาใครเมื่อมีปัญหา",
+      withOther(f.confideIn, CONFIDE_IN_OPTIONS, f.confideInOther, f.confideInHotline).join(", "),
+    ],
+  ].filter((r): r is [string, string] => !!r[1]);
+  const photoSource = f.photoSource
+    ? PHOTO_SOURCE_OPTIONS.find((o) => o.id === f.photoSource)?.label
+    : undefined;
 
   return (
     <>
@@ -65,6 +105,16 @@ export function VisitRecordSummary({ record }: { record: HomeVisitRecord }) {
             <StatusChip label="ความพิการ" labels={disabilities} none="ไม่พิการ" />
             <StatusChip label="ภัยพิบัติในพื้นที่" labels={disasters} none="ไม่มีความเสี่ยง" />
           </div>
+          {familyRows.length > 0 && (
+            <dl className="mt-3 space-y-1 text-[13px]">
+              {familyRows.map(([k, v]) => (
+                <div key={k} className="flex gap-2">
+                  <dt className="w-44 shrink-0 text-muted-foreground">{k}</dt>
+                  <dd>{v}</dd>
+                </div>
+              ))}
+            </dl>
+          )}
           {record.livesWith && (
             <p className="mt-3 text-[13px] text-muted-foreground">
               นักเรียนอาศัยอยู่กับ: <span className="text-foreground">{record.livesWith}</span>{" "}
@@ -110,6 +160,11 @@ export function VisitRecordSummary({ record }: { record: HomeVisitRecord }) {
               <div className="mb-3 rounded-lg bg-accent px-3.5 py-2.5 text-[13px] text-accent-foreground">
                 <b>เข้าเยี่ยมที่บ้านไม่ได้</b> — {record.cannotAccessReason || "-"}
               </div>
+            )}
+            {photoSource && (
+              <p className="mb-3 text-[13px] text-muted-foreground">
+                ที่มาของภาพ: <span className="text-foreground">{photoSource}</span>
+              </p>
             )}
             {record.photos.length > 0 ? (
               <div className="flex gap-3">

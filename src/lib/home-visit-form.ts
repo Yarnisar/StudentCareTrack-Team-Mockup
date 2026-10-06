@@ -134,6 +134,76 @@ export function relationRowsOf(members: HouseholdMember[]): string[] {
   return rows;
 }
 
+/** ข้อ 5.9 สถานภาพของบิดา-มารดา (ตอบเพียง 1 ข้อ) ตามแบบฟอร์มจริง ข้อ 7 */
+export const PARENT_STATUS_OPTIONS: CheckboxOption[] = [
+  { id: "together", label: "อยู่ด้วยกัน" },
+  { id: "separated", label: "แยกกันอยู่" },
+  { id: "divorced", label: "หย่าร้าง" },
+  { id: "abandoned", label: "บิดา-มารดาทอดทิ้ง" },
+  { id: "mother_deceased", label: "มารดาเสียชีวิต/สาบสูญ" },
+  { id: "mother_remarried", label: "มารดาสมรสใหม่" },
+  { id: "father_deceased", label: "บิดาเสียชีวิต/สาบสูญ" },
+  { id: "father_remarried", label: "บิดาสมรสใหม่" },
+  { id: "both_deceased", label: "บิดา-มารดาเสียชีวิต/สาบสูญ" },
+  { id: "other", label: "อื่น ๆ (ระบุ)" },
+];
+
+/** ข้อ 5.10 ลำดับการเกิด */
+export const SIBLING_KIND_OPTIONS: CheckboxOption[] = [
+  { id: "only", label: "เป็นบุตรคนเดียว" },
+  { id: "order", label: "เป็นบุตรคนที่" },
+];
+
+/** ข้อ 5.10 จำนวนพี่น้อง (ช่องตัวเลข) */
+export const SIBLING_COUNT_FIELDS = [
+  { key: "siblingsBrothers", label: "มีพี่ชาย/น้องชาย (บิดา-มารดาเดียวกัน)" },
+  { key: "siblingsSisters", label: "มีพี่สาว/น้องสาว (บิดา-มารดาเดียวกัน)" },
+  { key: "siblingsHalfOlder", label: "มีพี่ต่างบิดา-มารดา" },
+  { key: "siblingsHalfYounger", label: "มีน้องต่างบิดา-มารดา" },
+  { key: "siblingsStudying", label: "พี่น้องที่ศึกษาอยู่ (ไม่นับรวมตัวนักเรียน)" },
+] as const satisfies readonly { key: keyof HomeVisitForm; label: string }[];
+
+/** ข้อ 4.3 ลักษณะกายภาพของบ้าน (ตอบเพียง 1 ข้อ) ตามแบบฟอร์มจริง ข้อ 14 */
+export const HOUSE_BUILDING_OPTIONS: CheckboxOption[] = [
+  { id: "single_storey", label: "บ้านชั้นเดียว" },
+  { id: "two_storey", label: "บ้านสองชั้น" },
+  { id: "townhouse", label: "ทาวน์เฮ้าส์" },
+  { id: "other", label: "อื่น ๆ (ระบุ)" },
+];
+
+/** ข้อ 5.11 ในครอบครัวนักเรียนสนิทสนมกับใครมากที่สุด (ไม่บังคับ) */
+export const CLOSEST_TO_OPTIONS: CheckboxOption[] = [
+  { id: "father", label: "บิดา" },
+  { id: "mother", label: "มารดา" },
+  { id: "older_brother", label: "พี่ชาย" },
+  { id: "older_sister", label: "พี่สาว" },
+  { id: "younger_brother", label: "น้องชาย" },
+  { id: "younger_sister", label: "น้องสาว" },
+  { id: "guardian", label: "ผู้ปกครอง" },
+  { id: "other", label: "อื่น ๆ (ระบุ)" },
+];
+
+/** ข้อ 5.12 เมื่อทุกข์ใจ/มีปัญหา ส่วนใหญ่นักเรียนปรึกษาใคร (ไม่บังคับ) */
+export const CONFIDE_IN_OPTIONS: CheckboxOption[] = [
+  { id: "father", label: "บิดา" },
+  { id: "mother", label: "มารดา" },
+  { id: "guardian", label: "ผู้ปกครอง" },
+  { id: "sibling", label: "พี่น้อง" },
+  { id: "relative", label: "ญาติ" },
+  { id: "friend", label: "เพื่อน" },
+  { id: "teacher", label: "ครู" },
+  { id: "online_friend", label: "เพื่อนในโลกออนไลน์" },
+  { id: "keep_to_self", label: "เก็บไว้ในใจ ไม่เล่าให้ใครฟัง" },
+  { id: "hotline", label: "Hotline (ระบุ)" },
+  { id: "other", label: "อื่น ๆ (ระบุ)" },
+];
+
+/** ที่มาของภาพถ่ายที่พักอาศัย (ต่อการเยี่ยม) ตามแบบฟอร์มจริง ข้อ 12 */
+export const PHOTO_SOURCE_OPTIONS: CheckboxOption[] = [
+  { id: "teacher", label: "คุณครูเยี่ยมบ้านด้วยตนเอง" },
+  { id: "student", label: "ให้นักเรียนถ่ายภาพมาให้" },
+];
+
 /** ข้อ 5.3 ผู้ดูแลกรณีผู้ปกครองไม่อยู่บ้าน (ตอบเพียง 1 ข้อ) */
 export const CARETAKER_OPTIONS: CheckboxOption[] = [
   { id: "relative", label: "ญาติ" },
@@ -361,6 +431,23 @@ export function emptyHomeVisitForm(): HomeVisitForm {
     friendInSchoolPhone: "",
     friendOutsideName: "",
     friendOutsidePhone: "",
+    parentStatus: "",
+    parentStatusOther: "",
+    siblingKind: "",
+    birthOrder: "",
+    siblingsBrothers: "",
+    siblingsSisters: "",
+    siblingsHalfOlder: "",
+    siblingsHalfYounger: "",
+    siblingsStudying: "",
+    houseBuilding: "",
+    houseBuildingOther: "",
+    closestTo: [],
+    closestToOther: "",
+    confideIn: [],
+    confideInOther: "",
+    confideInHotline: "",
+    photoSource: "",
   };
 }
 
@@ -405,6 +492,22 @@ export const CARRIED_FORM_KEYS = [
   "friendInSchoolPhone",
   "friendOutsideName",
   "friendOutsidePhone",
+  "parentStatus",
+  "parentStatusOther",
+  "siblingKind",
+  "birthOrder",
+  "siblingsBrothers",
+  "siblingsSisters",
+  "siblingsHalfOlder",
+  "siblingsHalfYounger",
+  "siblingsStudying",
+  "houseBuilding",
+  "houseBuildingOther",
+  "closestTo",
+  "closestToOther",
+  "confideIn",
+  "confideInOther",
+  "confideInHotline",
 ] as const satisfies readonly (keyof HomeVisitForm)[];
 
 export type CarriedFormKey = (typeof CARRIED_FORM_KEYS)[number];
@@ -556,7 +659,19 @@ export function buildDemoAutofill({
     form.friendInSchoolPhone = "08x-xxx-" + String(1000 + (h % 9000));
     form.friendOutsideName = (h >> 8) % 2 === 0 ? "เพื่อนบ้านวัยเดียวกัน (ไม่ได้เรียนที่โรงเรียนนี้)" : "";
     form.friendOutsidePhone = "";
+    form.parentStatus = withGrandparent ? pick(["separated", "divorced"], 15) : "together";
+    form.siblingKind = (h >> 9) % 3 === 0 ? "only" : "order";
+    form.birthOrder = form.siblingKind === "order" ? String(1 + (h % 2)) : "";
+    if (form.siblingKind === "order") {
+      form.siblingsBrothers = String(h % 2);
+      form.siblingsSisters = String(1 - (h % 2));
+      form.siblingsStudying = "1";
+    }
+    form.houseBuilding = pick(["single_storey", "single_storey", "two_storey", "townhouse"], 16);
+    form.closestTo = [pick(["mother", "father", "older_sister"], 17)];
+    form.confideIn = [pick(["friend", "mother", "teacher"], 18)];
   }
+  form.photoSource = "teacher";
 
   form.relations = Object.fromEntries(
     relationRowsOf(form.members).map((m, i) => [

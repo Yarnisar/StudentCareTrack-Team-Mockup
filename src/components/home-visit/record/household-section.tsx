@@ -1,7 +1,7 @@
 "use client";
 
 import { Plus, Trash2 } from "lucide-react";
-import { AutoBadge, CarryBadge, SectionCard } from "../field-shell";
+import { AutoBadge, CarryBadge, Field, SectionCard } from "../field-shell";
 import { ChipGroup, ChipSelect, YesNoRows } from "../option-inputs";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -11,6 +11,7 @@ import {
   DISASTER_OPTIONS,
   ELECTRICITY_OPTIONS,
   FARMLAND_OPTIONS,
+  HOUSE_BUILDING_OPTIONS,
   HOUSING_CONDITION_OPTIONS,
   HOUSING_TYPE_OPTIONS,
   INCOME_COLUMNS,
@@ -205,8 +206,30 @@ export function HouseholdSection({ api }: { api: RecordFormApi }) {
             carry={api.carryOf("housingType")}
             columns={3}
           />
+          <ChipSelect
+            label="4.3 ลักษณะกายภาพของบ้าน"
+            options={HOUSE_BUILDING_OPTIONS}
+            value={f.houseBuilding}
+            onChange={(v) => api.setForm("houseBuilding", v)}
+            source={api.sourceOf("houseBuilding")}
+            carry={
+              api.carryOf("houseBuilding") === "changed" || api.carryOf("houseBuildingOther") === "changed"
+                ? "changed"
+                : api.carryOf("houseBuilding")
+            }
+            columns={4}
+          />
+          {f.houseBuilding === "other" && (
+            <Field label="ระบุลักษณะบ้านอื่น ๆ" htmlFor="house-building-other" className="-mt-3 max-w-md">
+              <Input
+                id="house-building-other"
+                value={f.houseBuildingOther}
+                onChange={(e) => api.setForm("houseBuildingOther", e.target.value)}
+              />
+            </Field>
+          )}
           <ChipGroup
-            label="4.3 สภาพที่อยู่อาศัย"
+            label="4.4 สภาพที่อยู่อาศัย"
             options={HOUSING_CONDITION_OPTIONS}
             selected={f.housingConditions}
             onToggle={(id) => api.toggleIn("housingConditions", id)}
@@ -217,7 +240,7 @@ export function HouseholdSection({ api }: { api: RecordFormApi }) {
             columns={1}
           />
           <YesNoRows
-            label="4.4 ยานพาหนะของครอบครัว"
+            label="4.5 ยานพาหนะของครอบครัว"
             rows={VEHICLE_OPTIONS}
             values={f.vehicles}
             onChange={(id, value) => api.setForm("vehicles", { ...f.vehicles, [id]: value })}
@@ -225,7 +248,7 @@ export function HouseholdSection({ api }: { api: RecordFormApi }) {
             carry={api.carryOf("vehicles")}
           />
           <ChipSelect
-            label="4.5 ที่ดินทำกิน"
+            label="4.6 ที่ดินทำกิน"
             options={FARMLAND_OPTIONS}
             value={f.farmland}
             onChange={(v) => api.setForm("farmland", v)}
@@ -234,7 +257,7 @@ export function HouseholdSection({ api }: { api: RecordFormApi }) {
             columns={2}
           />
           <ChipSelect
-            label="4.6 แหล่งไฟฟ้าหลักของที่พักอาศัย"
+            label="4.7 แหล่งไฟฟ้าหลักของที่พักอาศัย"
             options={ELECTRICITY_OPTIONS}
             value={f.electricity}
             onChange={(v) => api.setForm("electricity", v)}
@@ -242,7 +265,7 @@ export function HouseholdSection({ api }: { api: RecordFormApi }) {
             columns={2}
           />
           <ChipGroup
-            label="4.7 แหล่งน้ำดื่มของครัวเรือน"
+            label="4.8 แหล่งน้ำดื่มของครัวเรือน"
             options={WATER_OPTIONS}
             selected={f.waterSources}
             onToggle={(id) => api.toggleIn("waterSources", id)}
@@ -251,7 +274,7 @@ export function HouseholdSection({ api }: { api: RecordFormApi }) {
             columns={2}
           />
           <ChipGroup
-            label="4.8 ความปลอดภัยของที่พักอาศัยด้านภัยพิบัติ"
+            label="4.9 ความปลอดภัยของที่พักอาศัยด้านภัยพิบัติ"
             options={DISASTER_OPTIONS}
             selected={f.disasterRisks}
             onToggle={(id) => api.toggleIn("disasterRisks", id)}
