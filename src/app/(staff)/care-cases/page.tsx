@@ -4,6 +4,7 @@ import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { FolderPlus, Lightbulb } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
+import { PagerNumbered, usePagination } from "@/components/shared/pagination";
 import { RiskBadge } from "@/components/shared/risk-badge";
 import { CaseDetail } from "@/components/care/case-detail";
 import { OpenCaseForm } from "@/components/care/open-case-form";
@@ -57,6 +58,8 @@ function CareCasesContent() {
     return visibleCases[0] ? { kind: "case", caseId: visibleCases[0].caseId } : { kind: "none" };
   });
   const [pickStudent, setPickStudent] = useState("");
+  const [pageSize, setPageSize] = useState(10);
+  const pager = usePagination(visibleCases, pageSize);
 
   const selectedCase =
     selection.kind === "case" ? visibleCases.find((c) => c.caseId === selection.caseId) : undefined;
@@ -155,7 +158,7 @@ function CareCasesContent() {
               <CardContent className="p-5">
                 <h2 className="mb-3 text-[15px] font-bold">รายการ case</h2>
                 <div className="space-y-2">
-                  {visibleCases.map((c) => {
+                  {pager.slice.map((c) => {
                     const s = store.getStudent(c.studentId);
                     const risk = store.overallRiskOf(c.studentId);
                     const selected = selection.kind === "case" && c.caseId === selection.caseId;
@@ -196,6 +199,20 @@ function CareCasesContent() {
                     <p className="text-sm text-muted-foreground">ยังไม่มี care case ที่คุณดูได้</p>
                   )}
                 </div>
+
+                <PagerNumbered
+                  page={pager.page}
+                  totalPages={pager.totalPages}
+                  setPage={pager.setPage}
+                  from={pager.from}
+                  to={pager.to}
+                  total={pager.total}
+                  pageSize={pageSize}
+                  onPageSize={(n) => {
+                    setPageSize(n);
+                    pager.reset();
+                  }}
+                />
               </CardContent>
             </Card>
           </div>

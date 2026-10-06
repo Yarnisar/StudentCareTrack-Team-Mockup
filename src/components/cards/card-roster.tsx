@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PagerNumbered, usePagination } from "@/components/shared/pagination";
 import {
   Table,
   TableBody,
@@ -44,6 +45,8 @@ export function CardRoster({
   const [expanded, setExpanded] = useState<string | null>(null);
 
   const students = store.students.filter((s) => s.status === "studying");
+  const [pageSize, setPageSize] = useState(10);
+  const pager = usePagination(students, pageSize);
 
   const issue = (studentId: string) => {
     const result = store.issueCard(studentId);
@@ -116,7 +119,7 @@ export function CardRoster({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {students.map((student) => {
+            {pager.slice.map((student) => {
               const active = store.activeCardOfStudent(student.studentId);
               const history = store.cardsOfStudent(student.studentId);
               const status = store.cardStatusOfStudent(student.studentId);
@@ -214,6 +217,20 @@ export function CardRoster({
             })}
           </TableBody>
         </Table>
+
+        <PagerNumbered
+          page={pager.page}
+          totalPages={pager.totalPages}
+          setPage={pager.setPage}
+          from={pager.from}
+          to={pager.to}
+          total={pager.total}
+          pageSize={pageSize}
+          onPageSize={(n) => {
+            setPageSize(n);
+            pager.reset();
+          }}
+        />
 
         {pending && (
           <div className="mt-4 rounded-xl border border-border bg-surface p-4">

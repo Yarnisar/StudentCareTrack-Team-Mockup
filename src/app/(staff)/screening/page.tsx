@@ -1,6 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { PageHeader } from "@/components/layout/page-header";
+import { PagerNumbered, usePagination } from "@/components/shared/pagination";
 import { RiskBadge } from "@/components/shared/risk-badge";
 import { WindowNotice } from "@/components/shared/window-notice";
 import { LinkButton } from "@/components/ui/link-button";
@@ -14,6 +16,8 @@ export default function ScreeningListPage() {
   const store = useStore();
   const students = store.students.filter((s) => store.canSeeSensitive(s.studentId));
   const certified = students.filter((s) => store.screeningOf(s.studentId)?.status === "certified").length;
+  const [pageSize, setPageSize] = useState(10);
+  const pager = usePagination(students, pageSize);
 
   return (
     <>
@@ -46,7 +50,7 @@ export default function ScreeningListPage() {
             )}
 
             <div className="divide-y divide-border">
-              {students.map((student) => {
+              {pager.slice.map((student) => {
                 const screening = store.screeningOf(student.studentId);
                 const blocked = store.screeningEditBlockReason(student.studentId);
                 const risk = screening ? overallRisk(screening.results.map((r) => r.group)) : null;
@@ -107,6 +111,20 @@ export default function ScreeningListPage() {
                 );
               })}
             </div>
+
+            <PagerNumbered
+              page={pager.page}
+              totalPages={pager.totalPages}
+              setPage={pager.setPage}
+              from={pager.from}
+              to={pager.to}
+              total={pager.total}
+              pageSize={pageSize}
+              onPageSize={(n) => {
+                setPageSize(n);
+                pager.reset();
+              }}
+            />
           </CardContent>
         </Card>
       </div>

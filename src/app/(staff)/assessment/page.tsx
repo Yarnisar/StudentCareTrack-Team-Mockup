@@ -1,8 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import { PageHeader } from "@/components/layout/page-header";
 import { AssessmentRouteDiagram } from "@/components/assessment/route-diagram";
 import { CombinedSdqSummary } from "@/components/assessment/sdq-result";
+import { PagerNumbered, usePagination } from "@/components/shared/pagination";
 import { WindowNotice } from "@/components/shared/window-notice";
 import { LinkButton } from "@/components/ui/link-button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -25,6 +27,8 @@ export default function AssessmentPage() {
   const term = store.currentTerm;
   const round = term.semester;
   const students = store.students.filter((s) => store.canSeeSensitive(s.studentId));
+  const [pageSize, setPageSize] = useState(10);
+  const pager = usePagination(students, pageSize);
 
   return (
     <>
@@ -66,7 +70,7 @@ export default function AssessmentPage() {
             <h2 className="mb-4 text-[15.5px] font-bold">สถานะการประเมินรายบุคคล</h2>
 
             <div className="divide-y divide-border">
-              {students.map((student) => {
+              {pager.slice.map((student) => {
                 const plan = store.assessmentPlanOf(student.studentId);
                 const rfFromSem1 = plan.redFlag && plan.redFlag.termId !== term.termId;
                 const nsFromSem1 = plan.nineS && plan.nineS.termId !== term.termId;
@@ -111,6 +115,20 @@ export default function AssessmentPage() {
                 );
               })}
             </div>
+
+            <PagerNumbered
+              page={pager.page}
+              totalPages={pager.totalPages}
+              setPage={pager.setPage}
+              from={pager.from}
+              to={pager.to}
+              total={pager.total}
+              pageSize={pageSize}
+              onPageSize={(n) => {
+                setPageSize(n);
+                pager.reset();
+              }}
+            />
           </CardContent>
         </Card>
       </div>

@@ -7,6 +7,7 @@ import { AnnualVisitSummary } from "@/components/home-visit/annual-visit-summary
 import { AppointmentDateFields } from "@/components/home-visit/appointment-date-fields";
 import { CreateAppointmentForm } from "@/components/home-visit/create-appointment-form";
 import { VisitRecordSummary } from "@/components/home-visit/visit-record-summary";
+import { PagerNumbered, usePagination } from "@/components/shared/pagination";
 import { WindowNotice } from "@/components/shared/window-notice";
 import { Button } from "@/components/ui/button";
 import { LinkButton } from "@/components/ui/link-button";
@@ -46,6 +47,8 @@ export default function HomeVisitsPage() {
     () => visible.find((a) => a.status !== "completed" && a.status !== "cancelled")?.appointmentId ?? visible[0]?.appointmentId ?? ""
   );
   const [creating, setCreating] = useState(false);
+  const [pageSize, setPageSize] = useState(10);
+  const pager = usePagination(visible, pageSize);
 
   const appointment = visible.find((a) => a.appointmentId === selected);
   const student = appointment ? store.getStudent(appointment.studentId) : undefined;
@@ -88,7 +91,7 @@ export default function HomeVisitsPage() {
                   {visible.length === 0 && (
                     <p className="text-[13px] text-muted-foreground">ยังไม่มีนัดหมายเยี่ยมบ้าน</p>
                   )}
-                  {visible.map((a) => {
+                  {pager.slice.map((a) => {
                     const s = store.getStudent(a.studentId);
                     const active = a.appointmentId === selected;
                     const draft = store.recordOfAppointment(a.appointmentId);
@@ -122,6 +125,20 @@ export default function HomeVisitsPage() {
                     );
                   })}
                 </div>
+
+                <PagerNumbered
+                  page={pager.page}
+                  totalPages={pager.totalPages}
+                  setPage={pager.setPage}
+                  from={pager.from}
+                  to={pager.to}
+                  total={pager.total}
+                  pageSize={pageSize}
+                  onPageSize={(n) => {
+                    setPageSize(n);
+                    pager.reset();
+                  }}
+                />
               </CardContent>
             </Card>
 
