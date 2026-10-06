@@ -93,7 +93,29 @@ export interface CareFollowup {
   recordedBy: string;
 }
 
-/** referral_documents — สร้างได้เมื่อ guardian_consents ของปีนั้น granted = true */
+/**
+ * สถานะเอกสารส่งต่อตามสายการลงนาม
+ * จัดทำร่าง → ผู้ปกครองลงนาม → ผู้บริหารอนุมัติ → ส่งต่อได้
+ * ปฏิเสธการลงนามหรือยกเลิกคำขอ → กลับมาเป็นร่าง (คำขอเดิมยังอยู่ในประวัติ)
+ */
+export type ReferralStatus =
+  | "draft"
+  | "awaiting_guardian"
+  | "awaiting_executive"
+  | "approved"
+  | "sent"
+  | "voided";
+
+export const REFERRAL_STATUS_LABEL: Record<ReferralStatus, string> = {
+  draft: "จัดทำร่าง",
+  awaiting_guardian: "รอผู้ปกครองลงนาม",
+  awaiting_executive: "รอผู้บริหารอนุมัติ",
+  approved: "อนุมัติแล้ว ส่งต่อได้",
+  sent: "ส่งต่อแล้ว",
+  voided: "ยกเลิกแล้ว",
+};
+
+/** referral_documents — สร้างร่างได้เมื่อ guardian_consents ของปีนั้น granted = true */
 export interface ReferralDocument {
   referralId: string;
   caseId: string;
@@ -101,7 +123,64 @@ export interface ReferralDocument {
   content: string;
   createdBy: string;
   createdAt: string;
+  status: ReferralStatus;
+  /** ครูประจำชั้นผู้ส่งเอกสารให้หน่วยงานภายนอก (null = ยังไม่ได้ส่ง) */
+  sentBy: string | null;
+  sentAt: string | null;
+  voidedBy: string | null;
+  voidedAt: string | null;
+  voidReason: string | null;
 }
+
+/** ขั้นของสายการลงนาม (signature_requests.step) */
+export type SignatureStep = "guardian" | "executive";
+
+export const SIGNATURE_STEP_LABEL: Record<SignatureStep, string> = {
+  guardian: "ผู้ปกครองลงนาม",
+  executive: "ผู้บริหารอนุมัติ",
+};
+
+export type SignatureRequestStatus = "pending" | "signed" | "declined" | "voided";
+
+export const SIGNATURE_REQUEST_STATUS_LABEL: Record<SignatureRequestStatus, string> = {
+  pending: "รอดำเนินการ",
+  signed: "ลงนามแล้ว",
+  declined: "ปฏิเสธการลงนาม",
+  voided: "ยกเลิกคำขอแล้ว",
+};
+
+/**
+ * signature_requests — คำขอลงนาม 1 แถวต่อ 1 ขั้นของเอกสารส่งต่อ 1 ฉบับ
+ * ไม่มีการลบจริง: คำขอที่ไม่ใช้แล้วใช้การยกเลิก (voided) พร้อมเหตุผล
+ * มีคำขอ pending ได้ครั้งละ 1 แถวต่อเอกสาร
+ */
+export interface SignatureRequest {
+  requestId: string;
+  referralId: string;
+  step: SignatureStep;
+  /** บทบาทที่ลงนามขั้นนี้ได้ (guardian → parent, executive → admin_school) */
+  signerRole: "parent" | "admin_school";
+  /** ผู้ขอให้ลงนาม (ขั้นผู้บริหารระบบสร้างต่อให้เมื่อผู้ปกครองลงนามแล้ว) */
+  requestedBy: string;
+  requestedAt: string;
+  /** ผู้ที่ลงนาม/ปฏิเสธจริง (null = ยังไม่มีใครดำเนินการ) */
+  signerUserId: string | null;
+  signedAt: string | null;
+  status: SignatureRequestStatus;
+  declinedAt: string | null;
+  declineReason: string | null;
+  voidedBy: string | null;
+  voidedAt: string | null;
+  voidReason: string | null;
+}
+
+/** ขั้นของสายการลงนามเรียงตามลำดับ (ใช้แสดงแถบความคืบหน้า) */
+export const REFERRAL_CHAIN_STEPS: { key: ReferralStatus; label: string }[] = [
+  { key: "draft", label: "จัดทำร่าง" },
+  { key: "awaiting_guardian", label: "ผู้ปกครองลงนาม" },
+  { key: "awaiting_executive", label: "ผู้บริหารอนุมัติ" },
+  { key: "sent", label: "ส่งต่อ" },
+];
 
 export type CaseCloseReason = "resolved" | "transferred" | "graduated";
 

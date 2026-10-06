@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CheckCircle2, FileText, Plus } from "lucide-react";
+import { CheckCircle2, FileText, Plus, Send } from "lucide-react";
 import { WindowNotice } from "@/components/shared/window-notice";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -15,10 +15,13 @@ import {
   CARE_METHOD_LABEL,
   CASE_CLOSE_REASON_LABEL,
   CASE_TRIGGER_SOURCE_LABEL,
+  SIGNATURE_STEP_LABEL,
   SUPPORT_TYPE_LABEL,
   type CareCase,
   type CarePlan,
+  type ReferralDocument,
 } from "@/lib/types";
+import { ReferralChain, ReferralStatusChip, SignatureHistory } from "./referral-chain";
 import { EMPTY_PLAN, isPlanDraftComplete, PlanFields, type PlanDraft } from "./plan-fields";
 
 const selectClass = "h-9 rounded-lg border border-border bg-card px-2.5 text-[13px]";
@@ -435,7 +438,8 @@ function ReferralsCard({ careCase }: { careCase: CareCase }) {
           )}
         </div>
         <p className="mb-3 text-[11.5px] text-muted-foreground">
-          ต้องได้รับความยินยอมจากผู้ปกครองของปีการศึกษานั้น · การส่งต่อภายนอกไม่ทำให้ case ปิด
+          ต้องได้รับความยินยอมของปีการศึกษานั้น และต้องผ่านสายการลงนามครบ (ผู้ปกครองลงนาม → ผู้บริหารอนุมัติ) จึงส่งต่อได้ ·
+          การส่งต่อภายนอกไม่ทำให้ case ปิด
         </p>
         {showActions && <BlockedNote reason={blocked} />}
 
@@ -482,20 +486,133 @@ function ReferralsCard({ careCase }: { careCase: CareCase }) {
 
         <div className="space-y-2.5">
           {careCase.referrals.map((r) => (
-            <div key={r.referralId} className="rounded-xl border border-border p-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="text-[13.5px] font-semibold">{r.externalAgency}</span>
-                <span className="text-[11.5px] text-muted-foreground">
-                  {r.referralId} · {store.nameOf(r.createdBy)} · {formatThaiDate(r.createdAt)}
-                </span>
-              </div>
-              <p className="mt-1 text-[13px] whitespace-pre-line text-muted-foreground">{r.content}</p>
-            </div>
+            <ReferralRow key={r.referralId} referral={r} canManage={showActions} />
           ))}
           {careCase.referrals.length === 0 && <p className="text-sm text-muted-foreground">ยังไม่มีการส่งต่อภายนอก</p>}
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+/** เอกสารส่งต่อ 1 ฉบับ พร้อมสายการลงนามและปุ่มของครูประจำชั้น */
+function ReferralRow({ referral, canManage }: { referral: ReferralDocument; canManage: boolean }) {
+  const store = useStore();
+  const [prompt, setPrompt] = useState<null | "void_request" | "void_referral">(null);
+  const [reason, setReason] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const pending = store.pendingSignatureOf(referral.referralId);
+  const requestBlocked = store.requestSignatureBlockReason(referral.referralId);
+  const sendBlocked = store.sendReferralBlockReason(referral.referralId);
+
+  const run = (res: { ok: true } | { ok: false; error: string }) => {
+    if (!res.ok) {
+      setError(res.error);
+      return;
+    }
+    setError(null);
+    setReason("");
+    setPrompt(null);
+  };
+
+  return (
+    <div className="rounded-xl border border-border p-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span className="text-[13.5px] font-semibold">{referral.externalAgency}</span>
+        <ReferralStatusChip referral={referral} />
+      </div>
+      <div className="mt-0.5 text-[11.5px] text-muted-foreground">
+        {referral.referralId} · จัดทำโดย {store.nameOf(referral.createdBy)} · {formatThaiDate(referral.createdAt)}
+        {referral.sentAt && ` · ส่งเมื่อ ${formatThaiDate(referral.sentAt)} โดย ${store.nameOf(referral.sentBy)}`}
+      </div>
+      <p className="mt-1.5 text-[13px] whitespace-pre-line text-muted-foreground">{referral.content}</p>
+      {referral.status === "voided" && referral.voidReason && (
+        <p className="mt-1.5 text-[12.5px] text-risk-red">
+          ยกเลิกเอกสารโดย {store.nameOf(referral.voidedBy)} · เหตุผล: {referral.voidReason}
+        </p>
+      )}
+
+      <div className="mt-3 border-t border-border pt-3">
+        <ReferralChain referral={referral} />
+        <SignatureHistory referralId={referral.referralId} />
+      </div>
+
+      {canManage && referral.status !== "voided" && referral.status !== "sent" && (
+        <div className="mt-3 space-y-1.5">
+          {prompt ? (
+            <div className="space-y-2 rounded-lg bg-surface p-3">
+              <Label htmlFor={`vr-${referral.referralId}`} className="text-[12.5px]">
+                {prompt === "void_request" ? "เหตุผลที่ยกเลิกคำขอลงนาม" : "เหตุผลที่ยกเลิกเอกสารส่งต่อ"}
+              </Label>
+              <Input
+                id={`vr-${referral.referralId}`}
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                placeholder="เช่น แก้ไขเนื้อหาที่ส่งต่อใหม่"
+              />
+              <p className="text-[11.5px] text-muted-foreground">
+                ระบบไม่ลบรายการใด ๆ — คำขอและเอกสารที่ยกเลิกยังอยู่ในประวัติพร้อมเหตุผล
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  disabled={!reason.trim()}
+                  onClick={() =>
+                    run(
+                      prompt === "void_request" && pending
+                        ? store.voidSignatureRequest(pending.requestId, reason)
+                        : store.voidReferral(referral.referralId, reason)
+                    )
+                  }
+                >
+                  ยืนยันการยกเลิก
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => setPrompt(null)}>
+                  ปิด
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {referral.status === "draft" && (
+                <Button
+                  size="xs"
+                  disabled={!!requestBlocked}
+                  onClick={() => run(store.requestGuardianSignature(referral.referralId))}
+                >
+                  <Send className="size-3.5" /> ขอลายมือชื่อผู้ปกครอง
+                </Button>
+              )}
+              {referral.status === "approved" && (
+                <Button
+                  size="xs"
+                  disabled={!!sendBlocked}
+                  onClick={() => run(store.sendReferral(referral.referralId))}
+                >
+                  <Send className="size-3.5" /> ส่งเอกสารให้หน่วยงานภายนอก
+                </Button>
+              )}
+              {pending && (
+                <Button size="xs" variant="outline" onClick={() => setPrompt("void_request")}>
+                  ยกเลิกคำขอลงนาม
+                </Button>
+              )}
+              <Button size="xs" variant="ghost" onClick={() => setPrompt("void_referral")}>
+                ยกเลิกเอกสาร
+              </Button>
+            </div>
+          )}
+          {referral.status === "draft" && <BlockedNote reason={requestBlocked} />}
+          {referral.status !== "draft" && referral.status !== "approved" && pending && (
+            <p className="text-[12.5px] text-muted-foreground">
+              รอ{SIGNATURE_STEP_LABEL[pending.step]} · ขอเมื่อ {formatThaiDate(pending.requestedAt)}
+            </p>
+          )}
+          {referral.status === "approved" && <BlockedNote reason={sendBlocked} />}
+          {error && <p className="text-[13px] text-risk-red">{error}</p>}
+        </div>
+      )}
+    </div>
   );
 }
 

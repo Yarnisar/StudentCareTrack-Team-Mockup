@@ -19,7 +19,7 @@ import type {
   SchoolSettings,
 } from "../types";
 import { behaviorRecords, checkinLogs } from "./behavior";
-import { careCases } from "./care";
+import { careCases, signatureRequests } from "./care";
 import { CURRENT_TERM, PREVIOUS_TERM, students, SYSTEM_USER_ID, USER, users } from "./core";
 import { appointments } from "./home-visit";
 import { screenings } from "./screening";
@@ -112,6 +112,14 @@ export const seedNotifications: Notification[] = [
   // case เปิดให้อัตโนมัติจากผลคัดกรองมิติสุขภาพจิต "มีปัญหา" ของ 30118
   seedNotification("case_opened", USER.somying, "30118", "2570-02-13T09:00:00", "2570-02-13T09:30:00"),
   seedNotification("case_opened", USER.theerapong, "30118", "2570-02-13T09:00:00", null),
+  // เอกสารส่งต่อ REF-2570-001 รอผู้ปกครองของ 30125 ลงนาม
+  seedNotification("referral_signature_requested", USER.ratana, "30125", "2570-02-15T09:35:00", null),
+  seedNotification("referral_signature_requested", USER.ekachai, "30125", "2570-02-15T09:35:00", null),
+  // REF-2570-002 ผู้ปกครองลงนามแล้ว → รอผู้บริหารอนุมัติ
+  seedNotification("referral_signed", USER.somying, "30118", "2570-02-14T20:10:00", null),
+  seedNotification("referral_signed", USER.theerapong, "30118", "2570-02-14T20:10:00", null),
+  seedNotification("referral_approval_requested", USER.admin, "30118", "2570-02-14T20:10:00", null),
+  seedNotification("referral_approval_requested", USER.director, "30118", "2570-02-14T20:10:00", null),
   // นัดเยี่ยมบ้าน HV-001 ถึงผู้ปกครองทุกคนของ 30125
   seedNotification("visit_scheduled", USER.ratana, "30125", "2570-02-10T16:00:00", "2570-02-10T19:45:00", {
     date: hv001.proposedDate,
@@ -215,6 +223,27 @@ export const seedAuditLogs: AuditLog[] = [
           audit(c.closedBy ?? SYSTEM_USER_ID, "UPDATE", "care_cases", c.caseId, atTime(c.closedAt, "16:00:00"), {
             before: { status: "active" },
             after: { status: "closed", closeReason: c.closeReason },
+          }),
+        ]
+      : []),
+  ]),
+  // เอกสารส่งต่อและสายการลงนาม
+  ...careCases.flatMap((c) =>
+    c.referrals.map((r) =>
+      audit(r.createdBy, "CREATE", "referral_documents", r.referralId, r.createdAt, {
+        after: { caseId: c.caseId, externalAgency: r.externalAgency, status: "draft" },
+      })
+    )
+  ),
+  ...signatureRequests.flatMap((r) => [
+    audit(r.requestedBy, "CREATE", "signature_requests", r.requestId, r.requestedAt, {
+      after: { referralId: r.referralId, step: r.step, signerRole: r.signerRole },
+    }),
+    ...(r.status === "signed" && r.signerUserId && r.signedAt
+      ? [
+          audit(r.signerUserId, "UPDATE", "signature_requests", r.requestId, r.signedAt, {
+            before: { status: "pending" },
+            after: { status: "signed", step: r.step },
           }),
         ]
       : []),

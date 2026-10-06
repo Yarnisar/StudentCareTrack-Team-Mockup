@@ -69,7 +69,7 @@ export type {
   SaveSdqResult,
 } from "./assessment";
 export type { ScreeningActionResult, ScreeningInputs } from "./screening";
-export type { RaiseTriggerResult } from "./care";
+export type { RaiseTriggerResult, ReferralEntry } from "./care";
 export { auditSummary } from "./audit";
 
 const StoreContext = createContext<StoreValue | null>(null);

@@ -1,7 +1,96 @@
 /** ข้อมูลตัวอย่าง: care case เหตุเปิด case แผนช่วยเหลือ การติดตามผล และคำแนะนำให้เปิด case */
 
-import type { CareCase, CaseSuggestion } from "../types";
-import { USER } from "./core";
+import type { CareCase, CaseSuggestion, ReferralDocument, SignatureRequest } from "../types";
+import { SYSTEM_USER_ID, USER } from "./core";
+
+/** เอกสารส่งต่อของ CASE-2570-014 — ร่างแล้ว ส่งให้ผู้ปกครองลงนาม รอลายมือชื่อ */
+const referral014: ReferralDocument = {
+  referralId: "REF-2570-001",
+  caseId: "CASE-2570-014",
+  externalAgency: "โรงพยาบาลบางพลี (คลินิกสุขภาพจิตเด็กและวัยรุ่น)",
+  content:
+    "ขอส่งต่อนักเรียนเพื่อรับการประเมินและดูแลด้านสุขภาพจิต หลังโรงเรียนให้คำปรึกษาต่อเนื่อง 3 ครั้งแล้วอาการยังไม่ดีขึ้น แนบผลการคัดกรอง ผลประเมิน และบันทึกการช่วยเหลือที่ผ่านมา",
+  createdBy: USER.somying,
+  createdAt: "2570-02-15T09:30:00",
+  status: "awaiting_guardian",
+  sentBy: null,
+  sentAt: null,
+  voidedBy: null,
+  voidedAt: null,
+  voidReason: null,
+};
+
+/** เอกสารส่งต่อของ CASE-2570-015 — ผู้ปกครองลงนามแล้ว รอผู้บริหารอนุมัติ */
+const referral015: ReferralDocument = {
+  referralId: "REF-2570-002",
+  caseId: "CASE-2570-015",
+  externalAgency: "สำนักงานสาธารณสุขจังหวัดสมุทรปราการ",
+  content:
+    "ขอส่งต่อนักเรียนเพื่อรับการประเมินเชิงลึกด้านสุขภาพจิต ตามแผนส่งต่อภายในที่ครูแนะแนวรับเรื่องแล้วแต่ต้องการผู้เชี่ยวชาญภายนอกร่วมประเมิน",
+  createdBy: USER.somying,
+  createdAt: "2570-02-14T15:20:00",
+  status: "awaiting_executive",
+  sentBy: null,
+  sentAt: null,
+  voidedBy: null,
+  voidedAt: null,
+  voidReason: null,
+};
+
+/**
+ * คำขอลงนามของเอกสารส่งต่อ (จัดทำร่าง → ผู้ปกครองลงนาม → ผู้บริหารอนุมัติ → ส่งต่อได้)
+ * คำขอที่ไม่ใช้แล้วใช้การยกเลิกพร้อมเหตุผล ไม่มีการลบ
+ */
+export const signatureRequests: SignatureRequest[] = [
+  {
+    requestId: "SR-2570-001",
+    referralId: referral014.referralId,
+    step: "guardian",
+    signerRole: "parent",
+    requestedBy: USER.somying,
+    requestedAt: "2570-02-15T09:35:00",
+    signerUserId: null,
+    signedAt: null,
+    status: "pending",
+    declinedAt: null,
+    declineReason: null,
+    voidedBy: null,
+    voidedAt: null,
+    voidReason: null,
+  },
+  {
+    requestId: "SR-2570-002",
+    referralId: referral015.referralId,
+    step: "guardian",
+    signerRole: "parent",
+    requestedBy: USER.somying,
+    requestedAt: "2570-02-14T15:25:00",
+    signerUserId: "U-G03",
+    signedAt: "2570-02-14T20:10:00",
+    status: "signed",
+    declinedAt: null,
+    declineReason: null,
+    voidedBy: null,
+    voidedAt: null,
+    voidReason: null,
+  },
+  {
+    requestId: "SR-2570-003",
+    referralId: referral015.referralId,
+    step: "executive",
+    signerRole: "admin_school",
+    requestedBy: SYSTEM_USER_ID,
+    requestedAt: "2570-02-14T20:10:00",
+    signerUserId: null,
+    signedAt: null,
+    status: "pending",
+    declinedAt: null,
+    declineReason: null,
+    voidedBy: null,
+    voidedAt: null,
+    voidReason: null,
+  },
+];
 
 export const careCases: CareCase[] = [
   {
@@ -77,7 +166,7 @@ export const careCases: CareCase[] = [
         recordedBy: USER.somying,
       },
     ],
-    referrals: [],
+    referrals: [referral014],
   },
   {
     // ระบบเปิดให้อัตโนมัติจากมิติสุขภาพจิต "มีปัญหา" มีเหตุที่ 2 ที่ยังไม่มีแผนรองรับ
@@ -132,7 +221,7 @@ export const careCases: CareCase[] = [
         recordedBy: USER.somying,
       },
     ],
-    referrals: [],
+    referrals: [referral015],
   },
   {
     // ระบบเปิดให้อัตโนมัติจากมิติการเรียน "มีปัญหา" — ยังไม่มีแผนและยังไม่มีการติดตามผล
