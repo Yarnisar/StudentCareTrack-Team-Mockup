@@ -102,6 +102,17 @@ export const appointments: HomeVisitAppointment[] = [
 ];
 
 const BLANK_RISKS = {
+  currentAddress: "",
+  disadvantages: [],
+  disabilities: [],
+  electricity: "meter",
+  waterSources: ["bottled"],
+  disasterRisks: [],
+  friendInSchoolName: "",
+  friendInSchoolRoom: "",
+  friendInSchoolPhone: "",
+  friendOutsideName: "",
+  friendOutsidePhone: "",
   supportRequests: [],
   welfareReceived: [],
   guardianConcern: "",
@@ -149,6 +160,11 @@ const form30118: HomeVisitForm = {
   duties: ["housework", "care_sick"],
   internet: "can_access",
   welfareRisks: ["family_conflict"],
+  currentAddress: "129 หมู่ 5 ต.บ้านแยง อ.นครไทย",
+  waterSources: ["well"],
+  disasterRisks: ["air_pollution"],
+  friendInSchoolName: "ด.ช.วีระ สีขาว",
+  friendInSchoolRoom: "ม.3/1",
   gaming: ["over_2h", "obsessed"],
   hobbies: ["games"],
   guardianConcern: "ผู้ปกครองทำงานต่างจังหวัดเป็นช่วง ๆ เป็นห่วงเรื่องการเล่นเกมของลูก",
@@ -179,6 +195,14 @@ const form30125Prev: HomeVisitForm = {
   duties: ["housework", "small_trade"],
   internet: "can_access",
   supportRequests: ["economic"],
+  currentAddress: "88/4 หมู่ 3 ต.ในเมือง อ.เมือง",
+  disadvantages: ["poor"],
+  electricity: "meter",
+  waterSources: ["bottled", "tap"],
+  disasterRisks: ["flood"],
+  friendInSchoolName: "ด.ญ.พิมพ์ชนก ใจงาม",
+  friendInSchoolRoom: "ม.2/1",
+  friendInSchoolPhone: "08x-xxx-7781",
 };
 
 const form30140: HomeVisitForm = {
@@ -203,6 +227,10 @@ const form30140: HomeVisitForm = {
   travelMode: "bus",
   duties: ["housework"],
   internet: "cannot_access",
+  currentAddress: "หอพักของโรงงาน ต.ท่าทอง อ.เมือง",
+  disadvantages: ["poor"],
+  electricity: "shared",
+  waterSources: ["bottled"],
 };
 
 export const homeVisitRecords: HomeVisitRecord[] = [
