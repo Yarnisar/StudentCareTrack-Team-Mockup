@@ -197,6 +197,9 @@ export const NINE_S_QUESTIONS: {
   { id: "s9", cluster: "social", text: "มีเรื่องขัดแย้งกับเพื่อนหรือครูบ่อยครั้ง" },
 ];
 
+/** เกณฑ์ 9S: คะแนนรวมในกลุ่มใดตั้งแต่ค่านี้ขึ้นไป ถือว่าควรดูแล */
+export const NINE_S_CLUSTER_THRESHOLD = 3;
+
 /** แต่ละข้อให้คะแนน 0-2 (ไม่จริง / ค่อนข้างจริง / จริงแน่นอน) */
 export function evaluateNineS(answers: Record<string, 0 | 1 | 2>) {
   const clusterScores: Record<NineSCluster, number> = {
@@ -209,11 +212,11 @@ export function evaluateNineS(answers: Record<string, 0 | 1 | 2>) {
     clusterScores[q.cluster] += answers[q.id] ?? 0;
   }
 
-  // เกณฑ์: คะแนนรวมในกลุ่มใดตั้งแต่ 3 คะแนนขึ้นไป ถือว่าควรดูแล
+  // เกณฑ์: คะแนนรวมในกลุ่มใดตั้งแต่ NINE_S_CLUSTER_THRESHOLD คะแนนขึ้นไป ถือว่าควรดูแล
   const clusterResults = Object.fromEntries(
     (Object.keys(clusterScores) as NineSCluster[]).map((c) => [
       c,
-      clusterScores[c] >= 3 ? "needs_care" : "normal",
+      clusterScores[c] >= NINE_S_CLUSTER_THRESHOLD ? "needs_care" : "normal",
     ])
   ) as Record<NineSCluster, AssessmentOutcome>;
 

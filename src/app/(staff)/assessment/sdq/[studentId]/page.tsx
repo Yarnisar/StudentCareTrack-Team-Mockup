@@ -6,6 +6,7 @@ import { Lock, Sparkles } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { StepIndicator } from "@/components/assessment/step-indicator";
 import { SdqForm } from "@/components/assessment/sdq-form";
+import { SdqRaterComparison } from "@/components/assessment/sdq-comparison";
 import { CombinedSdqSummary, SdqAnswersToggle, SdqLevelBadge } from "@/components/assessment/sdq-result";
 import { CaseTriggerOutcome } from "@/components/assessment/trigger-outcome";
 import { WindowNotice } from "@/components/shared/window-notice";
@@ -133,6 +134,10 @@ function SdqContent({ studentId }: { studentId: string }) {
                     );
                   })}
                 </div>
+              )}
+
+              {set.length > 0 && (
+                <SdqRaterComparison studentId={studentId} forms={set} className="mt-4 border-t border-border pt-4" />
               )}
 
               {previousCombined && (

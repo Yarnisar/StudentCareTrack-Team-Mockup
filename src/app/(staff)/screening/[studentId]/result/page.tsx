@@ -4,6 +4,7 @@ import { use, useState } from "react";
 import Link from "next/link";
 import { BadgeCheck, ChevronLeft, LockOpen, ShieldCheck } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
+import { AssessmentRouteDiagram } from "@/components/assessment/route-diagram";
 import { CaseTriggerOutcome } from "@/components/assessment/trigger-outcome";
 import { RiskBadge } from "@/components/shared/risk-badge";
 import { WindowNotice } from "@/components/shared/window-notice";
@@ -14,7 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { formatThaiDateTime } from "@/lib/format";
 import { overallRisk, SCREENING_ITEMS, screeningItemLabel } from "@/lib/rules";
 import { useStore, type RaiseTriggerResult } from "@/lib/store";
-import { DIMENSION_LABEL, RISK_LABEL, SCREENING_STATUS_LABEL } from "@/lib/types";
+import { ASSESSMENT_NEXT_STEP_LABEL, DIMENSION_LABEL, RISK_LABEL, SCREENING_STATUS_LABEL } from "@/lib/types";
 
 const CONSENT_LABEL = { granted: "ผู้ปกครองให้ความยินยอมแล้ว", declined: "ผู้ปกครองไม่ยินยอม", none: "ผู้ปกครองยังไม่ตอบความยินยอม" };
 
@@ -182,16 +183,30 @@ export default function ScreeningResultPage({ params }: { params: Promise<{ stud
           })}
         </div>
 
-        {nextStep && (
-          <div className="mt-4 flex flex-wrap items-center gap-3 rounded-xl border border-blue-200 bg-accent px-4 py-3 text-[13px] text-accent-foreground">
-            <span className="flex-1">
-              <b>ขั้นถัดไปด้านสุขภาพจิต:</b> {nextStep.text}
-            </span>
-            <LinkButton size="sm" href={nextStep.href}>
-              {nextStep.label}
-            </LinkButton>
-          </div>
-        )}
+        <Card className="mt-4">
+          <CardContent className="p-5">
+            <h2 className="mb-3 text-[15px] font-bold">เส้นทางการประเมินสุขภาพจิต</h2>
+            <div className="grid gap-5 lg:grid-cols-[minmax(0,360px)_1fr]">
+              <AssessmentRouteDiagram studentId={studentId} />
+              <div className="content-start">
+                {nextStep ? (
+                  <div className="flex flex-wrap items-center gap-3 rounded-xl border border-blue-200 bg-accent px-4 py-3 text-[13px] text-accent-foreground">
+                    <span className="flex-1">
+                      <b>ขั้นถัดไปด้านสุขภาพจิต:</b> {nextStep.text}
+                    </span>
+                    <LinkButton size="sm" href={nextStep.href}>
+                      {nextStep.label}
+                    </LinkButton>
+                  </div>
+                ) : (
+                  <p className="rounded-xl bg-surface px-4 py-3 text-[13px] text-muted-foreground">
+                    ไม่มีขั้นถัดไปด้านสุขภาพจิตในรอบนี้ — {ASSESSMENT_NEXT_STEP_LABEL[plan.next]}
+                  </p>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {error && <p className="mt-4 text-[13px] text-risk-red">{error}</p>}
 

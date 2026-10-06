@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { SdqRaterComparison } from "@/components/assessment/sdq-comparison";
 import { CombinedSdqSummary, SdqAnswersToggle, SdqLevelBadge } from "@/components/assessment/sdq-result";
 import { formatThaiDate } from "@/lib/format";
 import { PREVIOUS_TERM } from "@/lib/mock-data";
@@ -92,6 +93,10 @@ export function SdqCard({ studentId }: { studentId: string }) {
         </div>
       ) : (
         <p className="text-[13px] text-muted-foreground">ยังไม่เปิดแบบประเมินรอบนี้</p>
+      )}
+
+      {forms.length > 0 && (
+        <SdqRaterComparison studentId={studentId} forms={forms} className="mt-4 border-t border-border pt-4" />
       )}
 
       {previous && (
