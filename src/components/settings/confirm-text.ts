@@ -139,3 +139,39 @@ export function ruleActiveConfirm(rule: BehaviorRule, usedCount: number): Confir
     danger: false,
   };
 }
+
+/** ผลต่างก่อน → หลังของการมอบหมายครู 1 คน (หน้า "ครูและสิทธิ์") */
+export interface TeacherAssignmentDiff {
+  teacherName: string;
+  roleBefore: string;
+  roleAfter: string;
+  roomsBefore: string[];
+  roomsAfter: string[];
+  subjectsBefore: string[];
+  subjectsAfter: string[];
+}
+
+const listOrNone = (items: string[]) => (items.length > 0 ? items.join(", ") : "ไม่มี");
+
+/** บันทึกการมอบหมายครู — ยืนยันในที่ บอกก่อน → หลัง และผลต่อสิทธิ์ */
+export function teacherAssignmentConfirm(diff: TeacherAssignmentDiff): ConfirmContent {
+  const parts: string[] = [];
+  if (diff.roomsBefore.join() !== diff.roomsAfter.join()) {
+    parts.push(`ครูประจำชั้น: ${listOrNone(diff.roomsBefore)} → ${listOrNone(diff.roomsAfter)}`);
+  }
+  if (diff.subjectsBefore.join() !== diff.subjectsAfter.join()) {
+    parts.push(`วิชาที่สอน: ${listOrNone(diff.subjectsBefore)} → ${listOrNone(diff.subjectsAfter)}`);
+  }
+  parts.push(
+    diff.roleBefore === diff.roleAfter
+      ? `สิทธิ์ยังเป็น${diff.roleAfter}`
+      : `สิทธิ์: ${diff.roleBefore} → ${diff.roleAfter} มีผลทันทีกับเมนูและข้อมูลที่ครูเห็น`
+  );
+  parts.push("การสิ้นสุดการมอบหมายไม่ลบข้อมูล เก็บวันที่สิ้นสุดไว้ และบันทึกลงประวัติการใช้งาน");
+  return {
+    title: `บันทึกการมอบหมายของ ${diff.teacherName} ?`,
+    description: parts.join(" · "),
+    confirmLabel: "บันทึกการมอบหมาย",
+    danger: diff.roleBefore !== diff.roleAfter && diff.roleAfter === "ครูทั่วไป",
+  };
+}

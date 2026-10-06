@@ -141,7 +141,7 @@ export default function HomeVisitRecordPage({
     return () => clearTimeout(timer);
   }, [snapshot, readOnly, store, appointmentId]);
 
-  // แอดมิน/ผู้บริหารเปิดผลเยี่ยมบ้านรายคน → VIEW_SENSITIVE
+  // ผู้ดูแลระบบเปิดผลเยี่ยมบ้านรายคน → VIEW_SENSITIVE
   useSensitiveView("home_visit_records", appointmentId, { enabled: canOpen, note: "เปิดแบบบันทึกการเยี่ยมบ้าน" });
 
   // เครื่องมือสาธิต: กรอกข้อมูลอัตโนมัติ (ไม่รับรองให้ — ครูต้องตรวจและรับรองเอง)

@@ -30,8 +30,8 @@ export const NOTIFICATION_EVENT_LABEL: Record<NotificationEventType, string> = {
   dc_scores_requested: "ขอให้ส่งคะแนนคุณลักษณะฯ",
   referral_signature_requested: "เอกสารส่งต่อรอผู้ปกครองลงนาม",
   referral_signed: "ผู้ปกครองลงนามเอกสารส่งต่อแล้ว",
-  referral_approval_requested: "เอกสารส่งต่อรอผู้บริหารอนุมัติ",
-  referral_approved: "ผู้บริหารอนุมัติเอกสารส่งต่อแล้ว",
+  referral_approval_requested: "เอกสารส่งต่อรอผู้ดูแลระบบอนุมัติ",
+  referral_approved: "ผู้ดูแลระบบอนุมัติเอกสารส่งต่อแล้ว",
   referral_declined: "มีการปฏิเสธการลงนามเอกสารส่งต่อ",
   referral_sent: "ส่งเอกสารส่งต่อให้หน่วยงานภายนอกแล้ว",
 };
@@ -132,9 +132,9 @@ export function buildNotificationContent(
     case "referral_signed":
       return { message: `ผู้ปกครองลงนามเอกสารส่งต่อของ ${who} แล้ว`, linkPath: "/care-cases" };
     case "referral_approval_requested":
-      return { message: `มีเอกสารส่งต่อของ ${who} รอผู้บริหารอนุมัติ`, linkPath: "/approvals" };
+      return { message: `มีเอกสารส่งต่อของ ${who} รอผู้ดูแลระบบอนุมัติ`, linkPath: "/approvals" };
     case "referral_approved":
-      return { message: `ผู้บริหารอนุมัติเอกสารส่งต่อของ ${who} แล้ว`, linkPath: "/care-cases" };
+      return { message: `ผู้ดูแลระบบอนุมัติเอกสารส่งต่อของ ${who} แล้ว`, linkPath: "/care-cases" };
     case "referral_declined":
       return { message: `มีการปฏิเสธการลงนามเอกสารส่งต่อของ ${who}`, linkPath: "/care-cases" };
     case "referral_sent":

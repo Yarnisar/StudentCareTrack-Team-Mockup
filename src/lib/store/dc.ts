@@ -18,7 +18,6 @@ import {
   dcSubmissionDeadlines,
   dcSummaryRows as seedSummaryRows,
   subjects,
-  subjectTeachings,
 } from "../mock-data";
 import type {
   DcCriteria,
@@ -62,7 +61,6 @@ export interface DcSlice {
   dcIndicators: DcIndicator[];
   /** รายวิชา (Team A, อ่านอย่างเดียว) */
   subjects: Subject[];
-  subjectTeachings: SubjectTeaching[];
   dcScores: DcScore[];
   dcSummaryRows: DcSummaryRow[];
   /** สรุปล่าสุดของนักเรียนแต่ละคน (ภาคปัจจุบันถ้าสรุปแล้ว ไม่งั้นภาคล่าสุดที่สรุป) */
@@ -124,13 +122,16 @@ export function useDcSlice(base: PlatformSlice): DcSlice {
   return useMemo<DcSlice>(() => {
     const currentTermId = base.currentTerm.termId;
     const user = base.currentUser;
+    // การมอบหมายครูสอนอยู่ใน core (เขียนผ่าน slice assignments) — แถวที่สิ้นสุดแล้วไม่นับเป็นผู้สอนอีก
+    const allTeachings = base.subjectTeachings;
+    const subjectTeachings = allTeachings.filter((t) => t.endedAt === null);
 
     const scoreIndex = new Map(dcScores.map((s) => [scoreKey(s.studentId, s.indicatorId, s.subjectId, s.termId), s]));
     const dcScoreOf: DcSlice["dcScoreOf"] = (studentId, indicatorId, subjectId, termId = currentTermId) =>
       scoreIndex.get(scoreKey(studentId, indicatorId, subjectId, termId));
 
     const subjectOf = (subjectId: string) => subjects.find((s) => s.subjectId === subjectId);
-    const teachingOf = (teachingId: string) => subjectTeachings.find((t) => t.teachingId === teachingId);
+    const teachingOf = (teachingId: string) => allTeachings.find((t) => t.teachingId === teachingId);
     const studentsOfRoom = (roomId: string) =>
       base.students
         .filter((s) => s.roomId === roomId && s.status === "studying")
@@ -220,7 +221,7 @@ export function useDcSlice(base: PlatformSlice): DcSlice {
 
     const canEnterDcScores = (teachingId: string) => {
       const t = teachingOf(teachingId);
-      return !!t && t.termId === currentTermId && t.teacherId === user.userId;
+      return !!t && t.endedAt === null && t.termId === currentTermId && t.teacherId === user.userId;
     };
 
     const saveDcScores: DcSlice["saveDcScores"] = (teachingId, entries) => {
@@ -355,7 +356,6 @@ export function useDcSlice(base: PlatformSlice): DcSlice {
       dcCriteria,
       dcIndicators,
       subjects,
-      subjectTeachings,
       dcScores,
       dcSummaryRows,
       dcSummaries,

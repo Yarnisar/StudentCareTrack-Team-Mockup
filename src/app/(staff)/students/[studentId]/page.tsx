@@ -27,7 +27,7 @@ export default function StudentDetailPage({
   const store = useStore();
   const student = store.getStudent(studentId);
 
-  // แอดมิน/ผู้บริหารเปิดข้อมูลรายคน → VIEW_SENSITIVE (ข้ามเองถ้าไม่ใช่แอดมิน)
+  // ผู้ดูแลระบบเปิดข้อมูลรายคน → VIEW_SENSITIVE (ข้ามเองถ้าไม่ใช่แอดมิน)
   useSensitiveView("students", student ? studentId : null, { note: "เปิดหน้าข้อมูลนักเรียนรายคน" });
 
   if (!student) return <p className="p-8 text-sm text-muted-foreground">ไม่พบข้อมูลนักเรียน</p>;

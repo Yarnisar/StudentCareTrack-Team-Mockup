@@ -50,6 +50,8 @@ export interface SubjectTeaching {
   termId: string;
   /** userId ของครูประจำวิชา */
   teacherId: string;
+  /** วันที่สิ้นสุดการมอบหมาย (พ.ศ. yyyy-mm-dd) — null = ยังสอนอยู่ ไม่ลบแถว (ADR-0003) */
+  endedAt: string | null;
 }
 
 /** dc_scores (ปพ.5) — UNIQUE (studentId, indicatorId, subjectId, termId) */

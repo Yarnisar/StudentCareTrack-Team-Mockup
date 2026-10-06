@@ -134,15 +134,16 @@ function DocumentsContent() {
   const studentOptions = isAdmin
     ? store.students.filter((s) => s.status === "studying")
     : store.students.filter((s) => s.status === "studying" && store.isHomeroomOf(s.studentId));
-  const teachingOptions = store.subjectTeachings.filter(
-    (t) => t.termId === termId && (isAdmin || t.teacherId === store.currentUser.userId)
+  const activeTeachings = store.subjectTeachings.filter((t) => t.endedAt === null && t.termId === termId);
+  const teachingOptions = activeTeachings.filter(
+    (t) => isAdmin || t.teacherId === store.currentUser.userId
   );
 
   const [selected, setSelected] = useState<DocumentType>("ปพ.6");
   const [studentId, setStudentId] = useState(() => studentOptions[0]?.studentId ?? store.students[0]?.studentId ?? "");
   const [roomId, setRoomId] = useState(() => roomsWithStudents[0]?.roomId ?? "");
   const [teachingId, setTeachingId] = useState(
-    () => teachingOptions[0]?.teachingId ?? store.subjectTeachings.find((t) => t.termId === termId)?.teachingId ?? ""
+    () => teachingOptions[0]?.teachingId ?? activeTeachings[0]?.teachingId ?? ""
   );
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [historySize, setHistorySize] = useState(10);
@@ -365,7 +366,7 @@ function DocumentsContent() {
                 }} className={selectClass}>
                   {(teachingOptions.length > 0
                     ? teachingOptions
-                    : store.subjectTeachings.filter((t) => t.termId === termId)
+                    : activeTeachings
                   ).map((t) => (
                     <option key={t.teachingId} value={t.teachingId}>
                       {store.subjectOf(t.subjectId)?.name} · {roomName(t.roomId)}

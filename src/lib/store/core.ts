@@ -6,7 +6,7 @@
  * (slice ของ audit log, การแจ้งเตือน, ตั้งค่า, ช่วงดำเนินงาน, ความยินยอม จะต่อจาก core ในลำดับเดียวกัน)
  */
 
-import { useMemo, useSyncExternalStore } from "react";
+import { useMemo, useState, useSyncExternalStore, type Dispatch, type SetStateAction } from "react";
 import { storedCurrentUserId } from "../demo/persisted";
 import {
   classroomHomerooms,
@@ -16,8 +16,9 @@ import {
   studentEnrollments,
   studentGuardians,
   students,
+  subjectTeachings as seedSubjectTeachings,
   SYSTEM_USER_ID,
-  users,
+  users as seedUsers,
 } from "../mock-data";
 import * as perm from "../permissions";
 import type {
@@ -27,6 +28,7 @@ import type {
   GuardianOf,
   Student,
   StudentGuardian,
+  SubjectTeaching,
   User,
 } from "../types";
 
@@ -38,10 +40,22 @@ export interface CoreSlice {
   currentUser: User;
   setCurrentUser: (userId: string) => void;
 
+  /** บทบาทของครูคำนวณจากการมอบหมายครูประจำชั้นที่ยังใช้อยู่ — เปลี่ยนตามทันทีเมื่อผู้ดูแลระบบมอบหมาย */
   users: User[];
   students: Student[];
   classrooms: Classroom[];
+  /** การมอบหมายครูประจำชั้นทุกแถวทุกปี รวมที่สิ้นสุดแล้ว (endedAt) — ผู้อ่านต้องกรองด้วย isActiveHomeroom */
   homerooms: ClassroomHomeroom[];
+  /** การมอบหมายครูสอนวิชาทุกแถว รวมที่สิ้นสุดแล้ว — ผู้อ่านต้องกรอง endedAt === null */
+  subjectTeachings: SubjectTeaching[];
+  /**
+   * จุดเขียนตารางการมอบหมาย — ใช้เฉพาะ slice assignments (ADR-0003) ห้ามเรียกจากหน้าจอ
+   * หน้าจอเขียนผ่าน assignHomeroom / endHomeroom / assignSubject / endSubject
+   */
+  assignmentTables: {
+    setHomerooms: Dispatch<SetStateAction<ClassroomHomeroom[]>>;
+    setSubjectTeachings: Dispatch<SetStateAction<SubjectTeaching[]>>;
+  };
   studentGuardians: StudentGuardian[];
   permissionContext: perm.PermissionContext;
 
@@ -70,19 +84,27 @@ export function useCoreSlice(): CoreSlice {
   // จำผู้ใช้ที่เลือกไว้ข้ามการ reload; ฝั่ง server/รอบ hydrate ใช้ DEFAULT_USER_ID
   const storedUserId = useSyncExternalStore(storedCurrentUserId.subscribe, storedCurrentUserId.get, () => null);
   const currentUserId =
-    storedUserId && users.some((u) => u.userId === storedUserId) ? storedUserId : DEFAULT_USER_ID;
+    storedUserId && seedUsers.some((u) => u.userId === storedUserId) ? storedUserId : DEFAULT_USER_ID;
+
+  // ตารางการมอบหมายครู (ทีม B/A) — ผู้ดูแลระบบเปลี่ยนได้ผ่าน slice assignments เท่านั้น
+  const [homerooms, setHomerooms] = useState<ClassroomHomeroom[]>(classroomHomerooms);
+  const [subjectTeachings, setSubjectTeachings] = useState<SubjectTeaching[]>(seedSubjectTeachings);
 
   return useMemo<CoreSlice>(() => {
-    const getUser = (userId: string) => users.find((u) => u.userId === userId);
-    const getStudent = (studentId: string) => students.find((s) => s.studentId === studentId);
-    const currentUser = getUser(currentUserId) ?? users[0];
-
     const permissionContext: perm.PermissionContext = {
-      homerooms: classroomHomerooms,
+      homerooms,
       enrollments: studentEnrollments,
       guardians: studentGuardians,
       currentAcademicYear: CURRENT_TERM.academicYear,
     };
+    // บทบาทครูคำนวณจากการมอบหมาย ไม่ใช่ค่าที่กรอกเอง (ADR-0003)
+    const users = seedUsers.map<User>((u) => {
+      const role = perm.deriveRole(permissionContext, u);
+      return role === u.role ? u : { ...u, role };
+    });
+    const getUser = (userId: string) => users.find((u) => u.userId === userId);
+    const getStudent = (studentId: string) => students.find((s) => s.studentId === studentId);
+    const currentUser = getUser(currentUserId) ?? users[0];
 
     const withStudent =
       (fn: (student: Student) => boolean) =>
@@ -101,7 +123,9 @@ export function useCoreSlice(): CoreSlice {
       users,
       students,
       classrooms,
-      homerooms: classroomHomerooms,
+      homerooms,
+      subjectTeachings,
+      assignmentTables: { setHomerooms, setSubjectTeachings },
       studentGuardians,
       permissionContext,
 
@@ -130,7 +154,9 @@ export function useCoreSlice(): CoreSlice {
         const student = getStudent(studentId);
         if (!student) return [];
         const staffIds = classroomHomerooms
-          .filter((h) => h.roomId === student.roomId && h.academicYear === CURRENT_TERM.academicYear)
+          .filter(
+            (h) => h.roomId === student.roomId && h.academicYear === CURRENT_TERM.academicYear && perm.isActiveHomeroom(permissionContext, h)
+          )
           .map((h) => h.staffId);
         return users.filter((u) => u.refId && staffIds.includes(u.refId) && perm.isStaff(u));
       },
@@ -143,6 +169,6 @@ export function useCoreSlice(): CoreSlice {
         withStudent((s) => perm.canViewRecord(permissionContext, currentUser, s, { by: recordBy }))(studentId),
       canEdit: withStudent((s) => perm.canEdit(permissionContext, currentUser, s)),
     };
-  }, [currentUserId]);
+  }, [currentUserId, homerooms, subjectTeachings]);
 }
 

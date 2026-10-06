@@ -11,7 +11,7 @@ export type UserRole =
   | "parent";
 
 export const ROLE_LABEL: Record<UserRole, string> = {
-  admin_school: "แอดมินโรงเรียน / ผู้บริหาร",
+  admin_school: "ผู้ดูแลระบบ",
   teacher_general: "ครูทั่วไป",
   teacher_homeroom: "ครูประจำชั้น",
   student: "นักเรียน",
@@ -25,12 +25,16 @@ export const STAFF_ROLES: UserRole[] = ["admin_school", "teacher_general", "teac
 export interface User {
   userId: string;
   username: string;
+  /**
+   * ครู: คำนวณจากการมอบหมาย (ครูประจำชั้น = มีห้องที่ยังใช้อยู่ในปีการศึกษาปัจจุบัน ไม่มี = ครูทั่วไป)
+   * ค่าใน seed เป็นเพียงค่าตั้งต้น — store คำนวณทับเสมอ (ดู store/core.ts)
+   */
   role: UserRole;
   /** staff.staffId หรือ students.studentId ตาม role (ผู้ปกครองเชื่อมผ่าน student_guardians จึงเป็น null) */
   refId: string | null;
   /** ชื่อที่แสดง (staff.full_name / students.full_name / ชื่อผู้ปกครอง) */
   name: string;
-  /** ตำแหน่ง/คำอธิบายสั้นที่แสดงใต้ชื่อ เช่น "ผู้อำนวยการ" */
+  /** ตำแหน่ง/คำอธิบายสั้นที่แสดงใต้ชื่อ เช่น "ครูประจำชั้น ม.3/1" */
   title?: string;
   /** อีเมลสำหรับการแจ้งเตือน (nullable) */
   email: string | null;
@@ -54,11 +58,16 @@ export interface Classroom {
   roomName: string;
 }
 
-/** classroom_homeroom_teachers (Team B) — ห้องละ 2 คน สิทธิ์เท่ากัน */
+/**
+ * classroom_homeroom_teachers (Team B) — ห้องละไม่เกิน 2 คนที่ยังใช้อยู่ สิทธิ์เท่ากัน
+ * ผู้ดูแลระบบเป็นผู้มอบหมาย (ADR-0003) ไม่ลบแถว ใช้ endedAt สิ้นสุดการมอบหมาย
+ */
 export interface ClassroomHomeroom {
   roomId: string;
   staffId: string;
   academicYear: number;
+  /** วันที่สิ้นสุดการมอบหมาย (พ.ศ. yyyy-mm-dd) — null = ยังใช้อยู่ */
+  endedAt: string | null;
 }
 
 /** student_guardians (Team B) — many-to-many, ผู้ปกครองทุกคนสิทธิ์เท่ากัน */

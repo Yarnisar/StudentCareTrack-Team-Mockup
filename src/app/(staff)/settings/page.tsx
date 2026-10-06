@@ -9,19 +9,20 @@
  */
 
 import { useMemo, useState } from "react";
-import { CalendarClock, Gavel, History } from "lucide-react";
+import { CalendarClock, Gavel, History, UserCog } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { AuditLogList, useAuditEntries } from "@/components/settings/audit-log";
 import { BehaviorRulesPanel } from "@/components/settings/behavior-rules-panel";
 import type { ImpactContext } from "@/components/settings/confirm-text";
 import { OperatingWindowsPanel } from "@/components/settings/operating-windows-panel";
+import { TeachersPanel } from "@/components/settings/teachers-panel";
 import { SchoolSettingsCard } from "@/components/settings/school-settings-card";
 import { nowThaiIso, thaiDateOf } from "@/lib/format";
 import { CURRENT_TERM, SCHOOL_NAME } from "@/lib/mock-data";
 import { useStore } from "@/lib/store";
 import { OPERATING_ACTIVITIES } from "@/lib/types";
 
-type Tab = "windows" | "rules" | "audit";
+type Tab = "windows" | "rules" | "teachers" | "audit";
 
 export default function SettingsPage() {
   const store = useStore();
@@ -53,6 +54,12 @@ export default function SettingsPage() {
   const tabs: { key: Tab; label: string; icon: typeof CalendarClock; count: number }[] = [
     { key: "windows", label: "ช่วงดำเนินงาน", icon: CalendarClock, count: OPERATING_ACTIVITIES.length },
     { key: "rules", label: "กฎความประพฤติ", icon: Gavel, count: store.behaviorRules.length },
+    {
+      key: "teachers",
+      label: "ครูและสิทธิ์",
+      icon: UserCog,
+      count: store.users.filter((u) => u.role === "teacher_general" || u.role === "teacher_homeroom").length,
+    },
     { key: "audit", label: "ประวัติการใช้งาน", icon: History, count: entries.length },
   ];
 
@@ -92,6 +99,7 @@ export default function SettingsPage() {
 
         {tab === "windows" && <OperatingWindowsPanel impact={impact} />}
         {tab === "rules" && <BehaviorRulesPanel ruleUsage={ruleUsage} />}
+        {tab === "teachers" && <TeachersPanel />}
         {tab === "audit" && (
           <div className="min-w-0 flex-1 overflow-y-auto p-6">
             <h2 className="text-[15.5px] font-bold">ประวัติการใช้งาน (Audit Log)</h2>

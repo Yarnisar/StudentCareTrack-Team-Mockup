@@ -75,8 +75,9 @@ export const USER = {
   malee: "U-T10",
   arun: "U-T11",
   janpen: "U-T12",
+  /** ครูใหม่ ยังไม่ได้รับมอบหมาย (ไม่มีอีเมล) — ใช้สาธิตการมอบหมายครูโดยผู้ดูแลระบบ */
+  kamol: "U-T13",
   admin: "U-A01",
-  director: "U-A02",
   /** ผู้ปกครองของ 30125 (มารดา) */
   ratana: "U-G01",
   /** ผู้ปกครองของ 30125 (บิดา) */
@@ -101,8 +102,8 @@ export const staff: Staff[] = [
   { staffId: "S-10", fullName: "ครูมาลี วาดเขียน", position: "ครู" },
   { staffId: "S-11", fullName: "ครูอรุณ ประดิษฐ์", position: "ครู" },
   { staffId: "S-12", fullName: "ครูจันทร์เพ็ญ แสงทอง", position: "ครู" },
+  { staffId: "S-13", fullName: "ครูกมล พัฒนา", position: "ครู" },
   { staffId: "S-A1", fullName: "นางสาวกนกพร ธุรการ", position: "แอดมิน" },
-  { staffId: "S-A2", fullName: "นายประวิทย์ บริหารดี", position: "ผู้บริหาร" },
 ];
 
 export const classrooms: Classroom[] = [
@@ -113,12 +114,12 @@ export const classrooms: Classroom[] = [
 
 /** ครูประจำชั้นห้องละ 2 คนต่อปีการศึกษา (รวมปีก่อนหน้า เพื่อสาธิตกฎหลังเลื่อนชั้น) */
 export const classroomHomerooms: ClassroomHomeroom[] = [
-  { roomId: "R-301", staffId: "S-01", academicYear: 2569 },
-  { roomId: "R-301", staffId: "S-02", academicYear: 2569 },
-  { roomId: "R-302", staffId: "S-03", academicYear: 2569 },
-  { roomId: "R-302", staffId: "S-12", academicYear: 2569 },
-  { roomId: "R-201", staffId: "S-03", academicYear: 2568 },
-  { roomId: "R-201", staffId: "S-04", academicYear: 2568 },
+  { roomId: "R-301", staffId: "S-01", academicYear: 2569, endedAt: null },
+  { roomId: "R-301", staffId: "S-02", academicYear: 2569, endedAt: null },
+  { roomId: "R-302", staffId: "S-03", academicYear: 2569, endedAt: null },
+  { roomId: "R-302", staffId: "S-12", academicYear: 2569, endedAt: null },
+  { roomId: "R-201", staffId: "S-03", academicYear: 2568, endedAt: null },
+  { roomId: "R-201", staffId: "S-04", academicYear: 2568, endedAt: null },
 ];
 
 const staffUser = (
@@ -279,8 +280,8 @@ export const users: User[] = [
   staffUser(USER.malee, "S-10", "malee.w", "teacher_general", "ครูประจำวิชาศิลปะ", null),
   staffUser(USER.arun, "S-11", "arun.p", "teacher_general", "ครูประจำวิชาการงานอาชีพ", null),
   staffUser(USER.janpen, "S-12", "janpen.s", "teacher_homeroom", "ครูประจำชั้น ม.3/2", null),
-  staffUser(USER.admin, "S-A1", "admin", "admin_school", "แอดมินโรงเรียน", "admin@school.example"),
-  staffUser(USER.director, "S-A2", "director", "admin_school", "ผู้อำนวยการ", "director@school.example"),
+  staffUser(USER.kamol, "S-13", "kamol.p", "teacher_general", "ครู", null),
+  staffUser(USER.admin, "S-A1", "admin", "admin_school", "ผู้ดูแลระบบ", "admin@school.example"),
   ...baseStudents.map<User>((s) => ({
     userId: `U-S${s.studentId}`,
     username: s.studentId,
@@ -324,8 +325,8 @@ export const DEMO_USERS: { userId: string; note: string }[] = [
   { userId: USER.theerapong, note: "ครูประจำชั้น ม.3/1 คนที่ 2 (ไม่มีอีเมล)" },
   { userId: USER.wichai, note: "ครูทั่วไป · เคยเป็นครูประจำชั้นของห้องนี้ปีก่อน" },
   { userId: USER.prapa, note: "ครูประจำชั้น ม.3/2 · เคยเป็นครูประจำชั้นของห้องนี้ปีก่อน" },
-  { userId: USER.admin, note: "แอดมินโรงเรียน" },
-  { userId: USER.director, note: "ผู้บริหาร (สิทธิ์เท่าแอดมิน)" },
+  { userId: USER.kamol, note: "ครูใหม่ · เริ่มต้นไม่มีการมอบหมาย (ใช้ลองมอบหมายครูในหน้าตั้งค่า)" },
+  { userId: USER.admin, note: "ผู้ดูแลระบบ (ผู้อำนวยการ/รองฝ่ายกิจการนักเรียนใช้บัญชีนี้)" },
   { userId: studentUserId("30125"), note: "นักเรียน ม.3/1" },
   { userId: USER.ratana, note: "ผู้ปกครองของ ด.ญ. แพรวา" },
   { userId: USER.pimjai, note: "ผู้ปกครองของนักเรียน 2 คน" },

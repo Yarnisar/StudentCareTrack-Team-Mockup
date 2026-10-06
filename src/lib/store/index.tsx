@@ -9,8 +9,9 @@
  * และรับ slice ที่ต้องพึ่งเป็นอาร์กิวเมนต์ StoreProvider เรียกทุก slice ตามลำดับการพึ่งพา
  * แล้วรวมเป็นค่าเดียว — หน้าจอใช้ useStore() เหมือนเดิม
  *
+
  * ลำดับ: core → audit → notifications → settings → consent  (รวมเป็น base: PlatformSlice)
- *        → behavior → checkin → cards → care → assessment → screening → home-visit → dc → documents
+ *        → assignments (เขตแดนเขียนตารางมอบหมายครู ADR-0003) → behavior → checkin → cards → care → assessment → screening → home-visit → dc → documents
  * (assessment ส่งเหตุเปิด case ผ่าน care; screening อ่านผล Red Flag/9S จาก assessment และมาสายจาก behavior)
  * slice ของโมดูลรับ base เป็นอาร์กิวเมนต์แรก (base.logAudit / base.notify / base.isWindowOpen /
  * base.schoolSettings / base.consentOf) slice ที่ต้องเรียก slice โมดูลอื่น (เช่น เปิด case อัตโนมัติ)
@@ -18,6 +19,7 @@
  */
 
 import { createContext, useContext, useEffect, useMemo, type ReactNode } from "react";
+import { useAssignmentsSlice, type AssignmentsSlice } from "./assignments";
 import { useAuditSlice, type AuditSlice } from "./audit";
 import { useConsentSlice, type ConsentSlice } from "./consent";
 import { useNotificationsSlice, type NotificationsSlice } from "./notifications";
@@ -39,6 +41,7 @@ export type StoreValue = CoreSlice &
   NotificationsSlice &
   SettingsSlice &
   ConsentSlice &
+  AssignmentsSlice &
   BehaviorSlice &
   CheckinSlice &
   CardsSlice &
@@ -60,6 +63,8 @@ export type {
 export type { PlatformSlice } from "./platform";
 export type { RecipientGroup } from "./notifications";
 export type { OperatingWindowInput, SaveWindowResult, SchoolSettingsPatch } from "./settings";
+export type { AssignmentChange, AssignmentResult, HomeroomOfRoom } from "./assignments";
+export { MAX_HOMEROOM_TEACHERS_PER_ROOM } from "./assignments";
 export type { ConsentStatus, RecordConsentResult } from "./consent";
 export type { CreateAppointmentInput, HomeVisitResult } from "./home-visit";
 export type { DcOverrides, DcResult, DcScoreEntry, DcSummaryReadiness } from "./dc";
@@ -88,6 +93,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     [core, audit, notifications, settings, consent]
   );
 
+  const assignments = useAssignmentsSlice(base);
   const behavior = useBehaviorSlice(base);
   const checkin = useCheckinSlice(base, behavior);
   const cards = useCardsSlice(base);
@@ -101,6 +107,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const value = useMemo<StoreValue>(
     () => ({
       ...base,
+      ...assignments,
       ...behavior,
       ...checkin,
       ...cards,
@@ -111,7 +118,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       ...dc,
       ...documents,
     }),
-    [base, behavior, checkin, cards, care, screening, assessment, homeVisit, dc, documents]
+    [base, assignments, behavior, checkin, cards, care, screening, assessment, homeVisit, dc, documents]
   );
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
@@ -130,7 +137,7 @@ export function useStore() {
 export { behaviorRules } from "../mock-data";
 
 /**
- * บันทึก VIEW_SENSITIVE ครั้งเดียวเมื่อเปิดข้อมูลรายคน (logSensitiveView ข้ามเองถ้าไม่ใช่แอดมิน/ผู้บริหาร
+ * บันทึก VIEW_SENSITIVE ครั้งเดียวเมื่อเปิดข้อมูลรายคน (logSensitiveView ข้ามเองถ้าไม่ใช่ผู้ดูแลระบบ
  * เว้นแต่ always) — ยิงใหม่เมื่อ entityId/ผู้ใช้เปลี่ยนเท่านั้น
  */
 export function useSensitiveView(

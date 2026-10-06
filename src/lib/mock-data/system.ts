@@ -130,11 +130,10 @@ export const seedNotifications: Notification[] = [
   // เอกสารส่งต่อ REF-2570-001 รอผู้ปกครองของ 30125 ลงนาม
   seedNotification("referral_signature_requested", USER.ratana, "30125", "2570-02-15T09:35:00", null),
   seedNotification("referral_signature_requested", USER.ekachai, "30125", "2570-02-15T09:35:00", null),
-  // REF-2570-002 ผู้ปกครองลงนามแล้ว → รอผู้บริหารอนุมัติ
+  // REF-2570-002 ผู้ปกครองลงนามแล้ว → รอผู้ดูแลระบบอนุมัติ
   seedNotification("referral_signed", USER.somying, "30118", "2570-02-14T20:10:00", null),
   seedNotification("referral_signed", USER.theerapong, "30118", "2570-02-14T20:10:00", null),
   seedNotification("referral_approval_requested", USER.admin, "30118", "2570-02-14T20:10:00", null),
-  seedNotification("referral_approval_requested", USER.director, "30118", "2570-02-14T20:10:00", null),
   // นัดเยี่ยมบ้าน HV-001 ถึงผู้ปกครองทุกคนของ 30125
   seedNotification("visit_scheduled", USER.ratana, "30125", "2570-02-10T16:00:00", "2570-02-10T19:45:00", {
     date: hv001.proposedDate,
@@ -325,8 +324,8 @@ export const seedAuditLogs: AuditLog[] = [
       ? [audit(b.recordedBy, "VOID", "behavior_records", b.recordId, addHoursThai(b.createdAt, 30), { reason: b.voidReason ?? "" })]
       : []),
   ]),
-  // ผู้บริหารเปิดดูข้อมูลรายคน — ระบบบันทึกไว้ทุกครั้ง
-  audit(USER.director, "VIEW_SENSITIVE", "students", "30118", "2570-02-14T13:10:00", {
+  // ผู้ดูแลระบบเปิดดูข้อมูลรายคน — ระบบบันทึกไว้ทุกครั้ง
+  audit(USER.admin, "VIEW_SENSITIVE", "students", "30118", "2570-02-14T13:10:00", {
     note: "เปิดหน้าข้อมูลนักเรียนรายคน",
   }),
 ].sort((a, b) => b.createdAt.localeCompare(a.createdAt));

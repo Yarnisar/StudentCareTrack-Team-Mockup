@@ -53,7 +53,7 @@ export default function HomeVisitsPage() {
   const appointment = visible.find((a) => a.appointmentId === selected);
   const student = appointment ? store.getStudent(appointment.studentId) : undefined;
 
-  // แอดมิน/ผู้บริหารเปิดข้อมูลเยี่ยมบ้านรายคน → VIEW_SENSITIVE (ข้ามเองถ้าไม่ใช่แอดมิน)
+  // ผู้ดูแลระบบเปิดข้อมูลเยี่ยมบ้านรายคน → VIEW_SENSITIVE (ข้ามเองถ้าไม่ใช่แอดมิน)
   useSensitiveView("home_visit_appointments", selected, { note: "เปิดข้อมูลการเยี่ยมบ้าน" });
 
   return (

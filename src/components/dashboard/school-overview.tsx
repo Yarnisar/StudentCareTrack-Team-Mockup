@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * ภาพรวมระดับโรงเรียน (แอดมิน / ผู้บริหาร) — "ตัวเลขรวม + ตารางรายห้อง"
+ * ภาพรวมระดับโรงเรียน (ผู้ดูแลระบบ) — "ตัวเลขรวม + ตารางรายห้อง"
  * ทุกตัวเลขมาจาก store จริง:
  * - จำนวนนักเรียน: studentsOfRoom(roomId) (เฉพาะที่กำลังศึกษา)
  * - คัดกรองแล้ว: screeningOf(studentId) ที่ status = "certified" ของภาคเรียนปัจจุบัน
@@ -45,7 +45,7 @@ export function SchoolOverview() {
     return store.classrooms.map((room) => {
       const students = store.studentsOfRoom(room.roomId);
       const teachers = store.homerooms
-        .filter((h) => h.roomId === room.roomId && h.academicYear === academicYear)
+        .filter((h) => h.roomId === room.roomId && h.academicYear === academicYear && h.endedAt === null)
         .map((h) => store.users.find((u) => u.refId === h.staffId)?.name ?? h.staffId)
         .join(" · ");
 

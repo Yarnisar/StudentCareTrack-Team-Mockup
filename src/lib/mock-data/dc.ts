@@ -88,6 +88,7 @@ export const subjectTeachings: SubjectTeaching[] = ["T2569-1", "T2569-2"].flatMa
     roomId: "R-301",
     termId,
     teacherId: TEACHER_OF[s.subjectId],
+    endedAt: null,
   }))
 );
 

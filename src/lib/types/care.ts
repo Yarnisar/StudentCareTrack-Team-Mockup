@@ -95,7 +95,7 @@ export interface CareFollowup {
 
 /**
  * สถานะเอกสารส่งต่อตามสายการลงนาม
- * จัดทำร่าง → ผู้ปกครองลงนาม → ผู้บริหารอนุมัติ → ส่งต่อได้
+ * จัดทำร่าง → ผู้ปกครองลงนาม → ผู้ดูแลระบบอนุมัติ → ส่งต่อได้
  * ปฏิเสธการลงนามหรือยกเลิกคำขอ → กลับมาเป็นร่าง (คำขอเดิมยังอยู่ในประวัติ)
  */
 export type ReferralStatus =
@@ -109,7 +109,7 @@ export type ReferralStatus =
 export const REFERRAL_STATUS_LABEL: Record<ReferralStatus, string> = {
   draft: "จัดทำร่าง",
   awaiting_guardian: "รอผู้ปกครองลงนาม",
-  awaiting_executive: "รอผู้บริหารอนุมัติ",
+  awaiting_executive: "รอผู้ดูแลระบบอนุมัติ",
   approved: "อนุมัติแล้ว ส่งต่อได้",
   sent: "ส่งต่อแล้ว",
   voided: "ยกเลิกแล้ว",
@@ -137,7 +137,7 @@ export type SignatureStep = "guardian" | "executive";
 
 export const SIGNATURE_STEP_LABEL: Record<SignatureStep, string> = {
   guardian: "ผู้ปกครองลงนาม",
-  executive: "ผู้บริหารอนุมัติ",
+  executive: "ผู้ดูแลระบบอนุมัติ",
 };
 
 export type SignatureRequestStatus = "pending" | "signed" | "declined" | "voided";
@@ -160,7 +160,7 @@ export interface SignatureRequest {
   step: SignatureStep;
   /** บทบาทที่ลงนามขั้นนี้ได้ (guardian → parent, executive → admin_school) */
   signerRole: "parent" | "admin_school";
-  /** ผู้ขอให้ลงนาม (ขั้นผู้บริหารระบบสร้างต่อให้เมื่อผู้ปกครองลงนามแล้ว) */
+  /** ผู้ขอให้ลงนาม (ขั้นผู้ดูแลระบบสร้างต่อให้เมื่อผู้ปกครองลงนามแล้ว) */
   requestedBy: string;
   requestedAt: string;
   /** ผู้ที่ลงนาม/ปฏิเสธจริง (null = ยังไม่มีใครดำเนินการ) */
@@ -178,7 +178,7 @@ export interface SignatureRequest {
 export const REFERRAL_CHAIN_STEPS: { key: ReferralStatus; label: string }[] = [
   { key: "draft", label: "จัดทำร่าง" },
   { key: "awaiting_guardian", label: "ผู้ปกครองลงนาม" },
-  { key: "awaiting_executive", label: "ผู้บริหารอนุมัติ" },
+  { key: "awaiting_executive", label: "ผู้ดูแลระบบอนุมัติ" },
   { key: "sent", label: "ส่งต่อ" },
 ];
 

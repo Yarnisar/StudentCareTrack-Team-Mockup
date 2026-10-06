@@ -159,7 +159,7 @@ export interface CareSlice {
   getReferral: (referralId: string) => ReferralEntry | undefined;
   /** เอกสารส่งต่อที่ผู้ใช้ปัจจุบันเห็นได้ (ครูประจำชั้น/แอดมิน = ของนักเรียนที่ดูข้อมูลอ่อนไหวได้, ผู้ปกครอง = ของบุตรหลาน) */
   visibleReferrals: ReferralEntry[];
-  /** คำขอลงนามที่รอผู้ใช้ปัจจุบัน (ผู้ปกครอง = ของนักเรียนที่ผูกอยู่, ผู้บริหาร/แอดมิน = คิวอนุมัติ) */
+  /** คำขอลงนามที่รอผู้ใช้ปัจจุบัน (ผู้ปกครอง = ของนักเรียนที่ผูกอยู่, ผู้ดูแลระบบ = คิวอนุมัติ) */
   myPendingSignatures: ReferralEntry[];
 
   requestSignatureBlockReason: (referralId: string) => BlockReason;
@@ -167,7 +167,7 @@ export interface CareSlice {
   requestGuardianSignature: (referralId: string) => CareResult<{ request: SignatureRequest }>;
   /** เหตุผลที่ผู้ใช้ปัจจุบันลงนาม/อนุมัติคำขอนี้ไม่ได้ */
   signBlockReason: (requestId: string) => BlockReason;
-  /** ผู้ปกครองลงนาม หรือผู้บริหารอนุมัติ (ขั้นผู้ปกครองสำเร็จ → ระบบสร้างคำขอขั้นผู้บริหารต่อให้) */
+  /** ผู้ปกครองลงนาม หรือผู้ดูแลระบบอนุมัติ (ขั้นผู้ปกครองสำเร็จ → ระบบสร้างคำขอขั้นผู้ดูแลระบบต่อให้) */
   signSignatureRequest: (requestId: string) => CareResult<{ request: SignatureRequest }>;
   /** ปฏิเสธการลงนาม/ไม่อนุมัติ ต้องระบุเหตุผล → เอกสารกลับเป็นร่าง */
   declineSignatureRequest: (requestId: string, reason: string) => CareResult<{ request: SignatureRequest }>;
@@ -776,7 +776,7 @@ export function useCareSlice(base: PlatformSlice, behavior: BehaviorSlice): Care
       if (!canActOn(request, entry.studentId))
         return request.step === "guardian"
           ? "เฉพาะผู้ปกครองของนักเรียนคนนี้เท่านั้นที่ลงนามได้"
-          : "เฉพาะผู้บริหาร/แอดมินโรงเรียนเท่านั้นที่อนุมัติได้";
+          : "เฉพาะผู้ดูแลระบบเท่านั้นที่อนุมัติได้";
       if (!base.canReferExternally(entry.studentId))
         return "ความยินยอมของผู้ปกครองในปีการศึกษานี้ไม่ครอบคลุมการส่งต่อข้อมูล";
       return null;
@@ -806,7 +806,7 @@ export function useCareSlice(base: PlatformSlice, behavior: BehaviorSlice): Care
           before: { status: "awaiting_guardian" },
           after: { status: "awaiting_executive" },
         });
-        // ระบบส่งต่อให้ผู้บริหารเองเมื่อผู้ปกครองลงนามแล้ว
+        // ระบบส่งต่อให้ผู้ดูแลระบบเองเมื่อผู้ปกครองลงนามแล้ว
         createSignatureRequest(request.referralId, "executive", SYSTEM_USER_ID);
         base.notify("referral_signed", homeroomIds(entry.studentId), entry.studentId);
         base.notify("referral_approval_requested", adminUserIds(), entry.studentId);
@@ -887,7 +887,7 @@ export function useCareSlice(base: PlatformSlice, behavior: BehaviorSlice): Care
       if (!base.canReferExternally(entry.studentId))
         return "ยังไม่ได้รับความยินยอมจากผู้ปกครองสำหรับปีการศึกษานี้";
       if (entry.referral.status !== "approved")
-        return "สายการลงนามยังไม่ครบ (ต้องมีลายมือชื่อผู้ปกครองและการอนุมัติของผู้บริหาร)";
+        return "สายการลงนามยังไม่ครบ (ต้องมีลายมือชื่อผู้ปกครองและการอนุมัติของผู้ดูแลระบบ)";
       return null;
     };
 

@@ -2,7 +2,7 @@
  * Audit slice: audit_logs (append-only — ไม่มี API แก้หรือลบ)
  *
  * ทุก mutation ในทุก slice ต้องเรียก logAudit()
- * VIEW_SENSITIVE: เรียก logSensitiveView() เมื่อแอดมิน/ผู้บริหารเปิดข้อมูลรายคน หรือเมื่อเปิดคำตอบรายข้อของ SDQ
+ * VIEW_SENSITIVE: เรียก logSensitiveView() เมื่อผู้ดูแลระบบเปิดข้อมูลรายคน หรือเมื่อเปิดคำตอบรายข้อของ SDQ
  */
 
 import { useCallback, useMemo, useRef, useState } from "react";
@@ -27,7 +27,7 @@ export interface AuditSlice {
     userId?: string
   ) => AuditLog;
   /**
-   * บันทึก VIEW_SENSITIVE ถ้าผู้ใช้ปัจจุบันเป็นแอดมิน/ผู้บริหาร (หรือ always = true เช่น เปิดคำตอบรายข้อ SDQ)
+   * บันทึก VIEW_SENSITIVE ถ้าผู้ใช้ปัจจุบันเป็นผู้ดูแลระบบ (หรือ always = true เช่น เปิดคำตอบรายข้อ SDQ)
    * กันบันทึกซ้ำจากการ mount ซ้ำภายใน 5 วินาที — เรียกจาก useEffect ของหน้าได้เลย
    */
   logSensitiveView: (entityType: string, entityId: string, opts?: { always?: boolean; note?: string }) => void;
