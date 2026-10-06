@@ -1,0 +1,28 @@
+/*
+ * กฎการพิมพ์บัตร (ไฟล์ CSS ธรรมดา เพราะ CSS module ไม่อนุญาตตัวเลือกระดับ global ล้วน)
+ * โหลดเฉพาะหน้า /cards — ตอนสั่งพิมพ์จะเห็นเฉพาะแผ่นบัตร ไม่มี sidebar / header / แผงสาธิต
+ */
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 10mm;
+  }
+
+  body * {
+    visibility: hidden;
+  }
+
+  [data-print-sheet],
+  [data-print-sheet] * {
+    visibility: visible;
+  }
+
+  [data-print-sheet] {
+    position: fixed;
+    inset: 0;
+    margin: 0;
+    padding: 0;
+    background: #ffffff;
+  }
+}

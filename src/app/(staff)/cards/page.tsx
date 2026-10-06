@@ -10,6 +10,7 @@ import { CardPrintSheet, StudentIdCard } from "@/components/cards/student-id-car
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useStore } from "@/lib/store";
+import "@/components/cards/print.css";
 import type { IdCard, Student } from "@/lib/types";
 
 /**

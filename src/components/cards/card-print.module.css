@@ -134,6 +134,8 @@
 .sheet {
   display: flex;
   flex-wrap: wrap;
+  align-items: flex-start;
+  align-content: flex-start;
   gap: 6mm;
 }
 
@@ -143,29 +145,8 @@
 }
 
 @media print {
-  @page {
-    size: A4 portrait;
-    margin: 10mm;
-  }
-
-  /* ซ่อนทุกอย่างยกเว้นแผ่นพิมพ์ (sidebar / header / แผงสาธิต ไม่ถูกพิมพ์) */
-  :global(body) *,
-  :global(body) {
-    visibility: hidden;
-  }
-
-  .sheet,
-  .sheet * {
-    visibility: visible;
-  }
-
   .sheet {
-    position: fixed;
-    inset: 0;
-    margin: 0;
-    padding: 0;
     gap: 4mm;
-    background: #ffffff;
   }
 
   .sheetItem {

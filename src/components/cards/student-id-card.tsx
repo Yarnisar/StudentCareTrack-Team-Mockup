@@ -67,7 +67,7 @@ export function CardPrintSheet({
   template: CardTemplateSettings;
 }) {
   return (
-    <div className={styles.sheet}>
+    <div className={styles.sheet} data-print-sheet>
       {items.map(({ student, card }) => (
         <div key={card.cardId} className={styles.sheetItem}>
           <StudentIdCard student={student} card={card} template={template} />
