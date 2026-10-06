@@ -11,6 +11,7 @@ import { CardPrintSheet, StudentIdCard } from "@/components/cards/student-id-car
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useStore } from "@/lib/store";
+import { useDemoPageTool } from "@/lib/demo/page-tools";
 import "@/components/cards/print.css";
 import type { IdCard, Student } from "@/lib/types";
 
@@ -47,6 +48,23 @@ export default function CardsPage() {
   }
 
   const preview = printItems[0];
+
+  // เครื่องมือสาธิต: จำลองบัตรหมดอายุ (กดซ้ำเพื่อยกเลิก)
+  const simulated = store.simulatedExpiredCardIds;
+  useDemoPageTool(
+    simulated.length > 0 ? "ยกเลิกจำลอง: บัตรหมดอายุ" : "จำลอง: บัตรหมดอายุ",
+    () => {
+      if (simulated.length > 0) {
+        simulated.forEach((id) => store.setCardSimulatedExpiry(id, false));
+        return;
+      }
+      const target = withCard
+        .map((s) => store.activeCardOfStudent(s.studentId))
+        .find((c): c is IdCard => !!c);
+      if (target) store.setCardSimulatedExpiry(target.cardId, true);
+    },
+    "จำลองว่าบัตรของนักเรียนคนแรกที่มีบัตรใช้งานได้หมดอายุ — ตารางแสดง \"หมดอายุ\" และหน้าเช็คอินจะปฏิเสธ QR ใบนี้ (กดอีกครั้งเพื่อยกเลิกการจำลอง; ไม่เปลี่ยนข้อมูลบัตรจริง)"
+  );
 
   return (
     <>
