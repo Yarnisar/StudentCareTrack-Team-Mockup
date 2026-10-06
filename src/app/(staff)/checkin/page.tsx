@@ -23,8 +23,8 @@ export default function CheckinPage() {
     const input = value.trim();
 
     // รหัส QR บนบัตรเป็นรหัสอ้างอิงแบบสุ่ม ต้องค้นในตาราง id_cards เพื่อหาว่าเป็นของใคร
-    if (store.cardByToken(input)) {
-      const lookup = store.resolveCardToken(input);
+    const lookup = store.resolveCardToken(input);
+    if (lookup.ok || lookup.kind !== "not_a_card") {
       if (!lookup.ok) {
         setError(lookup.error);
         setLast(null);

@@ -132,7 +132,7 @@ export function HouseholdSection({ api }: { api: RecordFormApi }) {
                   <td className="text-center">
                     <button
                       onClick={() => api.setMembers((prev) => prev.filter((_, xi) => xi !== i))}
-                      aria-label={`ลบสมาชิกคนที่ ${i + 1}`}
+                      aria-label={`นำสมาชิกคนที่ ${i + 1} ออก`}
                       className="text-muted-foreground hover:text-risk-red"
                     >
                       <Trash2 className="size-4" />

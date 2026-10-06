@@ -205,7 +205,7 @@ function RecordRow({ rec, showStudent }: { rec: BehaviorRecord; showStudent: boo
       {mode === "edit" && (
         <div className="mt-3 space-y-2">
           <select
-            aria-label="ประเภทพฤติกรรม"
+            aria-label="ประเภทความประพฤติ"
             value={ruleId}
             onChange={(e) => setRuleId(e.target.value)}
             className="h-9 w-full rounded-lg border border-border bg-card px-3 text-sm"

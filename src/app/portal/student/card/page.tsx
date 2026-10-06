@@ -71,7 +71,11 @@ export default function StudentCardPage() {
             ) : (
               <div className="text-center">
                 <p className="text-[15px] font-semibold">
-                  {status === "revoked" ? "บัตรถูกเพิกถอนแล้ว" : "ยังไม่มีบัตรนักเรียน"}
+                  {status === "revoked"
+                    ? "บัตรถูกเพิกถอนแล้ว"
+                    : status === "expired"
+                      ? "บัตรหมดอายุ"
+                      : "ยังไม่มีบัตรนักเรียน"}
                 </p>
                 <p className="mt-1.5 text-[12.5px] leading-relaxed text-muted-foreground">
                   ติดต่อห้องกิจการนักเรียนเพื่อออกบัตรใหม่ ระหว่างนี้ให้ครูบันทึกการมาเรียนด้วยตนเอง

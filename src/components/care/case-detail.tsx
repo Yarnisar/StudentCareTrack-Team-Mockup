@@ -425,6 +425,8 @@ function ReferralsCard({ careCase }: { careCase: CareCase }) {
   const [content, setContent] = useState("");
   const [error, setError] = useState<string | null>(null);
   const showActions = careCase.status === "active" && store.canManageCase(careCase.studentId);
+  // เอกสารส่งต่อเดิมยังส่ง/ยกเลิกได้แม้เคสปิดแล้ว (ส่งต่อภายนอกไม่ปิดเคส) — ให้ store ตัดสินว่าทำอะไรได้
+  const canManageReferrals = store.canManageCase(careCase.studentId);
 
   return (
     <Card>
@@ -486,7 +488,7 @@ function ReferralsCard({ careCase }: { careCase: CareCase }) {
 
         <div className="space-y-2.5">
           {careCase.referrals.map((r) => (
-            <ReferralRow key={r.referralId} referral={r} canManage={showActions} />
+            <ReferralRow key={r.referralId} referral={r} canManage={canManageReferrals} />
           ))}
           {careCase.referrals.length === 0 && <p className="text-sm text-muted-foreground">ยังไม่มีการส่งต่อภายนอก</p>}
         </div>

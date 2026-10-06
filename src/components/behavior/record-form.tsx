@@ -5,7 +5,7 @@
  * ครูใช้บ่อยจึงเปิดค้างไว้ ไม่ต้องกดเปิด
  */
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -22,6 +22,15 @@ export function useBehaviorForm() {
   const [description, setDescription] = useState("");
   const [saved, setSaved] = useState(false);
   const [notifiedGuardians, setNotifiedGuardians] = useState(0);
+  const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // ล้างตัวจับเวลาเมื่อออกจากหน้า (ไม่ให้ setState หลังถอดคอมโพเนนต์)
+  useEffect(
+    () => () => {
+      if (savedTimer.current) clearTimeout(savedTimer.current);
+    },
+    []
+  );
 
   const canSave = studentId !== "" && ruleId !== "";
 
@@ -30,7 +39,8 @@ export function useBehaviorForm() {
     setNotifiedGuardians(result.notifiedGuardians.length);
     setDescription("");
     setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
+    if (savedTimer.current) clearTimeout(savedTimer.current);
+    savedTimer.current = setTimeout(() => setSaved(false), 2500);
   };
 
   return {
@@ -72,7 +82,7 @@ export function NewRecordFields({ form }: { form: BehaviorForm }) {
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="rule">ประเภทพฤติกรรม</Label>
+        <Label htmlFor="rule">ประเภทความประพฤติ</Label>
         <select
           id="rule"
           value={form.ruleId}
@@ -102,7 +112,7 @@ export function NewRecordFields({ form }: { form: BehaviorForm }) {
       </div>
 
       <Button className="w-full" onClick={form.save} disabled={!form.canSave}>
-        บันทึกพฤติกรรม
+        บันทึกความประพฤติ
       </Button>
 
       {form.saved && (

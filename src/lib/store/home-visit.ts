@@ -67,7 +67,7 @@ export interface HomeVisitSlice {
   saveHomeVisitRecord: (
     appointmentId: string,
     input: HomeVisitRecordInput,
-    opts: { sign: boolean }
+    opts: { sign: boolean; /** บันทึกอัตโนมัติ — ไม่เขียน audit ยกเว้นการสร้างร่างครั้งแรก */ silent?: boolean }
   ) => HomeVisitResult<HomeVisitRecord>;
 }
 
@@ -232,7 +232,7 @@ export function useHomeVisitSlice(base: PlatformSlice): HomeVisitSlice {
       return { ok: true, value: next };
     };
 
-    const saveHomeVisitRecord: HomeVisitSlice["saveHomeVisitRecord"] = (appointmentId, input, { sign }) => {
+    const saveHomeVisitRecord: HomeVisitSlice["saveHomeVisitRecord"] = (appointmentId, input, { sign, silent = false }) => {
       const appt = findAppointment(appointmentId);
       if (!appt) return fail("ไม่พบนัดหมาย");
       const block = homeVisitBlockReason(appt.studentId);
@@ -265,15 +265,18 @@ export function useHomeVisitSlice(base: PlatformSlice): HomeVisitSlice {
         existing ? prev.map((r) => (r.recordId === record.recordId ? record : r)) : [record, ...prev]
       );
       // ไม่ใส่คำตอบในแบบฟอร์มลง audit (ข้อมูลอ่อนไหว) — บันทึกเฉพาะสถานะ
-      base.logAudit(existing ? "UPDATE" : "CREATE", "home_visit_records", record.recordId, {
-        after: {
-          appointmentId,
-          status: sign ? "signed" : "draft",
-          cannotAccessHome: record.cannotAccessHome,
-          photos: record.photos.map((p) => p.photoType),
-        },
-        note: sign ? "รับรองผลการเยี่ยมบ้าน (แก้ไขไม่ได้หลังจากนี้)" : "บันทึกร่าง",
-      });
+      // บันทึกอัตโนมัติ (silent) เขียน audit เฉพาะครั้งแรกที่สร้างร่าง — ไม่ให้ audit ท่วมทุก 20 วินาที
+      if (!silent || !existing || sign) {
+        base.logAudit(existing ? "UPDATE" : "CREATE", "home_visit_records", record.recordId, {
+          after: {
+            appointmentId,
+            status: sign ? "signed" : "draft",
+            cannotAccessHome: record.cannotAccessHome,
+            photos: record.photos.map((p) => p.photoType),
+          },
+          note: sign ? "รับรองผลการเยี่ยมบ้าน (แก้ไขไม่ได้หลังจากนี้)" : "บันทึกร่าง",
+        });
+      }
       if (sign && appt.status !== "completed") {
         replaceAppointment({ ...appt, status: "completed" });
         base.logAudit("UPDATE", "home_visit_appointments", appointmentId, {

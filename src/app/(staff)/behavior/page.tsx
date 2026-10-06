@@ -3,7 +3,7 @@
 /**
  * หน้าการจัดการความประพฤติ
  *
- * จัดวางแบบ "ฟีดการ์ด" จัดกลุ่มตามวันที่ — ชื่อพฤติกรรมและรายละเอียดเหตุการณ์แสดงครบ ไม่ถูกตัด
+ * จัดวางแบบ "ฟีดการ์ด" จัดกลุ่มตามวันที่ — ชื่อความประพฤติและรายละเอียดเหตุการณ์แสดงครบ ไม่ถูกตัด
  * แถบด้านขวาเก็บฟอร์มบันทึกใหม่และกฎความประพฤติไว้ให้ครูใช้ได้ทันที
  *
  * ส่วนบนเป็นงานที่ต้องตัดสินใจก่อน:
@@ -41,7 +41,7 @@ export default function BehaviorPage() {
     <>
       <PageHeader
         title="การจัดการความประพฤติ"
-        subtitle={`บันทึกและติดตามพฤติกรรมนักเรียน · ${CURRENT_TERM.label}`}
+        subtitle={`บันทึกและติดตามความประพฤตินักเรียน · ${CURRENT_TERM.label}`}
       />
 
       <div className="flex-1 overflow-y-auto p-8 pb-24">
@@ -76,7 +76,7 @@ export default function BehaviorPage() {
           <div className="space-y-5">
             <Card>
               <CardContent className="p-6">
-                <h2 className="mb-4 text-[15.5px] font-bold">บันทึกพฤติกรรมใหม่</h2>
+                <h2 className="mb-4 text-[15.5px] font-bold">บันทึกความประพฤติใหม่</h2>
                 <NewRecordFields form={form} />
                 <p className="mt-3 text-[11.5px] leading-relaxed text-muted-foreground">
                   กฎที่ตั้งค่าให้แจ้งผู้ปกครอง ระบบจะแจ้งผู้ปกครองของนักเรียนทันทีเมื่อบันทึกมีผล

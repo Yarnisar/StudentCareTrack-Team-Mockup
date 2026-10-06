@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { ChevronLeft, History, Lock, Sparkles } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { FillSource, SOURCE_LABEL, SOURCE_STYLE } from "@/components/home-visit/field-shell";
-import { useRecordForm } from "@/components/home-visit/record/form-state";
+import { pickInput, useRecordForm } from "@/components/home-visit/record/form-state";
 import { StudentSection } from "@/components/home-visit/record/student-section";
 import { HouseholdSection } from "@/components/home-visit/record/household-section";
 import { FamilySection } from "@/components/home-visit/record/family-section";
@@ -29,7 +29,6 @@ import {
 } from "@/lib/home-visit-form";
 import {
   VISIT_TYPE_LABEL,
-  type HomeVisitRecord,
   type HomeVisitRecordInput,
 } from "@/lib/types";
 
@@ -92,8 +91,6 @@ export default function HomeVisitRecordPage({
     !!appointment &&
     (sensitive || store.canViewRecord(appointment.studentId, existing?.recordedBy ?? appointment.teacherId));
 
-  const previousInput = previous ? pickInput(previous) : undefined;
-
   const api = useRecordForm({
     initial: () => {
       if (existing) return structuredClone(pickInput(existing));
@@ -111,7 +108,7 @@ export default function HomeVisitRecordPage({
     },
     readOnly,
     autoFilled,
-    previous: previousInput,
+    previous,
   });
 
   const [onlyEmpty, setOnlyEmpty] = useState(false);
@@ -136,7 +133,7 @@ export default function HomeVisitRecordPage({
     if (readOnly || snapshot === lastSavedRef.current) return;
     const timer = setTimeout(() => {
       const draft = JSON.parse(snapshot) as HomeVisitRecordInput;
-      const result = store.saveHomeVisitRecord(appointmentId, draft, { sign: false });
+      const result = store.saveHomeVisitRecord(appointmentId, draft, { sign: false, silent: true });
       if (!result.ok) return;
       lastSavedRef.current = snapshot;
       setAutoSavedAt(result.value.updatedAt);
@@ -157,7 +154,7 @@ export default function HomeVisitRecordPage({
         buildDemoAutofill({
           studentId: appointment.studentId,
           now: nowThaiIso(),
-          previous: previousInput,
+          previous: previous ? pickInput(previous) : undefined,
           informant: g ? { name: g.user.name, relation: g.relation } : undefined,
           registryAddress: student?.address,
         })
@@ -411,17 +408,4 @@ export default function HomeVisitRecordPage({
       </div>
     </>
   );
-}
-
-/** ส่วนที่ครูกรอกของบันทึกเดิม (ตัด metadata ออก) */
-function pickInput(r: HomeVisitRecord): HomeVisitRecordInput {
-  return {
-    form: r.form,
-    livesWith: r.livesWith,
-    informantName: r.informantName,
-    informantRelation: r.informantRelation,
-    cannotAccessHome: r.cannotAccessHome,
-    cannotAccessReason: r.cannotAccessReason,
-    photos: r.photos,
-  };
 }
