@@ -1,6 +1,6 @@
 "use client";
 
-/** PROTOTYPE ONLY — เนื้อหา Audit Log เดิมของหน้าตั้งค่า ใช้ร่วมกันทุก variant */
+/** ประวัติการใช้งาน (audit_logs) — append-only อ่านจากสโตร์ แอดมินทุกคนอ่านได้ */
 
 import { formatThaiDateTime } from "@/lib/format";
 import { auditSummary, useStore } from "@/lib/store";
@@ -12,7 +12,6 @@ export interface AuditEntry {
   by: string;
 }
 
-/** อ่านจาก audit_logs ในสโตร์ (append-only) — แอดมินทุกคนอ่านได้ */
 export function useAuditEntries(): AuditEntry[] {
   const store = useStore();
   return store.auditLogs.map((log) => ({
@@ -24,6 +23,9 @@ export function useAuditEntries(): AuditEntry[] {
 }
 
 export function AuditLogList({ entries }: { entries: AuditEntry[] }) {
+  if (entries.length === 0) {
+    return <p className="py-6 text-[13px] text-muted-foreground">ยังไม่มีประวัติการใช้งาน</p>;
+  }
   return (
     <div className="divide-y divide-border">
       {entries.map((entry, i) => (

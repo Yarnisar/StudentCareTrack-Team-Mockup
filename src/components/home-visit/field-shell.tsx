@@ -1,8 +1,9 @@
 "use client";
 
-import { Sparkles } from "lucide-react";
+import { Copy, History, PencilLine, Sparkles } from "lucide-react";
 import type { ReactNode } from "react";
 import { Label } from "@/components/ui/label";
+import type { CarryState } from "@/lib/home-visit-form";
 
 /** แหล่งข้อมูลที่ระบบใช้กรอกอัตโนมัติ */
 export type FillSource = "registry" | "guardian" | "previous" | "screening";
@@ -32,17 +33,66 @@ export function AutoBadge({ source }: { source: FillSource }) {
   );
 }
 
+/**
+ * ข้อมูลที่ยกมาจากการเยี่ยมบ้านครั้งก่อน
+ * - same    = ยังเป็นค่าเดิมจากภาคเรียนก่อน
+ * - changed = ครูแก้ไขให้ต่างจากภาคเรียนก่อนแล้ว
+ */
+export function CarryBadge({ state }: { state: CarryState }) {
+  if (state === "changed") {
+    return (
+      <span className="inline-flex shrink-0 items-center gap-1 rounded-md bg-risk-amber-bg px-1.5 py-0.5 text-[10.5px] font-semibold text-risk-amber">
+        <PencilLine className="size-3" />
+        แก้จากข้อมูลภาคเรียนก่อน
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex shrink-0 items-center gap-1 rounded-md bg-surface px-1.5 py-0.5 text-[10.5px] font-semibold text-muted-foreground">
+      <History className="size-3" />
+      ข้อมูลจากภาคเรียนก่อน
+    </span>
+  );
+}
+
+/** ปุ่มคัดลอกข้อมูลจากแหล่งอื่นในระบบ (ทะเบียนบ้าน / ข้อมูลบิดา-มารดา) */
+export function CopyButton({
+  label,
+  onClick,
+  disabled,
+}: {
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-[12px] font-semibold text-primary transition-colors hover:bg-accent disabled:pointer-events-none disabled:opacity-50"
+    >
+      <Copy className="size-3.5" />
+      {label}
+    </button>
+  );
+}
+
 /** ห่อหุ้มช่องกรอกหนึ่งช่อง พร้อมแสดงว่าถูกกรอกอัตโนมัติจากแหล่งใด */
 export function Field({
   label,
   htmlFor,
   source,
+  carry,
+  action,
   children,
   className,
 }: {
   label: string;
   htmlFor?: string;
   source?: FillSource;
+  carry?: CarryState;
+  action?: ReactNode;
   children: ReactNode;
   className?: string;
 }) {
@@ -53,8 +103,24 @@ export function Field({
           {label}
         </Label>
         {source && <AutoBadge source={source} />}
+        {carry && <CarryBadge state={carry} />}
+        {action && (
+          <>
+            <span className="flex-1" />
+            {action}
+          </>
+        )}
       </div>
       {children}
+    </div>
+  );
+}
+
+/** ช่องข้อมูลที่ระบบกรอกให้และแก้ไขในแบบฟอร์มนี้ไม่ได้ */
+export function ReadOnly({ value }: { value: string }) {
+  return (
+    <div className="rounded-lg border border-border bg-surface px-3.5 py-2.5 text-[13.5px] font-medium">
+      {value}
     </div>
   );
 }

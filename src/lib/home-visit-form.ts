@@ -17,6 +17,34 @@ export interface CheckboxOption {
   label: string;
 }
 
+/** ข้อ 2 ประเภทความด้อยโอกาส (ไม่เลือกเลย = ไม่ด้อยโอกาส) */
+export const DISADVANTAGE_OPTIONS: CheckboxOption[] = [
+  { id: "poor", label: "เด็กยากจน" },
+  { id: "aids", label: "เด็กที่ได้รับผลกระทบจากเอดส์" },
+  { id: "sex_business", label: "เด็กที่อยู่ในธุรกิจทางเพศ" },
+  { id: "abused", label: "เด็กที่ถูกทำร้ายทารุณ" },
+  { id: "forced_labour", label: "เด็กที่ถูกบังคับให้ขายแรงงาน" },
+  { id: "orphan", label: "เด็กกำพร้า" },
+  { id: "drugs", label: "เด็กที่มีปัญหาเกี่ยวกับยาเสพติด" },
+  { id: "minority", label: "เด็กชนกลุ่มน้อย" },
+  { id: "juvenile", label: "เด็กในสถานพินิจและคุ้มครองเด็กและเยาวชน" },
+  { id: "abandoned", label: "เด็กถูกทอดทิ้ง" },
+  { id: "homeless", label: "เด็กเร่ร่อน" },
+];
+
+/** ข้อ 2 ประเภทความพิการ 9 ประเภท (ไม่เลือกเลย = ไม่พิการ) */
+export const DISABILITY_OPTIONS: CheckboxOption[] = [
+  { id: "physical", label: "บกพร่องทางร่างกายหรือสุขภาพ" },
+  { id: "hearing", label: "บกพร่องทางการได้ยิน" },
+  { id: "autistic", label: "ออทิสติก" },
+  { id: "speech", label: "บกพร่องทางการพูดและภาษา" },
+  { id: "vision", label: "บกพร่องทางการมองเห็น" },
+  { id: "intellect", label: "บกพร่องทางสติปัญญา" },
+  { id: "learning", label: "บกพร่องทางการเรียนรู้" },
+  { id: "emotional", label: "บกพร่องทางพฤติกรรมหรืออารมณ์" },
+  { id: "multiple", label: "ความพิการซ้อน" },
+];
+
 /** ข้อ 4.1 ภาระพึ่งพิงของครัวเรือน */
 export const DEPENDENCY_OPTIONS: CheckboxOption[] = [
   { id: "dep_disabled", label: "มีคนพิการ" },
@@ -54,6 +82,32 @@ export const FARMLAND_OPTIONS: CheckboxOption[] = [
   { id: "no_land", label: "ไม่มีที่ดินเป็นของตนเอง" },
 ];
 
+/** ข้อ 4.6 แหล่งไฟฟ้าหลักของที่พักอาศัย (ตอบเพียง 1 ข้อ) */
+export const ELECTRICITY_OPTIONS: CheckboxOption[] = [
+  { id: "none", label: "ไม่มีไฟฟ้า / ใช้เครื่องทำแสงสว่างอื่น ๆ" },
+  { id: "meter", label: "มีไฟฟ้า — ไฟบ้านหรือมิเตอร์ของตนเอง" },
+  { id: "shared", label: "มีไฟฟ้า — ไฟต่อพ่วงหรือแบตเตอรี่" },
+  { id: "generator", label: "มีไฟฟ้า — เครื่องปั่นไฟหรือโซลาร์เซลล์" },
+];
+
+/** ข้อ 4.7 แหล่งน้ำดื่ม */
+export const WATER_OPTIONS: CheckboxOption[] = [
+  { id: "bottled", label: "น้ำดื่มบรรจุขวด / ตู้หยอดน้ำ" },
+  { id: "tap", label: "น้ำประปา" },
+  { id: "well", label: "น้ำบ่อ / น้ำบาดาล" },
+  { id: "rain", label: "น้ำฝน / น้ำประปาภูเขา / ลำธาร" },
+];
+
+/** ข้อ 4.8 สภาพที่พักอาศัยและความปลอดภัยด้านภัยพิบัติ (ไม่เลือกเลย = ไม่มีความเสี่ยง) */
+export const DISASTER_OPTIONS: CheckboxOption[] = [
+  { id: "flood", label: "อาศัยอยู่ในพื้นที่อุทกภัย / น้ำท่วมซ้ำซาก" },
+  { id: "storm", label: "อาศัยอยู่ในพื้นที่ที่เกิดวาตภัย" },
+  { id: "landslide", label: "อาศัยอยู่ในพื้นที่แผ่นดินไหว / ดินโคลนถล่ม" },
+  { id: "air_pollution", label: "อาศัยอยู่ในพื้นที่ที่มีมลพิษทางอากาศ" },
+  { id: "noise_pollution", label: "อาศัยอยู่ในพื้นที่ที่มีมลพิษทางเสียง" },
+  { id: "epidemic", label: "อาศัยอยู่ในพื้นที่โรคระบาด" },
+];
+
 /** ข้อ 5.2 ความสัมพันธ์ระหว่างนักเรียนกับสมาชิกในครอบครัว */
 export const FAMILY_MEMBERS = [
   "บิดา",
@@ -66,6 +120,19 @@ export const FAMILY_MEMBERS = [
 
 export const RELATIONSHIP_LEVELS = ["สนิทสนม", "เฉยๆ", "ห่างเหิน", "ขัดแย้ง", "ไม่มี"] as const;
 export type RelationshipLevel = (typeof RELATIONSHIP_LEVELS)[number];
+
+/**
+ * แถวของตารางความสัมพันธ์: ใช้สมาชิกครัวเรือนที่ครูกรอกไว้จริง (ไม่นับตัวนักเรียน)
+ * แล้วต่อท้ายด้วยรายการมาตรฐานที่ยังไม่มี เพื่อให้ครบตามแบบฟอร์ม
+ */
+export function relationRowsOf(members: HouseholdMember[]): string[] {
+  const fromMembers = members
+    .map((m) => m.relation.trim())
+    .filter((r) => r !== "" && r !== "นักเรียน" && r !== "ตัวนักเรียน");
+  const rows = [...new Set(fromMembers)];
+  for (const standard of FAMILY_MEMBERS) if (!rows.includes(standard)) rows.push(standard);
+  return rows;
+}
 
 /** ข้อ 5.3 ผู้ดูแลกรณีผู้ปกครองไม่อยู่บ้าน (ตอบเพียง 1 ข้อ) */
 export const CARETAKER_OPTIONS: CheckboxOption[] = [
@@ -257,12 +324,18 @@ export function emptyHomeVisitForm(): HomeVisitForm {
   return {
     guardianOccupation: "",
     guardianEducation: "",
+    currentAddress: "",
+    disadvantages: [],
+    disabilities: [],
     members: [emptyMember("m1")],
     dependencies: [],
     housingType: "",
     housingConditions: [],
     vehicles: {},
     farmland: "",
+    electricity: "",
+    waterSources: [],
+    disasterRisks: [],
     hoursTogether: "",
     relations: {},
     caretakerWhenAway: "",
@@ -283,6 +356,11 @@ export function emptyHomeVisitForm(): HomeVisitForm {
     gaming: [],
     internet: "",
     devices: [],
+    friendInSchoolName: "",
+    friendInSchoolRoom: "",
+    friendInSchoolPhone: "",
+    friendOutsideName: "",
+    friendOutsidePhone: "",
   };
 }
 
@@ -302,12 +380,18 @@ export function emptyRecordInput(): HomeVisitRecordInput {
 export const CARRIED_FORM_KEYS = [
   "guardianOccupation",
   "guardianEducation",
+  "currentAddress",
+  "disadvantages",
+  "disabilities",
   "members",
   "dependencies",
   "housingType",
   "housingConditions",
   "vehicles",
   "farmland",
+  "electricity",
+  "waterSources",
+  "disasterRisks",
   "hoursTogether",
   "caretakerWhenAway",
   "travelKm",
@@ -316,7 +400,14 @@ export const CARRIED_FORM_KEYS = [
   "travelMode",
   "duties",
   "internet",
+  "friendInSchoolName",
+  "friendInSchoolRoom",
+  "friendInSchoolPhone",
+  "friendOutsideName",
+  "friendOutsidePhone",
 ] as const satisfies readonly (keyof HomeVisitForm)[];
+
+export type CarriedFormKey = (typeof CARRIED_FORM_KEYS)[number];
 
 export function inputFromPrevious(previous: HomeVisitRecordInput): HomeVisitRecordInput {
   const form = emptyHomeVisitForm();
@@ -324,6 +415,27 @@ export function inputFromPrevious(previous: HomeVisitRecordInput): HomeVisitReco
     CARRIED_FORM_KEYS.map((k) => [k, structuredClone(previous.form[k])])
   ) as Partial<HomeVisitForm>;
   return { ...emptyRecordInput(), form: { ...form, ...carried }, livesWith: previous.livesWith };
+}
+
+/** สถานะของข้อมูลที่ยกมาจากการเยี่ยมครั้งก่อน: เหมือนเดิม หรือครูแก้ไขแล้ว */
+export type CarryState = "same" | "changed";
+
+/**
+ * เทียบค่าปัจจุบันกับผลการเยี่ยมครั้งก่อน เฉพาะกลุ่มข้อมูลที่ยกมาให้
+ * คืน map ของ key → "same" | "changed" (ไม่มีผลครั้งก่อน = map ว่าง)
+ */
+export function carryStates(
+  form: HomeVisitForm,
+  previous: HomeVisitRecordInput | undefined
+): Map<CarriedFormKey, CarryState> {
+  const map = new Map<CarriedFormKey, CarryState>();
+  if (!previous) return map;
+  for (const key of CARRIED_FORM_KEYS) {
+    const before = JSON.stringify(previous.form[key] ?? null);
+    const after = JSON.stringify(form[key] ?? null);
+    map.set(key, before === after ? "same" : "changed");
+  }
+  return map;
 }
 
 /** รายการความเสี่ยงที่พบ (ข้อ 6) เป็นข้อความ สำหรับสรุปผล */
@@ -353,8 +465,10 @@ export function signBlockers(input: HomeVisitRecordInput): string[] {
     if (!input.cannotAccessReason.trim()) issues.push("ระบุเหตุผลที่เข้าเยี่ยมที่บ้านไม่ได้");
     if (!input.photos.some((p) => p.photoType === "with_signboard"))
       issues.push("แนบภาพนักเรียนคู่ป้ายชื่อโรงเรียน");
-  } else if (!input.photos.some((p) => p.photoType === "exterior")) {
-    issues.push("แนบภาพสภาพบ้านนักเรียน");
+  } else {
+    // แบบฟอร์มจริงบังคับ 2 ภาพ: ภายนอกที่พักอาศัย และภายในที่พักอาศัย
+    if (!input.photos.some((p) => p.photoType === "exterior")) issues.push("แนบภาพภายนอกที่พักอาศัย");
+    if (!input.photos.some((p) => p.photoType === "interior")) issues.push("แนบภาพภายในที่พักอาศัย");
   }
   return issues;
 }
@@ -389,12 +503,15 @@ export function buildDemoAutofill({
   now,
   previous,
   informant,
+  registryAddress,
 }: {
   studentId: string;
   now: string;
   previous?: HomeVisitRecordInput;
   /** ผู้ปกครองที่เชื่อมกับนักเรียน (ใช้เป็นผู้ให้ข้อมูล) */
   informant?: { name: string; relation: string };
+  /** ที่อยู่ตามทะเบียนบ้านจากทะเบียนนักเรียน (ใช้เติมที่อยู่ปัจจุบัน) */
+  registryAddress?: string;
 }): HomeVisitRecordInput {
   const h = hashOf(studentId);
   const pick = <T,>(list: readonly T[], salt: number): T => list[(h + salt) % list.length];
@@ -428,10 +545,21 @@ export function buildDemoAutofill({
     form.travelMode = pick(["motorcycle", "guardian", "bicycle", "school_bus"], 6);
     form.duties = ["housework"];
     form.internet = "can_access";
+    form.currentAddress = registryAddress ?? "";
+    form.disadvantages = fatherWage + motherBusiness < 9000 ? ["poor"] : [];
+    form.disabilities = [];
+    form.electricity = pick(["meter", "meter", "shared", "generator"], 10);
+    form.waterSources = [pick(["bottled", "tap", "well", "rain"], 11)];
+    form.disasterRisks = (h >> 7) % 3 === 0 ? [pick(["flood", "storm", "air_pollution"], 12)] : [];
+    form.friendInSchoolName = pick(["ด.ช.วีระ สีขาว", "ด.ญ.พิมพ์ชนก ใจงาม", "ด.ช.ธนกร แก้วใส"], 13);
+    form.friendInSchoolRoom = pick(["ม.3/1", "ม.3/2", "ม.3/3"], 14);
+    form.friendInSchoolPhone = "08x-xxx-" + String(1000 + (h % 9000));
+    form.friendOutsideName = (h >> 8) % 2 === 0 ? "เพื่อนบ้านวัยเดียวกัน (ไม่ได้เรียนที่โรงเรียนนี้)" : "";
+    form.friendOutsidePhone = "";
   }
 
   form.relations = Object.fromEntries(
-    FAMILY_MEMBERS.map((m, i) => [
+    relationRowsOf(form.members).map((m, i) => [
       m,
       m === "บิดา" || m === "มารดา" ? "สนิทสนม" : m === "ญาติ" ? "เฉยๆ" : i % 2 === 0 ? "สนิทสนม" : "ไม่มี",
     ])

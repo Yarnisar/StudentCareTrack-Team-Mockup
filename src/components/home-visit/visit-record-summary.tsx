@@ -4,13 +4,25 @@ import { Camera, Lock } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { useStore } from "@/lib/store";
 import { formatBaht, formatThaiDateTime } from "@/lib/format";
-import { memberTotal, riskFindingLabels } from "@/lib/home-visit-form";
+import {
+  DISABILITY_OPTIONS,
+  DISADVANTAGE_OPTIONS,
+  DISASTER_OPTIONS,
+  memberTotal,
+  riskFindingLabels,
+} from "@/lib/home-visit-form";
+import type { CheckboxOption } from "@/lib/home-visit-form";
 import { PHOTO_TYPE_LABEL, type HomeVisitRecord } from "@/lib/types";
 
 /** สรุปผลการเยี่ยมบ้าน (อ่านอย่างเดียว) สำหรับหน้ารายการนัดหมาย */
 export function VisitRecordSummary({ record }: { record: HomeVisitRecord }) {
   const store = useStore();
   const risks = riskFindingLabels(record.form);
+  const labelsOf = (ids: string[], options: CheckboxOption[]) =>
+    ids.map((id) => options.find((o) => o.id === id)?.label ?? id);
+  const disadvantages = labelsOf(record.form.disadvantages, DISADVANTAGE_OPTIONS);
+  const disabilities = labelsOf(record.form.disabilities, DISABILITY_OPTIONS);
+  const disasters = labelsOf(record.form.disasterRisks, DISASTER_OPTIONS);
 
   return (
     <>
@@ -47,6 +59,11 @@ export function VisitRecordSummary({ record }: { record: HomeVisitRecord }) {
               <span className="flex-1">รายได้เฉลี่ยต่อคนต่อเดือน</span>
               <span className="w-32 text-right">{formatBaht(record.householdIncomeAvg)} บาท</span>
             </div>
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2 text-[12.5px]">
+            <StatusChip label="ความด้อยโอกาส" labels={disadvantages} none="ไม่ด้อยโอกาส" />
+            <StatusChip label="ความพิการ" labels={disabilities} none="ไม่พิการ" />
+            <StatusChip label="ภัยพิบัติในพื้นที่" labels={disasters} none="ไม่มีความเสี่ยง" />
           </div>
           {record.livesWith && (
             <p className="mt-3 text-[13px] text-muted-foreground">
@@ -113,5 +130,21 @@ export function VisitRecordSummary({ record }: { record: HomeVisitRecord }) {
         </Card>
       </div>
     </>
+  );
+}
+
+/** สรุปสั้น ๆ ของกลุ่มสถานะ (ไม่มีรายการ = ข้อความ "ไม่มี" ของกลุ่มนั้น) */
+function StatusChip({ label, labels, none }: { label: string; labels: string[]; none: string }) {
+  const has = labels.length > 0;
+  return (
+    <span
+      className={
+        has
+          ? "rounded-md bg-risk-amber-bg px-2.5 py-1 font-semibold text-risk-amber"
+          : "rounded-md bg-surface px-2.5 py-1 text-muted-foreground"
+      }
+    >
+      {label}: {has ? labels.join(", ") : none}
+    </span>
   );
 }
