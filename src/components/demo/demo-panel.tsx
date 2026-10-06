@@ -2,7 +2,8 @@
 
 /**
  * แผงสาธิต — การ์ดลอยมุมขวาล่าง (จอกว้าง) / ปุ่มกลม + bottom sheet (จอโทรศัพท์)
- * - สวมบทบาทเป็น: สลับผู้ใช้สาธิตโดยไม่ reload
+ * - สวมบทบาทเป็น: เลือกกลุ่ม 4 กลุ่ม (ผู้ดูแลระบบ / ครู / นักเรียน / ผู้ปกครอง) แล้วสลับผู้ใช้โดยไม่ reload
+ *   — เมื่อเลือกครูจะแบ่งต่อเป็นครูประจำชั้น / ครูทั่วไป
  * - เครื่องมือของหน้านี้: ปุ่มที่หน้าลงทะเบียนผ่าน useDemoPageTool (lib/demo/page-tools.ts)
  * แสดงทุก build; ซ่อนทั้งหมดด้วย ?demo=0 จำเฉพาะผู้ใช้ที่เลือกและสถานะย่อ/ขยายข้าม reload
  */
@@ -18,12 +19,23 @@ import { initialOf } from "@/lib/format";
 import { useStore } from "@/lib/store";
 import type { User, UserRole } from "@/lib/types";
 
-const GROUPS: { label: string; roles: UserRole[] }[] = [
-  { label: "ผู้ดูแลระบบ", roles: ["admin_school"] },
-  { label: "ครู", roles: ["teacher_homeroom", "teacher_general"] },
-  { label: "ผู้ปกครอง", roles: ["parent"] },
-  { label: "นักเรียน", roles: ["student"] },
+type RoleTab = "admin" | "teacher" | "student" | "parent";
+type TeacherKind = "homeroom" | "general";
+
+/** ระดับแรกของแผง: 4 กลุ่มผู้ใช้ — ครูแบ่งต่อเป็นครูประจำชั้น / ครูทั่วไปเมื่อเลือกครู */
+const ROLE_TABS: { id: RoleTab; label: string; roles: UserRole[] }[] = [
+  { id: "admin", label: "ผู้ดูแลระบบ", roles: ["admin_school"] },
+  { id: "teacher", label: "ครู", roles: ["teacher_homeroom", "teacher_general"] },
+  { id: "student", label: "นักเรียน", roles: ["student"] },
+  { id: "parent", label: "ผู้ปกครอง", roles: ["parent"] },
 ];
+
+const TEACHER_KINDS: { id: TeacherKind; label: string; role: UserRole }[] = [
+  { id: "homeroom", label: "ครูประจำชั้น", role: "teacher_homeroom" },
+  { id: "general", label: "ครูทั่วไป", role: "teacher_general" },
+];
+
+const tabOfRole = (role: UserRole) => ROLE_TABS.find((t) => t.roles.includes(role))?.id ?? "admin";
 
 const PHONE_QUERY = "(max-width: 639px)";
 
@@ -188,65 +200,127 @@ function UserSection({ onAction }: { onAction?: () => void }) {
   const store = useStore();
   const switchUser = useSwitchUser();
   const options = demoUsers(store.users);
+  const current = store.currentUser;
+
+  // กลุ่มที่กำลังเปิดดู: ตามผู้ใช้ปัจจุบันจนกว่าจะกดเลือกกลุ่มอื่น (คำนวณระหว่าง render ไม่ใช้ effect)
+  const [pickedTab, setPickedTab] = useState<RoleTab | null>(null);
+  const [pickedKind, setPickedKind] = useState<TeacherKind | null>(null);
+  const tab = pickedTab ?? tabOfRole(current.role);
+  const kind: TeacherKind = pickedKind ?? (current.role === "teacher_general" ? "general" : "homeroom");
+
+  const rolesShown: UserRole[] =
+    tab === "teacher"
+      ? [TEACHER_KINDS.find((k) => k.id === kind)!.role]
+      : ROLE_TABS.find((t) => t.id === tab)!.roles;
+  const rows = options.filter(({ user }) => rolesShown.includes(user.role));
 
   const pick = (user: User) => {
-    if (user.userId !== store.currentUser.userId) switchUser(user, { stay: true });
+    setPickedTab(null);
+    setPickedKind(null);
+    if (user.userId !== current.userId) switchUser(user, { stay: true });
     onAction?.();
+  };
+
+  const chooseTab = (next: RoleTab) => {
+    const tabRoles = ROLE_TABS.find((t) => t.id === next)!.roles;
+    const only = options.filter(({ user }) => tabRoles.includes(user.role));
+    // กลุ่มที่มีผู้ใช้สาธิตคนเดียว (นักเรียน) สลับให้เลย
+    if (only.length === 1) pick(only[0].user);
+    else {
+      setPickedTab(next);
+      setPickedKind(null);
+    }
   };
 
   return (
     <section>
       <SectionTitle>สวมบทบาทเป็น</SectionTitle>
-      <div className="space-y-2.5">
-        {GROUPS.map((group) => {
-          const rows = options.filter(({ user }) => group.roles.includes(user.role));
-          if (rows.length === 0) return null;
+
+      <div role="tablist" aria-label="กลุ่มผู้ใช้" className="grid grid-cols-4 gap-1 rounded-xl bg-muted p-1">
+        {ROLE_TABS.map((t) => {
+          const selected = t.id === tab;
           return (
-            <div key={group.label}>
-              <div className="px-1 pb-0.5 text-[11.5px] font-semibold text-foreground/70">{group.label}</div>
-              <div className="space-y-0.5">
-                {rows.map(({ user, note }) => {
-                  const active = user.userId === store.currentUser.userId;
-                  return (
-                    <button
-                      key={user.userId}
-                      type="button"
-                      onClick={() => pick(user)}
-                      aria-current={active ? "true" : undefined}
-                      className={cn(
-                        "flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left transition-colors",
-                        active ? "bg-accent ring-1 ring-primary/40" : "hover:bg-muted"
-                      )}
-                    >
-                      <span
-                        className={cn(
-                          "flex size-8 shrink-0 items-center justify-center rounded-full text-[12px] font-bold",
-                          active ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
-                        )}
-                      >
-                        {initialOf(user.name.replace(/^ครู/, ""))}
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span
-                          className={cn(
-                            "block truncate text-[13px] font-semibold",
-                            active && "text-accent-foreground"
-                          )}
-                        >
-                          {user.name}
-                        </span>
-                        <span className="block truncate text-[11.5px] text-muted-foreground" title={note}>
-                          {note}
-                        </span>
-                      </span>
-                      {active && <Check className="size-4 shrink-0 text-primary" />}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+            <button
+              key={t.id}
+              type="button"
+              role="tab"
+              aria-selected={selected}
+              onClick={() => chooseTab(t.id)}
+              className={cn(
+                "rounded-lg px-1 py-1.5 text-[12px] font-semibold transition-colors",
+                selected ? "bg-card text-primary shadow-sm" : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              {t.label}
+            </button>
           );
         })}
+      </div>
+
+      {tab === "teacher" && (
+        <div role="tablist" aria-label="ประเภทครู" className="mt-2 grid grid-cols-2 gap-1">
+          {TEACHER_KINDS.map((k) => {
+            const selected = k.id === kind;
+            return (
+              <button
+                key={k.id}
+                type="button"
+                role="tab"
+                aria-selected={selected}
+                onClick={() => setPickedKind(k.id)}
+                className={cn(
+                  "rounded-lg border px-2 py-1.5 text-[12px] font-semibold transition-colors",
+                  selected
+                    ? "border-primary bg-accent text-accent-foreground"
+                    : "border-border text-muted-foreground hover:bg-muted"
+                )}
+              >
+                {k.label}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      <div className="mt-2 space-y-0.5">
+        {rows.map(({ user, note }) => {
+          const active = user.userId === current.userId;
+          return (
+            <button
+              key={user.userId}
+              type="button"
+              onClick={() => pick(user)}
+              aria-current={active ? "true" : undefined}
+              className={cn(
+                "flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left transition-colors",
+                active ? "bg-accent ring-1 ring-primary/40" : "hover:bg-muted"
+              )}
+            >
+              <span
+                className={cn(
+                  "flex size-8 shrink-0 items-center justify-center rounded-full text-[12px] font-bold",
+                  active ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                )}
+              >
+                {initialOf(user.name.replace(/^ครู/, ""))}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className={cn("block truncate text-[13px] font-semibold", active && "text-accent-foreground")}>
+                  {user.name}
+                </span>
+                <span className="block truncate text-[11.5px] text-muted-foreground" title={note}>
+                  {note}
+                </span>
+              </span>
+              {active && <Check className="size-4 shrink-0 text-primary" />}
+            </button>
+          );
+        })}
+        {rows.length === 0 && (
+          <p className="rounded-lg border border-dashed border-border px-3 py-3 text-center text-[12px] text-muted-foreground">
+            ไม่มีผู้ใช้สาธิตในกลุ่มนี้
+          </p>
+        )}
       </div>
     </section>
   );
