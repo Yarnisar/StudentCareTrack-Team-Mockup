@@ -3,8 +3,8 @@
 import { Check, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { cn } from "cn";
-import { AutoBadge, FillSource } from "./field-shell";
-import type { CheckboxOption } from "@/lib/home-visit-form";
+import { AutoBadge, CarryBadge, FillSource } from "./field-shell";
+import type { CarryState, CheckboxOption } from "@/lib/home-visit-form";
 
 /* ------------------------------------------------------------------ */
 /* หัวข้อของกลุ่มตัวเลือก                                              */
@@ -13,12 +13,14 @@ import type { CheckboxOption } from "@/lib/home-visit-form";
 function GroupHeader({
   label,
   source,
+  carry,
   hint,
   selectedCount,
   actions,
 }: {
   label: string;
   source?: FillSource;
+  carry?: CarryState;
   hint?: string;
   selectedCount?: number;
   actions?: ReactNode;
@@ -28,6 +30,7 @@ function GroupHeader({
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-[13.5px] font-semibold">{label}</span>
         {source && <AutoBadge source={source} />}
+        {carry && <CarryBadge state={carry} />}
         {selectedCount !== undefined && selectedCount > 0 && (
           <span className="rounded-full bg-accent px-2 py-0.5 text-[11.5px] font-semibold text-primary">
             เลือกแล้ว {selectedCount}
@@ -55,6 +58,7 @@ export function ChipGroup({
   onToggle,
   onClear,
   source,
+  carry,
   hint,
   columns = 2,
   /** ปุ่มทางลัดสำหรับหมวดความเสี่ยง: ยืนยันว่าไม่พบรายการใดในหมวดนี้ */
@@ -66,6 +70,7 @@ export function ChipGroup({
   onToggle: (id: string) => void;
   onClear?: () => void;
   source?: FillSource;
+  carry?: CarryState;
   hint?: string;
   columns?: number;
   noneLabel?: string;
@@ -77,6 +82,7 @@ export function ChipGroup({
       <GroupHeader
         label={label}
         source={source}
+        carry={carry}
         hint={hint}
         selectedCount={selected.length}
         actions={
@@ -155,6 +161,7 @@ export function ChipSelect({
   value,
   onChange,
   source,
+  carry,
   hint,
   columns = 2,
 }: {
@@ -163,12 +170,13 @@ export function ChipSelect({
   value: string;
   onChange: (v: string) => void;
   source?: FillSource;
+  carry?: CarryState;
   hint?: string;
   columns?: number;
 }) {
   return (
     <div>
-      <GroupHeader label={label} source={source} hint={hint} />
+      <GroupHeader label={label} source={source} carry={carry} hint={hint} />
       <div
         className="grid gap-2"
         style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
@@ -274,16 +282,18 @@ export function YesNoRows({
   values,
   onChange,
   source,
+  carry,
 }: {
   label: string;
   rows: CheckboxOption[];
   values: Record<string, boolean | undefined>;
   onChange: (id: string, value: boolean) => void;
   source?: FillSource;
+  carry?: CarryState;
 }) {
   return (
     <div>
-      <GroupHeader label={label} source={source} />
+      <GroupHeader label={label} source={source} carry={carry} />
       <div className="space-y-2">
         {rows.map((row) => {
           const value = values[row.id];

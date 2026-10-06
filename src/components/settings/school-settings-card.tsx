@@ -1,6 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { InlineConfirm } from "@/components/settings/confirm";
+import {
+  schoolSettingsSaveConfirm,
+  type ImpactContext,
+  type SettingChange,
+} from "@/components/settings/confirm-text";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -10,11 +16,23 @@ import { useStore, type SchoolSettingsPatch } from "@/lib/store";
 
 type Draft = Required<SchoolSettingsPatch>;
 
+const FIELD_LABEL: Record<keyof Draft, string> = {
+  schoolStartTime: "เวลาเข้าเรียน",
+  lateAlertThreshold: "แจ้งเตือนเมื่อมาสายครบ (ครั้ง/เดือน)",
+  behaviorAlertScore: "คะแนนความประพฤติที่แนะนำให้เปิด case",
+  pendingAutoConfirmDays: "ยืนยันอัตโนมัติเมื่อครบ (วันทำการ)",
+  sdq2ForNormalStudents: "ให้นักเรียนผลปกติทำ SDQ ครั้งที่ 2",
+};
+
+const shown = (v: Draft[keyof Draft]) =>
+  typeof v === "boolean" ? (v ? "ทำ" : "ไม่ทำ") : String(v);
+
 /**
- * ตั้งค่าระดับโรงเรียน (school_settings แถวเดียว) — อยู่นอก _prototype เพราะไม่ขึ้นกับแบบหน้าตั้งค่าที่ยังรอเลือก
- * กดบันทึกแล้วมีผลทันทีทุกหน้า (เช่น เวลาเข้าเรียนในหน้าเช็คอิน) และบันทึก audit UPDATE ค่าก่อน/หลัง
+ * ตั้งค่าระดับโรงเรียน (school_settings แถวเดียว)
+ * กดบันทึกแล้วยืนยันในที่ จากนั้นมีผลทันทีทุกหน้า (เช่น เวลาเข้าเรียนในหน้าเช็คอิน)
+ * และบันทึก audit UPDATE พร้อมค่าก่อน/หลัง
  */
-export function SchoolSettingsCard() {
+export function SchoolSettingsCard({ impact }: { impact: ImpactContext }) {
   const store = useStore();
   const s = store.schoolSettings;
   const fromStore = (): Draft => ({
@@ -26,10 +44,17 @@ export function SchoolSettingsCard() {
   });
   const [draft, setDraft] = useState<Draft>(fromStore);
   const [open, setOpen] = useState(false);
-  const set = <K extends keyof Draft>(key: K, value: Draft[K]) => setDraft((d) => ({ ...d, [key]: value }));
+  const [confirming, setConfirming] = useState(false);
+  const set = <K extends keyof Draft>(key: K, value: Draft[K]) => {
+    setDraft((d) => ({ ...d, [key]: value }));
+    setConfirming(false);
+  };
 
   const current = fromStore();
-  const dirty = (Object.keys(draft) as (keyof Draft)[]).some((k) => draft[k] !== current[k]);
+  const changes: SettingChange[] = (Object.keys(draft) as (keyof Draft)[])
+    .filter((k) => draft[k] !== current[k])
+    .map((k) => ({ label: FIELD_LABEL[k], before: shown(current[k]), after: shown(draft[k]) }));
+  const dirty = changes.length > 0;
   const valid =
     /^\d{2}:\d{2}$/.test(draft.schoolStartTime) &&
     draft.lateAlertThreshold >= 1 &&
@@ -110,13 +135,33 @@ export function SchoolSettingsCard() {
 
             <div className="mt-5 flex items-center justify-end gap-2">
               {!valid && <span className="mr-auto text-[12.5px] text-risk-red">ค่าที่กรอกไม่ถูกต้อง</span>}
-              <Button variant="ghost" disabled={!dirty} onClick={() => setDraft(current)}>
+              <Button
+                variant="ghost"
+                disabled={!dirty}
+                onClick={() => {
+                  setDraft(current);
+                  setConfirming(false);
+                }}
+              >
                 คืนค่า
               </Button>
-              <Button disabled={!dirty || !valid} onClick={() => store.updateSchoolSettings(draft)}>
+              <Button disabled={!dirty || !valid || confirming} onClick={() => setConfirming(true)}>
                 บันทึกการตั้งค่าโรงเรียน
               </Button>
             </div>
+
+            {confirming && dirty && valid && (
+              <div className="mt-3">
+                <InlineConfirm
+                  content={schoolSettingsSaveConfirm(changes, impact)}
+                  onConfirm={() => {
+                    store.updateSchoolSettings(draft);
+                    setConfirming(false);
+                  }}
+                  onCancel={() => setConfirming(false)}
+                />
+              </div>
+            )}
           </div>
         )}
       </CardContent>

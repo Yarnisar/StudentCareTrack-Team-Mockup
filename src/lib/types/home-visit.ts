@@ -60,12 +60,24 @@ export interface HouseholdMember {
 export interface HomeVisitForm {
   guardianOccupation: string;
   guardianEducation: string;
+  /** ที่อยู่ปัจจุบัน (ที่อยู่ตามทะเบียนบ้านมาจากทะเบียนนักเรียน) */
+  currentAddress: string;
+  /** ประเภทความด้อยโอกาส — รายการว่าง = ไม่ด้อยโอกาส */
+  disadvantages: string[];
+  /** ประเภทความพิการ — รายการว่าง = ไม่พิการ */
+  disabilities: string[];
   members: HouseholdMember[];
   dependencies: string[];
   housingType: string;
   housingConditions: string[];
   vehicles: Record<string, boolean | undefined>;
   farmland: string;
+  /** แหล่งไฟฟ้าหลักของที่พักอาศัย (ตอบข้อเดียว) */
+  electricity: string;
+  /** แหล่งน้ำดื่มของครัวเรือน */
+  waterSources: string[];
+  /** ความเสี่ยงด้านภัยพิบัติของที่พักอาศัย — รายการว่าง = ไม่มีความเสี่ยง */
+  disasterRisks: string[];
   hoursTogether: string;
   relations: Record<string, string>;
   caretakerWhenAway: string;
@@ -86,6 +98,13 @@ export interface HomeVisitForm {
   gaming: string[];
   internet: string;
   devices: string[];
+  /** เพื่อนสนิทของนักเรียนในโรงเรียน */
+  friendInSchoolName: string;
+  friendInSchoolRoom: string;
+  friendInSchoolPhone: string;
+  /** เพื่อนสนิทของนักเรียนนอกโรงเรียน */
+  friendOutsideName: string;
+  friendOutsidePhone: string;
 }
 
 export type HomeVisitPhotoType = "exterior" | "interior" | "with_signboard";
