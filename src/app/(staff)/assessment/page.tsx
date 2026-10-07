@@ -41,7 +41,7 @@ export default function AssessmentPage() {
 
         <Card>
           <CardContent className="p-6">
-            <h2 className="mb-4 text-[15.5px] font-bold">สถานะการประเมินรายบุคคล</h2>
+            <h2 className="mb-4 text-[15px] font-bold">สถานะรายบุคคล</h2>
 
             <div className="divide-y divide-border">
               {pager.slice.map((student) => {
@@ -62,7 +62,7 @@ export default function AssessmentPage() {
                       </div>
                     </div>
 
-                    <div className="flex flex-1 flex-wrap items-center gap-1.5 text-[11.5px]">
+                    <div className="flex flex-1 flex-wrap items-center gap-1.5 text-[12px]">
                       <OutcomeChip label="Red Flag" outcome={plan.redFlag?.result} note={rfFromSem1 ? "ภาค 1" : undefined} />
                       <OutcomeChip
                         label="9S"
@@ -155,10 +155,13 @@ function Chip({
     care: "bg-risk-red-bg text-risk-red",
   } as const;
 
-  const suffix = state === "pending" ? " · รอทำ" : hint ? ` · ${hint}` : state === "none" ? " · ยังไม่ทำ" : "";
+  const suffix = state === "pending" ? " · รอทำ" : hint ? ` · ${hint}` : "";
 
   return (
-    <span className={`rounded-md px-2 py-1 font-semibold ${styles[state]}`}>
+    <span
+      title={state === "none" ? "ยังไม่ทำ" : undefined}
+      className={`rounded-md px-2 py-1 font-semibold ${styles[state]}`}
+    >
       {label}
       {suffix}
     </span>

@@ -3,7 +3,7 @@
 import { use, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Check, ChevronLeft, Info, Lock, Sparkles, X } from "lucide-react";
+import { Check, ChevronLeft, Lock, Sparkles, X } from "lucide-react";
 import { cn } from "cn";
 import { PageHeader } from "@/components/layout/page-header";
 import { RiskBadge } from "@/components/shared/risk-badge";
@@ -124,7 +124,7 @@ export default function ScreeningFormPage({
       <div className="flex-1 overflow-y-auto p-8">
         <Link
           href="/screening"
-          className="mb-4 inline-flex items-center gap-1.5 text-[13.5px] font-semibold text-muted-foreground hover:text-foreground"
+          className="mb-4 inline-flex items-center gap-1.5 text-[13px] font-semibold text-muted-foreground hover:text-foreground"
         >
           <ChevronLeft className="size-4" /> กลับไปรายชื่อนักเรียน
         </Link>
@@ -166,34 +166,32 @@ export default function ScreeningFormPage({
                 ผู้คัดกรอง: {store.currentUser.name}
                 {existing?.status === "certified" &&
                   !readOnly &&
-                  " · รับรองข้อมูลแล้ว — ถ้าบันทึกการแก้ไข ต้องรับรองข้อมูลใหม่"}
+                  " · รับรองแล้ว — แก้ไขแล้วต้องรับรองใหม่"}
               </div>
             </div>
             <div className="text-right">
-              <div className="mb-1.5 text-[12.5px] text-muted-foreground">ผลรวมปัจจุบัน</div>
+              <div className="mb-1.5 text-[12px] text-muted-foreground">ผลรวม</div>
               <RiskBadge group={overall} />
-              <div className="mt-1 text-[11.5px] text-muted-foreground">
+              <div className="mt-1 text-[12px] text-muted-foreground">
                 {flaggedCount === 0 ? "ไม่พบมิติที่เข้าเกณฑ์" : `พบ ${flaggedCount} จาก 6 มิติ`}
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <div className="mb-4 flex items-center gap-3 rounded-xl border border-blue-200 bg-accent px-4 py-3">
-          <Info className="size-5 shrink-0 text-primary" />
-          <p className="text-[13.5px] text-accent-foreground">
-            แตะที่รายการที่พบในนักเรียน (แตะซ้ำเพื่อยกเลิก) · ไม่พบรายการใด = <b>ปกติ</b> ·
-            พบเกณฑ์เสี่ยง = <b>เสี่ยง</b> · พบเกณฑ์มีปัญหา = <b>มีปัญหา</b> — ผลคำนวณทันที ·
-            รายการที่มีป้าย <b>ระบบกำหนด</b> มาจากข้อมูลอื่น ติ๊กเองไม่ได้
-          </p>
-        </div>
+        <p
+          className="mb-4 text-xs text-muted-foreground"
+          title="ไม่พบรายการ = ปกติ · พบเกณฑ์เสี่ยง = เสี่ยง · พบเกณฑ์มีปัญหา = มีปัญหา · รายการ ระบบกำหนด มาจากข้อมูลอื่น ติ๊กเองไม่ได้"
+        >
+          แตะรายการที่พบในนักเรียน (แตะซ้ำเพื่อยกเลิก) · ผลคำนวณทันที
+        </p>
 
         {mentalPending && (
           <div className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-border bg-surface px-4 py-3 text-[13px]">
             <Sparkles className="size-4 shrink-0 text-primary" />
             <span className="flex-1">
-              มิติสุขภาพจิต<b>รอผลประเมิน</b> — ต้องมีผลแบบคัดกรอง Red Flag
-              {plan.redFlag ? " และ 9S" : ""} ของปีการศึกษานี้ก่อน
+              มิติสุขภาพจิต<b>รอผลประเมิน</b> — ต้องทำ Red Flag
+              {plan.redFlag ? " และ 9S" : ""} ก่อน
             </span>
             {(plan.next === "red_flag" || plan.next === "nine_s") && (
               <LinkButton size="sm" variant="outline" href={assessmentHref}>
@@ -236,7 +234,7 @@ export default function ScreeningFormPage({
                           aria-disabled={disabled}
                           onClick={() => toggle(item)}
                           className={cn(
-                            "flex min-h-12 w-full items-center gap-3 rounded-xl border px-3.5 py-2.5 text-left text-[14px] leading-snug transition-colors",
+                            "flex min-h-12 w-full items-center gap-3 rounded-xl border px-3.5 py-2.5 text-left text-[13px] leading-snug transition-colors",
                             "focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
                             disabled && "cursor-default",
                             active
@@ -263,32 +261,27 @@ export default function ScreeningFormPage({
                           <span className="flex-1">
                             {screeningItemLabel(item, { lateAlertThreshold: facts.lateAlertThreshold })}
                             {derived && (
-                              <span className="mt-0.5 block text-[11.5px] font-normal text-muted-foreground">
-                                {derivedNote(item)}
+                              <span className="mt-0.5 block text-[12px] font-normal text-muted-foreground">
+                                ระบบกำหนด · {derivedNote(item)}
                               </span>
                             )}
                           </span>
-                          {derived && (
-                            <span className="shrink-0 rounded-md bg-muted px-2 py-0.5 text-[11.5px] font-semibold text-muted-foreground">
-                              ระบบกำหนด
-                            </span>
-                          )}
                           <span
                             className={cn(
-                              "shrink-0 rounded-md px-2 py-0.5 text-[11.5px] font-semibold",
+                              "shrink-0 rounded-md px-2 py-0.5 text-[12px] font-semibold",
                               problem
                                 ? "bg-risk-red-bg text-risk-red"
                                 : "bg-risk-amber-bg text-risk-amber"
                             )}
                           >
-                            {problem ? "เกณฑ์มีปัญหา" : "เกณฑ์เสี่ยง"}
+                            {problem ? "มีปัญหา" : "เสี่ยง"}
                           </span>
                         </button>
                       );
                     })}
                   </div>
 
-                  <div className="mt-3 flex items-center justify-between text-[12.5px] text-muted-foreground">
+                  <div className="mt-3 flex items-center justify-between text-[12px] text-muted-foreground">
                     <span>
                       {manualSelected + result.derivedItemIds.length === 0
                         ? "ยังไม่พบรายการ"
@@ -308,7 +301,7 @@ export default function ScreeningFormPage({
                   {/* ผลที่ครูเลือก: ต่างจากผลที่คำนวณได้ไม่เกิน 1 ระดับ ต้องมีเหตุผล */}
                   {options.length > 0 && (
                     <div className="mt-3 border-t border-border pt-3">
-                      <div className="mb-2 flex flex-wrap items-center gap-2 text-[12.5px]">
+                      <div className="mb-2 flex flex-wrap items-center gap-2 text-[12px]">
                         <span className="text-muted-foreground">ผลที่ระบบคำนวณ</span>
                         <RiskBadge group={result.computedGroup} />
                         <span className="ml-auto text-muted-foreground">ผลที่ครูเลือก:</span>
@@ -351,11 +344,14 @@ export default function ScreeningFormPage({
 
         {!readOnly && (
           <div className="mt-6 flex flex-wrap items-center justify-between gap-3 pb-4">
-            <p className="text-[13px] text-muted-foreground">
+            <p
+              className="text-[13px] text-muted-foreground"
+              title="การเปิด case อัตโนมัติใช้ผลที่ระบบคำนวณ"
+            >
               {error ? (
                 <span className="text-risk-red">{error}</span>
               ) : (
-                "บันทึกเป็นร่างก่อน แล้วครูประจำชั้นรับรองข้อมูลในหน้าถัดไป — การเปิด case อัตโนมัติใช้ผลที่ระบบคำนวณ"
+                "บันทึกเป็นร่าง แล้วครูประจำชั้นรับรองในหน้าถัดไป"
               )}
             </p>
             <div className="flex gap-3">

@@ -128,10 +128,10 @@ function CareCasesContent() {
               <Card>
                 <CardContent className="p-5">
                   <h2 className="mb-1 flex items-center gap-2 text-[15px] font-bold">
-                    <Lightbulb className="size-4 text-risk-amber" /> ระบบแนะนำให้พิจารณา
+                    <Lightbulb className="size-4 text-risk-amber" /> แนะนำให้พิจารณา
                   </h2>
-                  <p className="mb-3 text-[11.5px] text-muted-foreground">
-                    ผล &quot;เสี่ยง&quot; หรือคะแนนความประพฤติต่ำกว่าเกณฑ์ — ครูประจำชั้นเป็นผู้ตัดสินใจเปิด case
+                  <p className="mb-3 text-[12px] text-muted-foreground">
+                    ครูประจำชั้นเป็นผู้ตัดสินใจเปิด case
                   </p>
                   <div className="space-y-2">
                     {suggestions.map((s) => {
@@ -147,8 +147,8 @@ function CareCasesContent() {
                               : "rounded-xl border border-border p-3"
                           }
                         >
-                          <div className="text-[13.5px] font-semibold">{st?.fullName}</div>
-                          <div className="mt-0.5 text-[11.5px] text-muted-foreground">
+                          <div className="text-[13px] font-semibold">{st?.fullName}</div>
+                          <div className="mt-0.5 text-[12px] text-muted-foreground">
                             {CASE_TRIGGER_SOURCE_LABEL[s.source]}
                             {s.summary ? ` · ${s.summary}` : ""}
                           </div>
@@ -195,10 +195,10 @@ function CareCasesContent() {
                         }
                       >
                         <div className="flex items-center justify-between gap-2">
-                          <span className="truncate text-[13.5px] font-semibold">{s?.fullName}</span>
+                          <span className="truncate text-[13px] font-semibold">{s?.fullName}</span>
                           {risk && c.status === "active" && <RiskBadge group={risk} />}
                         </div>
-                        <div className="mt-1 text-[11.5px] text-muted-foreground">
+                        <div className="mt-1 text-[12px] text-muted-foreground">
                           {c.caseId} ·{" "}
                           {c.status === "active"
                             ? "กำลังดำเนินการ"
@@ -206,7 +206,7 @@ function CareCasesContent() {
                           · ติดตาม {c.followups.length} ครั้ง
                         </div>
                         {noPlan && (
-                          <div className="mt-1 text-[11.5px] font-medium text-risk-amber">มีเหตุที่ยังไม่มีแผนรองรับ</div>
+                          <div className="mt-1 text-[12px] font-medium text-risk-amber">มีเหตุที่ยังไม่มีแผนรองรับ</div>
                         )}
                         {c.status === "closed" && c.closedAt && (
                           <div className="mt-0.5 text-[11px] text-muted-foreground">

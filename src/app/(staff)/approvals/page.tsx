@@ -31,7 +31,7 @@ export default function ApprovalsPage() {
     <>
       <PageHeader
         title="อนุมัติเอกสารส่งต่อ"
-        subtitle="เอกสารส่งต่อหน่วยงานภายนอกที่ผู้ปกครองลงนามแล้วและรอการอนุมัติ"
+        subtitle="เอกสารที่ผู้ปกครองลงนามแล้ว รอการอนุมัติ"
       />
       <div className="flex-1 overflow-y-auto p-4 md:p-8">
         {!isExecutive ? (
@@ -44,10 +44,9 @@ export default function ApprovalsPage() {
           <div className="space-y-5">
             <Card>
               <CardContent className="p-5">
-                <h2 className="text-[15.5px] font-bold">รออนุมัติ {queue.length} ฉบับ</h2>
+                <h2 className="text-[15px] font-bold">รออนุมัติ {queue.length} ฉบับ</h2>
                 <p className="mt-1 text-[12px] text-muted-foreground">
-                  อนุมัติแล้วครูประจำชั้นจึงส่งเอกสารให้หน่วยงานภายนอกได้ · ถ้าไม่อนุมัติ ต้องระบุเหตุผล
-                  และเอกสารจะกลับไปเป็นร่างให้ครูแก้ไข
+                  ไม่อนุมัติต้องระบุเหตุผล — เอกสารกลับเป็นร่างให้ครูแก้ไข
                 </p>
               </CardContent>
             </Card>
@@ -66,7 +65,7 @@ export default function ApprovalsPage() {
             {handled.length > 0 && (
               <Card>
                 <CardContent className="p-5">
-                  <h2 className="mb-2 text-[15.5px] font-bold">เอกสารที่อนุมัติแล้ว</h2>
+                  <h2 className="mb-2 text-[15px] font-bold">เอกสารที่อนุมัติแล้ว</h2>
                   <ul className="space-y-2">
                     {handled.map(({ referral, studentId }) => (
                       <li key={referral.referralId} className="rounded-xl border border-border p-3 text-[13px]">
@@ -74,7 +73,7 @@ export default function ApprovalsPage() {
                           <span className="font-semibold">
                             {store.getStudent(studentId)?.fullName} · {referral.externalAgency}
                           </span>
-                          <span className="text-[11.5px] text-muted-foreground">
+                          <span className="text-[12px] text-muted-foreground">
                             {referral.referralId} · {REFERRAL_STATUS_LABEL[referral.status]}
                             {referral.sentAt ? ` · ส่งเมื่อ ${formatThaiDate(referral.sentAt)}` : ""}
                           </span>
@@ -115,14 +114,18 @@ function ApprovalCard({ entry }: { entry: ReferralEntry }) {
     <Card>
       <CardContent className="space-y-3 p-6">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h3 className="text-[15.5px] font-bold">
+          <h3 className="text-[15px] font-bold">
             {student.fullName} · {student.roomName}
           </h3>
           <ReferralStatusChip referral={referral} />
         </div>
-        <p className="text-[12.5px] text-muted-foreground">
-          {referral.referralId} · {careCase.caseId} · หน่วยงาน {referral.externalAgency} · จัดทำโดย{" "}
-          {store.nameOf(referral.createdBy)} {formatThaiDate(referral.createdAt)} · ความยินยอมของผู้ปกครองปีนี้:{" "}
+        <p
+          className="text-[12px] text-muted-foreground"
+          title={`${referral.referralId} · ${careCase.caseId}`}
+        >
+          {referral.externalAgency} · จัดทำโดย {store.nameOf(referral.createdBy)} {formatThaiDate(referral.createdAt)}
+          {" · "}ขออนุมัติ {formatThaiDateTime(pending.requestedAt)}
+          {" · "}ความยินยอม:{" "}
           {store.consentStatusOf(studentId) === "granted" ? "ยินยอม" : "ยังไม่ได้รับความยินยอม"}
         </p>
 
@@ -130,18 +133,14 @@ function ApprovalCard({ entry }: { entry: ReferralEntry }) {
         <SignatureHistory referralId={referral.referralId} />
 
         {showContent ? (
-          <p className="rounded-xl bg-surface p-3.5 text-[13.5px] leading-relaxed whitespace-pre-line">
+          <p className="rounded-xl bg-surface p-3.5 text-[13px] leading-relaxed whitespace-pre-line">
             {referral.content}
           </p>
         ) : (
           <Button size="sm" variant="outline" onClick={openContent}>
-            ดูเนื้อหาเอกสาร (ระบบบันทึกการเปิดดู)
+            ดูเนื้อหาเอกสาร (บันทึกการเปิดดู)
           </Button>
         )}
-
-        <p className="text-[11.5px] text-muted-foreground">
-          ขออนุมัติเมื่อ {formatThaiDateTime(pending.requestedAt)}
-        </p>
 
         {declining ? (
           <div className="space-y-2 rounded-xl bg-surface p-3.5">
@@ -192,7 +191,7 @@ function ApprovalCard({ entry }: { entry: ReferralEntry }) {
           </div>
         )}
         {store.signBlockReason(pending.requestId) && (
-          <p className="text-[12.5px] text-muted-foreground">{store.signBlockReason(pending.requestId)}</p>
+          <p className="text-[12px] text-muted-foreground">{store.signBlockReason(pending.requestId)}</p>
         )}
         {error && <p className="text-[13px] text-risk-red">{error}</p>}
       </CardContent>

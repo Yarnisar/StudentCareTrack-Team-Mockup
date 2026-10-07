@@ -162,7 +162,7 @@ export function SdqForm({
             </div>
           )}
           {complete && showPreview && (
-            <p className="mt-3 text-[12.5px] text-muted-foreground">
+            <p className="mt-3 text-[12px] text-muted-foreground">
               คะแนนรวมพฤติกรรมที่เป็นปัญหา{" "}
               <b className="text-foreground">{preview.totalDifficulties}</b> คะแนน · แปลผลเบื้องต้น:{" "}
               <b className="text-foreground">{SDQ_LEVEL_LABEL[preview.level]}</b>
@@ -259,8 +259,8 @@ export function SdqForm({
 
       <p className="pb-6 text-center text-[12px] text-muted-foreground">
         {rater === "student"
-          ? "คำตอบของนักเรียนเป็นความลับ ครูจะเห็นเฉพาะผลสรุปเพื่อใช้ในการดูแลช่วยเหลือ"
-          : "ผลการประเมินใช้เพื่อการดูแลช่วยเหลือ ไม่มีผลต่อคะแนนหรือผลการเรียนของนักเรียน"}
+          ? "คำตอบเป็นความลับ ครูเห็นเฉพาะผลสรุปเพื่อการดูแลช่วยเหลือ"
+          : "ผลประเมินใช้เพื่อการดูแลช่วยเหลือ ไม่มีผลต่อคะแนนหรือผลการเรียน"}
       </p>
     </div>
   );

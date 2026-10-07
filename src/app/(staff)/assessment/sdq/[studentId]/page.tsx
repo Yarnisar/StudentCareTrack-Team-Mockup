@@ -89,9 +89,8 @@ function SdqContent({ studentId }: { studentId: string }) {
           {triggerText && set.length > 0 && (
             <div className="mb-4 flex items-center gap-3 rounded-xl border border-blue-200 bg-accent px-4 py-3">
               <Sparkles className="size-5 shrink-0 text-primary" />
-              <p className="text-[13.5px] text-accent-foreground">
-                {triggerText} — ระบบเปิดแบบประเมิน SDQ ครั้งที่ {plan.round} ให้ทุกฝ่ายแล้ว
-                ({set.map((f) => SDQ_RATER_LABEL[f.rater].replace("ประเมินตนเอง", "").replace("ประเมิน", "")).join(" / ")})
+              <p className="text-[13px] text-accent-foreground">
+                {triggerText} — เปิด SDQ ครั้งที่ {plan.round} ให้ทุกฝ่ายแล้ว
               </p>
             </div>
           )}
@@ -106,7 +105,7 @@ function SdqContent({ studentId }: { studentId: string }) {
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="mb-1 text-[11.5px] text-muted-foreground">ผล SDQ รวม ครั้งที่ {plan.round}</div>
+                  <div className="mb-1 text-[12px] text-muted-foreground">ผล SDQ รวม ครั้งที่ {plan.round}</div>
                   <CombinedSdqSummary combined={plan.combined} />
                 </div>
               </div>
@@ -117,7 +116,7 @@ function SdqContent({ studentId }: { studentId: string }) {
                     const done = record.status === "submitted";
                     return (
                       <div key={record.id} className="rounded-lg bg-surface p-3">
-                        <div className="text-[11.5px] text-muted-foreground">{SDQ_RATER_LABEL[record.rater]}</div>
+                        <div className="text-[12px] text-muted-foreground">{SDQ_RATER_LABEL[record.rater]}</div>
                         {done ? (
                           <>
                             <div className="mt-1 flex items-baseline gap-2">
@@ -143,7 +142,7 @@ function SdqContent({ studentId }: { studentId: string }) {
               )}
 
               {previousCombined && (
-                <p className="mt-3 flex flex-wrap items-center gap-2 border-t border-border pt-3 text-[12.5px] text-muted-foreground">
+                <p className="mt-3 flex flex-wrap items-center gap-2 border-t border-border pt-3 text-[12px] text-muted-foreground">
                   ผล SDQ รวม ครั้งที่ 1 (ภาคเรียนที่ 1): <CombinedSdqSummary combined={previousCombined} />
                 </p>
               )}
@@ -179,18 +178,17 @@ function SdqContent({ studentId }: { studentId: string }) {
                 {plan.next === "red_flag" || plan.next === "nine_s" ? (
                   <p className="text-sm text-muted-foreground">
                     ต้องทำ{plan.next === "red_flag" ? "แบบคัดกรอง Red Flag" : "แบบประเมิน 9S"}ก่อน
-                    ระบบจะเปิด SDQ ให้เมื่อผลเป็นควรดูแล
                   </p>
                 ) : plan.sdqRequired ? (
                   <>
                     <p className="text-sm text-muted-foreground">
                       {plan.needsCare
-                        ? `ผล Red Flag/9S ของปีการศึกษานี้ควรดูแล — ต้องทำ SDQ ครั้งที่ ${plan.round}`
-                        : `โรงเรียนกำหนดให้นักเรียนที่ปกติทำ SDQ ครั้งที่ ${plan.round} ด้วย`}
+                        ? `ผล Red Flag/9S ควรดูแล — ต้องทำ SDQ ครั้งที่ ${plan.round}`
+                        : `ต้องทำ SDQ ครั้งที่ ${plan.round} ตามที่โรงเรียนกำหนด`}
                     </p>
                     {plan.next === "wait_sdq_window" ? (
                       <p className="text-[13px] font-medium text-muted-foreground">
-                        รอเปิดช่วงทำ SDQ — เปิดแบบประเมินได้เมื่อถึงช่วงดำเนินงาน SDQ
+                        รอเปิดช่วงทำ SDQ
                       </p>
                     ) : (
                       store.canEdit(studentId) && (
@@ -200,7 +198,7 @@ function SdqContent({ studentId }: { studentId: string }) {
                   </>
                 ) : (
                   <p className="text-sm text-muted-foreground">
-                    ผล Red Flag/9S ปกติ — ไม่ต้องทำ SDQ ครั้งที่ {plan.round} (ตามการตั้งค่าของโรงเรียน)
+                    ผลปกติ — ไม่ต้องทำ SDQ ครั้งที่ {plan.round}
                   </p>
                 )}
               </CardContent>

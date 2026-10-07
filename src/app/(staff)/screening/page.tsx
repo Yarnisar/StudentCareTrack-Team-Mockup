@@ -23,7 +23,7 @@ export default function ScreeningListPage() {
     <>
       <PageHeader
         title="การคัดกรองนักเรียน"
-        subtitle={`คัดกรอง 6 มิติ ตามแนวทาง HERO OBEC CARE · ${store.currentTerm.label}`}
+        subtitle={`คัดกรอง 6 มิติ · ${store.currentTerm.label}`}
       />
 
       <div className="flex-1 overflow-y-auto p-8">
@@ -33,13 +33,13 @@ export default function ScreeningListPage() {
           <CardContent className="p-6">
             <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
               <div>
-                <h2 className="mb-1 text-[15.5px] font-bold">รายชื่อนักเรียนในห้องที่รับผิดชอบ</h2>
+                <h2 className="mb-1 text-[15px] font-bold">รายชื่อนักเรียนในห้องที่รับผิดชอบ</h2>
                 <p className="text-xs text-muted-foreground">
-                  คัดกรองได้ภาคเรียนละ 1 ครั้ง แก้ไขได้จนปิดช่วงดำเนินงาน — นับว่าส่งแล้วเมื่อครูประจำชั้นรับรองข้อมูล
+                  ภาคเรียนละ 1 ครั้ง · ส่งแล้วเมื่อครูประจำชั้นรับรอง
                 </p>
               </div>
               <div className="text-[13px] font-semibold text-primary">
-                ส่งแล้ว (รับรองแล้ว) {certified} / {students.length} คน
+                ส่งแล้ว {certified} / {students.length} คน
               </div>
             </div>
 
@@ -74,7 +74,7 @@ export default function ScreeningListPage() {
                       <div className="truncate text-xs text-muted-foreground">
                         {student.roomName} เลขที่ {student.classNo}
                         {screening
-                          ? ` · บันทึกล่าสุด ${formatThaiDate(screening.screenedAt)}${flagged ? ` · พบ: ${flagged}` : ""}`
+                          ? ` · บันทึก ${formatThaiDate(screening.screenedAt)}${flagged ? ` · พบ: ${flagged}` : ""}`
                           : " · ยังไม่คัดกรองภาคเรียนนี้"}
                       </div>
                     </div>

@@ -36,14 +36,14 @@ export function CaseTriggerOutcome({
           <div className="min-w-0 flex-1">
             <div className="font-semibold">
               {opened
-                ? "ระบบเปิด care case ให้อัตโนมัติแล้ว"
+                ? "เปิด care case อัตโนมัติแล้ว"
                 : appended
-                  ? "ระบบเพิ่มเหตุใหม่เข้า care case ที่เปิดอยู่แล้ว"
+                  ? "เพิ่มเหตุใหม่เข้า care case ที่เปิดอยู่แล้ว"
                   : "เหตุนี้อยู่ใน care case ที่เปิดอยู่แล้ว"}
             </div>
-            <div className="text-[12.5px]">
+            <div className="text-[12px]">
               {opened || appended
-                ? "แจ้งเตือนครูประจำชั้นแล้ว — จัดทำแผนช่วยเหลือรองรับเหตุนี้ในหน้า care case"
+                ? "แจ้งครูประจำชั้นแล้ว"
                 : "ไม่ได้เพิ่มซ้ำ"}
             </div>
           </div>

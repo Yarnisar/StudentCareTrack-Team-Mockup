@@ -33,7 +33,7 @@ const planLabel = (plans: CarePlan[], planId: string | null) => {
 
 function BlockedNote({ reason }: { reason: string | null }) {
   if (!reason) return null;
-  return <p className="text-[12.5px] text-muted-foreground">{reason}</p>;
+  return <p className="text-[12px] text-muted-foreground">{reason}</p>;
 }
 
 export function CaseDetail({ careCase }: { careCase: CareCase }) {
@@ -62,7 +62,7 @@ export function CaseDetail({ careCase }: { careCase: CareCase }) {
                 {active ? "กำลังดำเนินการ" : "ปิด case แล้ว"}
               </span>
             </div>
-            <p className="mt-1 text-[13.5px] text-muted-foreground">
+            <p className="mt-1 text-[13px] text-muted-foreground">
               {student.roomName} เลขที่ {student.classNo} · เปิด case {formatThaiDate(careCase.openedAt)} โดย{" "}
               {careCase.openedBy ? store.nameOf(careCase.openedBy) : "ระบบ (เปิดอัตโนมัติ)"}
             </p>
@@ -73,16 +73,6 @@ export function CaseDetail({ careCase }: { careCase: CareCase }) {
                 {careCase.closedBy ? store.nameOf(careCase.closedBy) : "ระบบปิดให้"}
               </p>
             )}
-          </div>
-          <div className="flex gap-6 text-right text-[13px]">
-            <div>
-              <div className="text-muted-foreground">แผน</div>
-              <div className="text-[15px] font-semibold">{careCase.plans.length}</div>
-            </div>
-            <div>
-              <div className="text-muted-foreground">ติดตามแล้ว</div>
-              <div className="text-[15px] font-semibold">{careCase.followups.length} ครั้ง</div>
-            </div>
           </div>
         </CardContent>
       </Card>
@@ -111,18 +101,17 @@ function TriggersCard({ careCase, canManage }: { careCase: CareCase; canManage: 
   return (
     <Card>
       <CardContent className="p-6">
-        <div className="mb-1 flex items-center justify-between gap-2">
-          <h3 className="text-[15.5px] font-bold">เหตุเปิด case</h3>
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <h3 className="text-[15px] font-bold">เหตุเปิด case</h3>
           {canManage && !adding && (
             <Button size="sm" variant="outline" onClick={() => setAdding(true)}>
               <Plus className="size-3.5" /> เพิ่มเหตุที่พบ
             </Button>
           )}
         </div>
-        <p className="mb-3 text-[11.5px] text-muted-foreground">
-          1 case มีได้หลายเหตุ เหตุใหม่ของนักเรียนคนเดิมเพิ่มเข้า case นี้
-          {unassigned > 0 && ` · ยังไม่มีแผนรองรับ ${unassigned} เหตุ`}
-        </p>
+        {unassigned > 0 && (
+          <p className="mb-3 text-[12px] font-medium text-risk-amber">ยังไม่มีแผนรองรับ {unassigned} เหตุ</p>
+        )}
 
         {adding && (
           <div className="mb-4 space-y-2 rounded-xl bg-surface p-3.5">
@@ -165,14 +154,14 @@ function TriggersCard({ careCase, canManage }: { careCase: CareCase; canManage: 
                 }
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="text-[13.5px] font-semibold">{CASE_TRIGGER_SOURCE_LABEL[t.source]}</span>
-                  <span className="text-[11.5px] text-muted-foreground">
+                  <span className="text-[13px] font-semibold">{CASE_TRIGGER_SOURCE_LABEL[t.source]}</span>
+                  <span className="text-[12px] text-muted-foreground">
                     {formatThaiDateTime(t.detectedAt)}
                     {t.sourceRefId ? ` · อ้างอิง ${t.sourceRefId}` : ""}
                   </span>
                 </div>
                 {t.summary && <p className="mt-0.5 text-[13px] text-muted-foreground">{t.summary}</p>}
-                <div className="mt-2 flex items-center gap-2 text-[12.5px]">
+                <div className="mt-2 flex items-center gap-2 text-[12px]">
                   <span className="text-muted-foreground">แผนที่รองรับ:</span>
                   {canManage && careCase.plans.length > 0 ? (
                     <select
@@ -222,7 +211,7 @@ function PlansCard({ careCase, canManage }: { careCase: CareCase; canManage: boo
     <Card>
       <CardContent className="p-6">
         <div className="mb-3 flex items-center justify-between gap-2">
-          <h3 className="text-[15.5px] font-bold">แผนช่วยเหลือ</h3>
+          <h3 className="text-[15px] font-bold">แผนช่วยเหลือ</h3>
           {canManage && !adding && (
             <Button size="sm" variant="outline" onClick={startAdding}>
               <Plus className="size-3.5" /> จัดทำแผนใหม่
@@ -283,10 +272,10 @@ function PlansCard({ careCase, canManage }: { careCase: CareCase; canManage: boo
           {careCase.plans.map((p, i) => (
             <div key={p.planId} className="rounded-xl border border-border p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="text-[14px] font-semibold">
+                <span className="text-[13px] font-semibold">
                   แผนที่ {i + 1} · {SUPPORT_TYPE_LABEL[p.supportType]}
                 </span>
-                <span className="text-[11.5px] text-muted-foreground">
+                <span className="text-[12px] text-muted-foreground">
                   {store.nameOf(p.createdBy)} · {formatThaiDate(p.createdAt)}
                 </span>
               </div>
@@ -297,10 +286,10 @@ function PlansCard({ careCase, canManage }: { careCase: CareCase; canManage: boo
                   </span>
                 ))}
               </div>
-              <p className="mt-2.5 rounded-lg bg-surface p-3 text-[13.5px] leading-relaxed">{p.goal}</p>
+              <p className="mt-2.5 rounded-lg bg-surface p-3 text-[13px] leading-relaxed">{p.goal}</p>
               {p.targetDate && (
                 <p className="mt-1.5 text-[12px] text-muted-foreground">
-                  วันที่คาดว่าจะบรรลุเป้าหมาย: {formatThaiDate(p.targetDate)}
+                  เป้าหมายภายใน {formatThaiDate(p.targetDate)}
                 </p>
               )}
             </div>
@@ -332,8 +321,8 @@ function FollowupsCard({ careCase }: { careCase: CareCase }) {
   return (
     <Card>
       <CardContent className="p-6">
-        <h3 className="mb-1 text-[15.5px] font-bold">ประวัติการช่วยเหลือและผลติดตาม</h3>
-        <p className="mb-4 text-[11.5px] text-muted-foreground">บันทึกแล้วแก้ไขไม่ได้ เพิ่มบันทึกใหม่ได้อย่างเดียว</p>
+        <h3 className="mb-1 text-[15px] font-bold">ประวัติการติดตามผล</h3>
+        <p className="mb-4 text-[12px] text-muted-foreground">บันทึกแล้วแก้ไขไม่ได้</p>
 
         {showForm && (
           <div className="mb-5 space-y-2.5 rounded-xl bg-surface p-4">
@@ -399,12 +388,12 @@ function FollowupsCard({ careCase }: { careCase: CareCase }) {
                 {i < careCase.followups.length - 1 && <span className="mt-1 w-px flex-1 bg-border" />}
               </div>
               <div className="flex-1 pb-3">
-                <div className="text-[14px] font-semibold">{f.actionTaken}</div>
+                <div className="text-[13px] font-semibold">{f.actionTaken}</div>
                 <div className="mt-0.5 mb-1 text-[12px] text-muted-foreground">
                   {formatThaiDate(f.followupDate)} · {store.nameOf(f.recordedBy)}
                   {planLabel(careCase.plans, f.planId) ? ` · ${planLabel(careCase.plans, f.planId)}` : ""}
                 </div>
-                <p className="text-[13.5px] leading-relaxed text-muted-foreground">{f.result}</p>
+                <p className="text-[13px] leading-relaxed text-muted-foreground">{f.result}</p>
               </div>
             </div>
           ))}
@@ -432,16 +421,15 @@ function ReferralsCard({ careCase }: { careCase: CareCase }) {
     <Card>
       <CardContent className="p-6">
         <div className="mb-1 flex items-center justify-between gap-2">
-          <h3 className="text-[15.5px] font-bold">ส่งต่อหน่วยงานภายนอก</h3>
+          <h3 className="text-[15px] font-bold">ส่งต่อหน่วยงานภายนอก</h3>
           {showActions && !open && (
             <Button size="sm" variant="outline" disabled={!!blocked} onClick={() => setOpen(true)}>
               <FileText className="size-3.5" /> จัดทำเอกสารส่งต่อภายนอก
             </Button>
           )}
         </div>
-        <p className="mb-3 text-[11.5px] text-muted-foreground">
-          ต้องได้รับความยินยอมของปีการศึกษานั้น และต้องผ่านสายการลงนามครบ (ผู้ปกครองลงนาม → ผู้ดูแลระบบอนุมัติ) จึงส่งต่อได้ ·
-          การส่งต่อภายนอกไม่ทำให้ case ปิด
+        <p className="mb-3 text-[12px] text-muted-foreground">
+          ต้องมีความยินยอมและผ่านสายการลงนามครบจึงส่งต่อได้
         </p>
         {showActions && <BlockedNote reason={blocked} />}
 
@@ -520,16 +508,16 @@ function ReferralRow({ referral, canManage }: { referral: ReferralDocument; canM
   return (
     <div className="rounded-xl border border-border p-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className="text-[13.5px] font-semibold">{referral.externalAgency}</span>
+        <span className="text-[13px] font-semibold">{referral.externalAgency}</span>
         <ReferralStatusChip referral={referral} />
       </div>
-      <div className="mt-0.5 text-[11.5px] text-muted-foreground">
+      <div className="mt-0.5 text-[12px] text-muted-foreground">
         {referral.referralId} · จัดทำโดย {store.nameOf(referral.createdBy)} · {formatThaiDate(referral.createdAt)}
         {referral.sentAt && ` · ส่งเมื่อ ${formatThaiDate(referral.sentAt)} โดย ${store.nameOf(referral.sentBy)}`}
       </div>
       <p className="mt-1.5 text-[13px] whitespace-pre-line text-muted-foreground">{referral.content}</p>
       {referral.status === "voided" && referral.voidReason && (
-        <p className="mt-1.5 text-[12.5px] text-risk-red">
+        <p className="mt-1.5 text-[12px] text-risk-red">
           ยกเลิกเอกสารโดย {store.nameOf(referral.voidedBy)} · เหตุผล: {referral.voidReason}
         </p>
       )}
@@ -543,7 +531,7 @@ function ReferralRow({ referral, canManage }: { referral: ReferralDocument; canM
         <div className="mt-3 space-y-1.5">
           {prompt ? (
             <div className="space-y-2 rounded-lg bg-surface p-3">
-              <Label htmlFor={`vr-${referral.referralId}`} className="text-[12.5px]">
+              <Label htmlFor={`vr-${referral.referralId}`} className="text-[12px]">
                 {prompt === "void_request" ? "เหตุผลที่ยกเลิกคำขอลงนาม" : "เหตุผลที่ยกเลิกเอกสารส่งต่อ"}
               </Label>
               <Input
@@ -552,8 +540,8 @@ function ReferralRow({ referral, canManage }: { referral: ReferralDocument; canM
                 onChange={(e) => setReason(e.target.value)}
                 placeholder="เช่น แก้ไขเนื้อหาที่ส่งต่อใหม่"
               />
-              <p className="text-[11.5px] text-muted-foreground">
-                ระบบไม่ลบรายการใด ๆ — คำขอและเอกสารที่ยกเลิกยังอยู่ในประวัติพร้อมเหตุผล
+              <p className="text-[12px] text-muted-foreground">
+                รายการที่ยกเลิกยังอยู่ในประวัติพร้อมเหตุผล
               </p>
               <div className="flex gap-2">
                 <Button
@@ -606,7 +594,7 @@ function ReferralRow({ referral, canManage }: { referral: ReferralDocument; canM
           )}
           {referral.status === "draft" && <BlockedNote reason={requestBlocked} />}
           {referral.status !== "draft" && referral.status !== "approved" && pending && (
-            <p className="text-[12.5px] text-muted-foreground">
+            <p className="text-[12px] text-muted-foreground">
               รอ{SIGNATURE_STEP_LABEL[pending.step]} · ขอเมื่อ {formatThaiDate(pending.requestedAt)}
             </p>
           )}
@@ -626,8 +614,8 @@ function CloseBar({ careCase }: { careCase: CareCase }) {
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 pb-4">
-      <p className="text-[13px] text-muted-foreground">
-        ทุกการเปลี่ยนแปลงถูกบันทึกใน audit log · นักเรียนย้ายออกหรือจบการศึกษา ระบบปิด case ให้เอง
+      <p className="text-[13px] text-muted-foreground" title="ทุกการเปลี่ยนแปลงถูกบันทึกใน audit log">
+        นักเรียนย้ายออกหรือจบการศึกษา ระบบปิด case ให้เอง
       </p>
       {show && (
         <div className="flex flex-col items-end gap-1">

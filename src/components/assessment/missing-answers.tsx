@@ -79,11 +79,10 @@ export function MissingSummary({
       <div className="flex gap-2.5">
         <AlertCircle className="mt-0.5 size-5 shrink-0 text-risk-red" />
         <div className="min-w-0 flex-1">
-          <p className="text-[14px] font-bold text-risk-red">
-            ยังตอบไม่ครบ เหลืออีก {missing.length} ข้อ
+          <p className="text-[13px] font-bold text-risk-red">
+            ยังไม่ได้ตอบ {missing.length} ข้อ
           </p>
-          <p className="mt-0.5 text-[12.5px] text-risk-red">กดเลขข้อเพื่อไปที่คำถามนั้น</p>
-          <div className="mt-2.5 flex flex-wrap gap-1.5">
+          <div className="mt-2.5 flex flex-wrap gap-1.5" title="กดเลขข้อเพื่อไปที่คำถามนั้น">
             {missing.map((item) => (
               <button
                 key={item.key}
@@ -133,5 +132,5 @@ export function QuestionNumber({
 
 export function MissingNote({ show }: { show: boolean }) {
   if (!show) return null;
-  return <p className="mt-1 text-[12.5px] font-semibold text-risk-red">ยังไม่ได้ตอบข้อนี้</p>;
+  return <p className="mt-1 text-[12px] font-semibold text-risk-red">ยังไม่ได้ตอบข้อนี้</p>;
 }

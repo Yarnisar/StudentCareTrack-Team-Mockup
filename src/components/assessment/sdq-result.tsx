@@ -33,7 +33,7 @@ export function CombinedSdqSummary({
   combined: CombinedSdqResult | null;
   className?: string;
 }) {
-  if (!combined) return <span className={cn("text-[12.5px] text-muted-foreground", className)}>ยังไม่เปิดแบบประเมิน</span>;
+  if (!combined) return <span className={cn("text-[12px] text-muted-foreground", className)}>ยังไม่เปิดแบบประเมิน</span>;
   return (
     <span className={cn("inline-flex flex-wrap items-center gap-2", className)}>
       {combined.level ? (
@@ -41,7 +41,7 @@ export function CombinedSdqSummary({
       ) : (
         <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-semibold text-muted-foreground">รอฉบับครู</span>
       )}
-      <span className="text-[11.5px] text-muted-foreground">{combinedSdqBasisLabel(combined)}</span>
+      <span className="text-[12px] text-muted-foreground">{combinedSdqBasisLabel(combined)}</span>
     </span>
   );
 }
