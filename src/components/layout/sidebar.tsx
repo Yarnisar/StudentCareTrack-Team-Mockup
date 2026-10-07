@@ -13,6 +13,7 @@ import {
   House,
   IdCard,
   LayoutGrid,
+  ScanLine,
   School,
   Settings,
   ShieldCheck,
@@ -36,7 +37,8 @@ const ICONS: Record<string, LucideIcon> = {
   "/behavior": Activity,
   "/characteristics": Star,
   "/documents": FileText,
-  "/checkin": IdCard,
+  "/checkin": ScanLine,
+  "/cards": IdCard,
   "/approvals": ShieldCheck,
   "/settings": Settings,
 };

@@ -19,21 +19,36 @@ import {
 } from "@/components/ui/table";
 import { byClassNo, formatThaiDate } from "@/lib/format";
 import { useStore } from "@/lib/store";
-import { ID_CARD_STATUS_LABEL, REVOKE_REASONS, type IdCard } from "@/lib/types";
+import {
+  ID_CARD_STATUS_LABEL,
+  REVOKE_REASONS,
+  STAFF_REVOKE_REASONS,
+  type CardOwnerKind,
+  type IdCard,
+} from "@/lib/types";
 
 /** แสดงรหัส QR เพียงบางส่วน — รหัสเต็มใช้ยืนยันตัวตนได้ จึงไม่แสดงเป็นข้อความในตาราง */
 const maskToken = (token: string) => `••••${token.slice(-4)}`;
 
-type Pending = { mode: "revoke" | "reissue"; cardId: string; studentId: string };
+type Pending = { mode: "revoke" | "reissue"; cardId: string; userId: string };
+
+/** แถวในตาราง: เจ้าของบัตรหนึ่งคน (นักเรียนหรือบุคลากร) */
+interface Row {
+  userId: string;
+  name: string;
+  sub: string;
+}
 
 /**
  * รายชื่อนักเรียนพร้อมสถานะบัตร — ออกบัตร / ออกบัตรใหม่ / เพิกถอน (เฉพาะแอดมิน)
  * การเพิกถอนต้องระบุเหตุผลเสมอ และไม่มีการลบบัตรออกจากระบบ
  */
 export function CardRoster({
+  kind,
   selected,
   onToggle,
 }: {
+  kind: CardOwnerKind;
   selected: string[];
   onToggle: (cardId: string) => void;
 }) {
@@ -44,15 +59,25 @@ export function CardRoster({
   const [message, setMessage] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
 
-  const students = store.students.filter((s) => s.status === "studying").sort(byClassNo);
+  const isStaffKind = kind === "staff";
+  const reasons = isStaffKind ? STAFF_REVOKE_REASONS : REVOKE_REASONS;
+  const rows: Row[] = isStaffKind
+    ? store.staffAccounts.map((u) => ({ userId: u.userId, name: u.name, sub: `${u.title ?? ""} · ${u.refId ?? ""}` }))
+    : store.students
+        .filter((s) => s.status === "studying")
+        .sort(byClassNo)
+        .flatMap((s) => {
+          const userId = store.users.find((u) => u.role === "student" && u.refId === s.studentId)?.userId;
+          return userId ? [{ userId, name: s.fullName, sub: `${s.roomName} เลขที่ ${s.classNo}` }] : [];
+        });
   const [pageSize, setPageSize] = useState(10);
-  const pager = usePagination(students, pageSize);
+  const pager = usePagination(rows, pageSize);
 
-  const issue = (studentId: string) => {
-    const result = store.issueCard(studentId);
+  const issue = (userId: string) => {
+    const result = store.issueCardToUser(userId);
     setMessage(
       result.ok
-        ? { tone: "ok", text: `ออกบัตรใหม่ให้ ${store.getStudent(studentId)?.fullName} แล้ว` }
+        ? { tone: "ok", text: `ออกบัตรใหม่ให้ ${store.nameOf(userId)} แล้ว` }
         : { tone: "error", text: result.error }
     );
   };
@@ -62,7 +87,7 @@ export function CardRoster({
     const result =
       pending.mode === "revoke"
         ? store.revokeCard(pending.cardId, reason)
-        : store.reissueCard(pending.studentId, reason);
+        : store.reissueCardToUser(pending.userId, reason);
     if (!result.ok) {
       setMessage({ tone: "error", text: result.error });
       return;
@@ -109,7 +134,7 @@ export function CardRoster({
           <TableHeader>
             <TableRow>
               <TableHead className="w-10" aria-label="เลือกเพื่อพิมพ์" />
-              <TableHead>นักเรียน</TableHead>
+              <TableHead>{isStaffKind ? "บุคลากร" : "นักเรียน"}</TableHead>
               <TableHead>สถานะบัตร</TableHead>
               <TableHead>รหัส QR</TableHead>
               <TableHead>ออกบัตรเมื่อ</TableHead>
@@ -117,28 +142,26 @@ export function CardRoster({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {pager.slice.map((student) => {
-              const active = store.activeCardOfStudent(student.studentId);
-              const history = store.cardsOfStudent(student.studentId);
-              const status = store.cardStatusOfStudent(student.studentId);
-              const open = expanded === student.studentId;
+            {pager.slice.map((row) => {
+              const active = store.activeCardOfUser(row.userId);
+              const history = store.cardsOfUser(row.userId);
+              const status = store.cardStatusOfUser(row.userId);
+              const open = expanded === row.userId;
 
               return (
-                <TableRow key={student.studentId}>
+                <TableRow key={row.userId}>
                   <TableCell>
                     {active && (
                       <Checkbox
                         checked={selected.includes(active.cardId)}
                         onCheckedChange={() => onToggle(active.cardId)}
-                        aria-label={`เลือกบัตรของ ${student.fullName} เพื่อพิมพ์`}
+                        aria-label={`เลือกบัตรของ ${row.name} เพื่อพิมพ์`}
                       />
                     )}
                   </TableCell>
                   <TableCell>
-                    <div className="font-semibold">{student.fullName}</div>
-                    <div className="text-[12px] text-muted-foreground">
-                      {student.roomName} เลขที่ {student.classNo}
-                    </div>
+                    <div className="font-semibold">{row.name}</div>
+                    <div className="text-[12px] text-muted-foreground">{row.sub}</div>
                   </TableCell>
                   <TableCell>
                     {status === "active" && (
@@ -162,7 +185,7 @@ export function CardRoster({
                     {history.length > 1 && (
                       <button
                         type="button"
-                        onClick={() => setExpanded(open ? null : student.studentId)}
+                        onClick={() => setExpanded(open ? null : row.userId)}
                         className="mt-1 block text-[12px] text-primary hover:underline"
                       >
                         {open ? "ซ่อนประวัติบัตร" : `ประวัติบัตร ${history.length} ใบ`}
@@ -178,7 +201,7 @@ export function CardRoster({
                   </TableCell>
                   <TableCell className="text-right">
                     {isAdmin && !active && (
-                      <Button size="sm" onClick={() => issue(student.studentId)}>
+                      <Button size="sm" onClick={() => issue(row.userId)}>
                         <CreditCard className="size-4" /> ออกบัตร
                       </Button>
                     )}
@@ -191,9 +214,9 @@ export function CardRoster({
                             setPending({
                               mode: "reissue",
                               cardId: active.cardId,
-                              studentId: student.studentId,
+                              userId: row.userId,
                             });
-                            setReason(REVOKE_REASONS[0]);
+                            setReason(reasons[0]);
                           }}
                         >
                           <RotateCcw className="size-4" /> ออกใบใหม่
@@ -205,9 +228,9 @@ export function CardRoster({
                             setPending({
                               mode: "revoke",
                               cardId: active.cardId,
-                              studentId: student.studentId,
+                              userId: row.userId,
                             });
-                            setReason(REVOKE_REASONS[0]);
+                            setReason(reasons[0]);
                           }}
                         >
                           <Ban className="size-4" /> เพิกถอน
@@ -244,12 +267,12 @@ export function CardRoster({
               {pending.mode === "revoke"
                 ? "บัตรจะสแกนไม่ได้ทันที แต่ยังอยู่ในประวัติ"
                 : "เพิกถอนใบเดิม แล้วออกรหัส QR ใหม่"}{" "}
-              — {store.getStudent(pending.studentId)?.fullName}
+              — {store.nameOf(pending.userId)}
             </p>
             <div className="mt-3 space-y-1.5">
               <Label htmlFor="revoke-reason">เหตุผล (บังคับ)</Label>
               <div className="flex flex-wrap gap-1.5">
-                {REVOKE_REASONS.map((r) => (
+                {reasons.map((r) => (
                   <button
                     key={r}
                     type="button"

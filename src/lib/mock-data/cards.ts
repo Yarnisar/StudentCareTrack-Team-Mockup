@@ -7,7 +7,7 @@
  */
 
 import type { CardTemplateSettings, IdCard } from "../types";
-import { generatedRoster, students, studentUserId, USER } from "./core";
+import { generatedRoster, students, studentUserId, USER, users } from "./core";
 import { hashText, Rng } from "./prng";
 
 const ISSUED_AT = "2569-05-18T08:30";
@@ -89,7 +89,35 @@ const generatedCards: IdCard[] = generatedRoster.profiles.flatMap((p) => {
   ];
 });
 
-export const idCards: IdCard[] = [...baseIdCards, ...generatedCards];
+/**
+ * บัตรบุคลากร: ทุกบัญชีบุคลากร (ครู + แอดมิน) มีบัตรใช้งานได้ ยกเว้น U-T13 ยังไม่มีบัตร (สาธิตการออกบัตร)
+ * และ U-T05 บัตรชำรุดแล้วออกใบใหม่ — สร้างต่อท้ายนักเรียนเพื่อไม่ให้รหัสของนักเรียนเปลี่ยน
+ */
+const STAFF_ROLES = ["admin_school", "teacher_homeroom", "teacher_general"];
+const staffUsers = users.filter((u) => STAFF_ROLES.includes(u.role));
+let staffSeq = 0;
+const staffCard = (userId: string, extra: Partial<IdCard> = {}): IdCard => ({
+  cardId: `IDC-S${String(++staffSeq).padStart(2, "0")}`,
+  userId,
+  qrCode: newToken(),
+  status: "active",
+  issuedAt: ISSUED_AT,
+  revokedAt: null,
+  revokeReason: null,
+  issuedBy: USER.admin,
+  academicYear: 2569,
+  ...extra,
+});
+const staffCards: IdCard[] = staffUsers.flatMap((u) => {
+  if (u.userId === USER.kamol) return [];
+  if (u.userId !== USER.wimon) return [staffCard(u.userId)];
+  return [
+    staffCard(u.userId, { status: "revoked", revokedAt: "2569-12-02T13:10", revokeReason: "บัตรชำรุด" }),
+    staffCard(u.userId, { issuedAt: "2569-12-02T13:15" }),
+  ];
+});
+
+export const idCards: IdCard[] = [...baseIdCards, ...generatedCards, ...staffCards];
 
 export const initialCardTemplate: CardTemplateSettings = {
   academicYear: 2569,
