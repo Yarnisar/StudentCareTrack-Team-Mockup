@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { PageHeader } from "@/components/layout/page-header";
-import { AssessmentRouteDiagram } from "@/components/assessment/route-diagram";
 import { CombinedSdqSummary } from "@/components/assessment/sdq-result";
 import { PagerNumbered, usePagination } from "@/components/shared/pagination";
 import { WindowNotice } from "@/components/shared/window-notice";
@@ -39,31 +38,6 @@ export default function AssessmentPage() {
 
       <div className="flex-1 overflow-y-auto p-8">
         <WindowNotice activity="sdq" className="mb-4" />
-
-        <Card className="mb-5">
-          <CardContent className="p-6">
-            <h2 className="text-[15.5px] font-bold">ลำดับการประเมินด้านสุขภาพจิต</h2>
-            <p className="mt-1 mb-4 text-xs text-muted-foreground">
-              เส้นทางด้านล่างมาจากกฎจริงใน lib/rules.ts — ผล Red Flag/9S เป็นตัวกำหนดว่าต้องทำ SDQ หรือไม่
-            </p>
-            <div className="grid gap-5 lg:grid-cols-[minmax(0,360px)_1fr]">
-              <AssessmentRouteDiagram />
-              <div className="grid content-start gap-3 text-[13px]">
-                <div className={round === 1 ? "rounded-lg border border-primary bg-accent p-3" : "rounded-lg bg-surface p-3"}>
-                  <div className="mb-1 font-semibold">ภาคเรียนที่ 1 · SDQ ครั้งที่ 1</div>
-                  นักเรียนทุกคนทำ Red Flag → 9S (ข้าม 9S ถ้า Red Flag ควรดูแล) → คนที่ควรดูแลทำ SDQ
-                </div>
-                <div className={round === 2 ? "rounded-lg border border-primary bg-accent p-3" : "rounded-lg bg-surface p-3"}>
-                  <div className="mb-1 font-semibold">ภาคเรียนที่ 2 · SDQ ครั้งที่ 2</div>
-                  ไม่ทำ Red Flag/9S ซ้ำ (ยกเว้นคนที่ยังไม่เคยประเมิน) · คนที่ควรดูแลทำ SDQ ครั้งที่ 2
-                  {store.schoolSettings.sdq2ForNormalStudents
-                    ? " · โรงเรียนให้คนที่ปกติทำด้วย"
-                    : " · คนที่ปกติไม่ต้องทำ (ตามการตั้งค่าโรงเรียน)"}
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
 
         <Card>
           <CardContent className="p-6">
