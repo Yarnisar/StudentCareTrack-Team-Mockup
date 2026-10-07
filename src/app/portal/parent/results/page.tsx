@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { Wand2 } from "lucide-react";
 import { MobileShell } from "@/components/layout/mobile-shell";
 import { SdqForm } from "@/components/assessment/sdq-form";
+import { sdqAnswersFor } from "@/lib/demo/assessment-autofill";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useStore } from "@/lib/store";
@@ -28,6 +30,8 @@ function ParentResultsPageContent() {
   const portalStudentId = usePortalStudent().studentId ?? "";
   const [mode, setMode] = useState<"view" | "take" | "read">("view");
   const [error, setError] = useState<string | null>(null);
+  /** คำตอบตั้งต้นของปุ่ม "เริ่มและกรอกอัตโนมัติ" (เฉพาะสาธิต) */
+  const [prefill, setPrefill] = useState<Record<number, 0 | 1 | 2> | null>(null);
 
   const student = store.getStudent(portalStudentId);
   const parentSdq = store.sdqFormFor(portalStudentId, "parent");
@@ -49,8 +53,10 @@ function ParentResultsPageContent() {
         <div className="space-y-4 p-5">
           <ChildSwitcher />
           <SdqForm
+            key={prefill ? "prefilled" : "blank"}
             rater="parent"
             layout="mobile"
+            initialAnswers={prefill ?? undefined}
             submitLabel="ส่งแบบประเมิน"
             onSubmit={(answers) => {
               const res = store.saveSdq(portalStudentId, "parent", answers);
@@ -126,8 +132,24 @@ function ParentResultsPageContent() {
                     <p className="mt-1 text-muted-foreground">
                       ผู้ปกครองคนใดทำก็ได้ 1 ฉบับ — เมื่อส่งแล้วผู้ปกครองคนอื่นจะเห็นแต่แก้ไขไม่ได้
                     </p>
-                    <Button className="mt-3 h-12 w-full" onClick={() => setMode("take")}>
+                    <Button
+                      className="mt-3 h-12 w-full"
+                      onClick={() => {
+                        setPrefill(null);
+                        setMode("take");
+                      }}
+                    >
                       เริ่มทำแบบประเมินฉบับผู้ปกครอง
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="mt-2 h-11 w-full"
+                      onClick={() => {
+                        setPrefill(sdqAnswersFor("normal"));
+                        setMode("take");
+                      }}
+                    >
+                      <Wand2 className="size-4" /> เริ่มและกรอกอัตโนมัติ
                     </Button>
                   </>
                 ) : (

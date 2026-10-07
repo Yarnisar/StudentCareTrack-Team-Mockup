@@ -327,7 +327,8 @@ export const DEMO_USERS: { userId: string; note: string }[] = [
   { userId: USER.prapa, note: "ครูประจำชั้น ม.3/2 · เคยเป็นครูประจำชั้นของห้องนี้ปีก่อน" },
   { userId: USER.kamol, note: "ครูใหม่ · เริ่มต้นไม่มีการมอบหมาย (ใช้ลองมอบหมายครูในหน้าตั้งค่า)" },
   { userId: USER.admin, note: "ผู้ดูแลระบบ (ผู้อำนวยการ/รองฝ่ายกิจการนักเรียนใช้บัญชีนี้)" },
-  { userId: studentUserId("30125"), note: "นักเรียน ม.3/1" },
+  { userId: studentUserId("30125"), note: "นักเรียน ม.3/1 · ส่ง SDQ ครั้งที่ 2 แล้ว" },
+  { userId: studentUserId("30118"), note: "นักเรียน ม.3/1 · ยังไม่ส่ง SDQ ครั้งที่ 2 (มีแบบให้ทำ)" },
   { userId: USER.ratana, note: "ผู้ปกครองของ ด.ญ. แพรวา" },
   { userId: USER.pimjai, note: "ผู้ปกครองของนักเรียน 2 คน" },
 ];
