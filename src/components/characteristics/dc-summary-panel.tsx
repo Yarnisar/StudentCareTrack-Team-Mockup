@@ -101,9 +101,9 @@ export function DcSummaryPanel({ roomId }: { roomId: string }) {
   return (
     <div className="space-y-5">
       {readiness.deadline && (
-        <div className="flex items-center gap-2.5 rounded-xl bg-surface px-4 py-2.5 text-[12.5px] text-muted-foreground">
+        <div className="flex items-center gap-2.5 rounded-xl bg-surface px-4 py-2.5 text-[12px] text-muted-foreground">
           <CalendarClock className="size-4 shrink-0" />
-          กำหนดส่งคะแนน ปพ.5 ของภาคเรียนนี้ {formatThaiDate(readiness.deadline.date)} (ข้อมูลจากงานวิชาการ)
+          กำหนดส่งคะแนน ปพ.5 {formatThaiDate(readiness.deadline.date)}
           {store.isDcDeadlinePassed() && " · เลยกำหนดแล้ว"}
         </div>
       )}
@@ -111,11 +111,11 @@ export function DcSummaryPanel({ roomId }: { roomId: string }) {
       {readiness.pending.length > 0 && (
         <div className="flex flex-wrap items-center gap-3 rounded-xl border border-amber-200 bg-risk-amber-bg px-4 py-3.5">
           <AlertTriangle className="size-5 shrink-0 text-risk-amber" />
-          <p className="flex-1 text-[13.5px] text-risk-amber">
-            ยังมี <b>{readiness.pending.length} รายวิชา</b> ที่ครูประจำวิชายังให้คะแนน (ปพ.5) ไม่ครบ —{" "}
+          <p className="flex-1 text-[13px] text-risk-amber">
+            ยังมี <b>{readiness.pending.length} รายวิชา</b> ยังให้คะแนนไม่ครบ —{" "}
             {readiness.status === "deadline_passed"
-              ? "เลยกำหนดส่งแล้ว จึงสรุปเป็น ปพ.6 ได้ ระบบจะบันทึกรายวิชาที่ยังไม่ส่งไว้กับผลสรุป"
-              : "สรุปเป็น ปพ.6 ได้เมื่อส่งครบทุกวิชา หรือเมื่อเลยกำหนดส่งแล้ว"}
+              ? "เลยกำหนดแล้ว สรุปได้ และจะบันทึกรายวิชาที่ยังไม่ส่งไว้กับผล"
+              : "สรุปได้เมื่อส่งครบ หรือเลยกำหนด"}
           </p>
           {(isHomeroom || store.currentUser.role === "admin_school") &&
             (notifiedCount === null ? (
@@ -123,7 +123,7 @@ export function DcSummaryPanel({ roomId }: { roomId: string }) {
                 ส่งการแจ้งเตือน
               </Button>
             ) : (
-              <span className="text-[12.5px] font-semibold text-risk-amber">
+              <span className="text-[12px] font-semibold text-risk-amber">
                 แจ้งเตือนครูประจำวิชาแล้ว {notifiedCount} คน
               </span>
             ))}
@@ -134,11 +134,11 @@ export function DcSummaryPanel({ roomId }: { roomId: string }) {
         <Card>
           <CardContent className="p-6">
             <div className="mb-4">
-              <h2 className="text-[15.5px] font-bold">ผลการประเมินคุณลักษณะอันพึงประสงค์ 8 ด้าน</h2>
-              <p className="mt-0.5 text-xs text-muted-foreground">
+              <h2 className="text-[15px] font-bold">ผลประเมิน 8 ด้าน</h2>
+              <p className="mt-0.5 text-[12px] text-muted-foreground">
                 {isHomeroom
-                  ? "ตัวเลขเริ่มต้นคือฐานนิยมของคะแนนทุกตัวชี้วัดจากทุกรายวิชา (ค่าที่ระบบเสนอ) — กดช่องเพื่อแก้ระดับพร้อมเหตุผล"
-                  : "ช่องเส้นประ = ค่าที่ระบบเสนอ ยังไม่ได้สรุป · ครูประจำชั้นเป็นผู้สรุป"}
+                  ? "ค่าเริ่มต้นเป็นค่าที่ระบบเสนอ กดช่องเพื่อแก้พร้อมเหตุผล"
+                  : "ช่องเส้นประ = ค่าที่ระบบเสนอ ยังไม่สรุป"}
               </p>
             </div>
 
@@ -151,7 +151,7 @@ export function DcSummaryPanel({ roomId }: { roomId: string }) {
                     <tr className="border-b-2 border-border">
                       <th className="pb-2.5 text-left text-[12px] font-semibold text-muted-foreground">นักเรียน</th>
                       {store.dcCriteria.map((c) => (
-                        <th key={c.criteriaId} className="pb-2.5 text-center text-[11.5px] font-semibold text-muted-foreground">
+                        <th key={c.criteriaId} className="pb-2.5 text-center text-[12px] font-semibold text-muted-foreground">
                           {c.shortName}
                         </th>
                       ))}
@@ -168,8 +168,8 @@ export function DcSummaryPanel({ roomId }: { roomId: string }) {
                       return (
                         <tr key={student.studentId} className="border-b border-border">
                           <td className="py-2.5">
-                            <div className="text-[13.5px] font-semibold">{student.fullName}</div>
-                            <div className="text-[11.5px] text-muted-foreground">เลขที่ {student.classNo}</div>
+                            <div className="text-[13px] font-semibold">{student.fullName}</div>
+                            <div className="text-[12px] text-muted-foreground">เลขที่ {student.classNo}</div>
                           </td>
                           {store.dcCriteria.map((c) => {
                             const level = isHomeroom
@@ -201,7 +201,7 @@ export function DcSummaryPanel({ roomId }: { roomId: string }) {
                           <td className="py-2.5 text-right">
                             {summary ? (
                               <div>
-                                <span className="rounded-full bg-risk-green-bg px-2.5 py-1 text-[11.5px] font-semibold text-risk-green">
+                                <span className="rounded-full bg-risk-green-bg px-2.5 py-1 text-[12px] font-semibold text-risk-green">
                                   สรุปแล้ว
                                 </span>
                                 {changedSinceSummary && isHomeroom && (
@@ -232,7 +232,7 @@ export function DcSummaryPanel({ roomId }: { roomId: string }) {
               <div className="mt-5 rounded-xl border border-border bg-surface p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <div className="text-[13.5px] font-bold">
+                    <div className="text-[13px] font-bold">
                       {sel.student.fullName} · ด้าน{sel.criteria.name}
                     </div>
                     <div className="mt-0.5 text-[12px] text-muted-foreground">
@@ -261,7 +261,7 @@ export function DcSummaryPanel({ roomId }: { roomId: string }) {
                             ? clearOverride(sel.studentId, sel.criteriaId)
                             : setOverride(sel.studentId, sel.criteriaId, { level: lv })
                         }
-                        className={`rounded-lg px-3 py-1.5 text-[12.5px] font-semibold ${
+                        className={`rounded-lg px-3 py-1.5 text-[12px] font-semibold ${
                           current === lv ? DC_LEVEL_STYLE[lv] : "border border-border bg-card hover:bg-muted"
                         }`}
                       >
@@ -277,7 +277,7 @@ export function DcSummaryPanel({ roomId }: { roomId: string }) {
                 </div>
                 {sel.override && sel.override.level !== sel.suggested && (
                   <div className="mt-3">
-                    <label className="text-[12.5px] font-semibold">
+                    <label className="text-[12px] font-semibold">
                       เหตุผลที่ต่างจากค่าที่ระบบเสนอ <span className="text-risk-red">*</span>
                     </label>
                     <Textarea
@@ -293,13 +293,10 @@ export function DcSummaryPanel({ roomId }: { roomId: string }) {
             )}
 
             <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
-              <p className="text-[12px] text-muted-foreground">
-                ระดับคุณภาพที่ระบบเสนอ = ฐานนิยมของคะแนนตัวชี้วัดในด้านนั้นจากทุกรายวิชา (ค่าเท่ากันเลือกระดับที่ต่ำกว่า)
-              </p>
               {isHomeroom && (
-                <div className="flex items-center gap-3">
+                <div className="ml-auto flex items-center gap-3">
                   {message && (
-                    <span className={`text-[12.5px] font-semibold ${message.ok ? "text-risk-green" : "text-risk-red"}`}>
+                    <span className={`text-[12px] font-semibold ${message.ok ? "text-risk-green" : "text-risk-red"}`}>
                       {message.text}
                     </span>
                   )}
@@ -316,7 +313,7 @@ export function DcSummaryPanel({ roomId }: { roomId: string }) {
               )}
             </div>
             {isHomeroom && anySummarized && (
-              <p className="mt-2 text-right text-[11.5px] text-muted-foreground">
+              <p className="mt-2 text-right text-[12px] text-muted-foreground">
                 สรุปล่าสุด{" "}
                 {(() => {
                   const s = roomStudents.map((st) => store.dcSummaryOf(st.studentId, termId)).find(Boolean);
@@ -331,7 +328,7 @@ export function DcSummaryPanel({ roomId }: { roomId: string }) {
           <Card>
             <CardContent className="p-6">
               <h3 className="text-[15px] font-bold">เกณฑ์ระดับคุณภาพ</h3>
-              <p className="mt-0.5 mb-3 text-[11.5px] text-muted-foreground">ตามหลักสูตรแกนกลางการศึกษาขั้นพื้นฐาน พ.ศ. 2551</p>
+              <p className="mt-0.5 mb-3 text-[12px] text-muted-foreground">หลักสูตรแกนกลาง พ.ศ. 2551</p>
               <div className="space-y-2">
                 {DC_LEVELS.map((level) => (
                   <div key={level} className="flex items-center gap-3">
@@ -343,7 +340,7 @@ export function DcSummaryPanel({ roomId }: { roomId: string }) {
                 ))}
               </div>
               <p className="mt-3 border-t border-border pt-3 text-[12px] leading-relaxed text-muted-foreground">
-                นักเรียนต้องได้ระดับ &quot;ผ่าน&quot; ขึ้นไปทุกด้าน จึงจะผ่านเกณฑ์การจบช่วงชั้น
+                ต้องได้ &quot;ผ่าน&quot; ขึ้นไปทุกด้านจึงผ่านเกณฑ์
               </p>
             </CardContent>
           </Card>
@@ -353,7 +350,7 @@ export function DcSummaryPanel({ roomId }: { roomId: string }) {
               <div className="mb-2 flex items-center justify-between">
                 <h3 className="text-[15px] font-bold">สถานะการส่ง ปพ.5 รายวิชา</h3>
                 <span
-                  className={`text-[12.5px] font-bold ${
+                  className={`text-[12px] font-bold ${
                     submittedCount === submissions.length ? "text-risk-green" : "text-risk-amber"
                   }`}
                 >
@@ -364,14 +361,14 @@ export function DcSummaryPanel({ roomId }: { roomId: string }) {
                 {submissions.map((s) => (
                   <div key={s.teachingId} className="flex items-center justify-between py-2.5">
                     <div>
-                      <div className="text-[13.5px] font-medium">{s.subject}</div>
-                      <div className="text-[11.5px] text-muted-foreground">{store.nameOf(s.teacherId)}</div>
+                      <div className="text-[13px] font-medium">{s.subject}</div>
+                      <div className="text-[12px] text-muted-foreground">{store.nameOf(s.teacherId)}</div>
                     </div>
                     <span
                       className={
                         s.submitted
-                          ? "rounded-full bg-risk-green-bg px-2.5 py-1 text-[11.5px] font-semibold text-risk-green"
-                          : "rounded-full bg-risk-amber-bg px-2.5 py-1 text-[11.5px] font-semibold text-risk-amber"
+                          ? "rounded-full bg-risk-green-bg px-2.5 py-1 text-[12px] font-semibold text-risk-green"
+                          : "rounded-full bg-risk-amber-bg px-2.5 py-1 text-[12px] font-semibold text-risk-amber"
                       }
                     >
                       {s.submitted ? "ส่งแล้ว" : s.filled > 0 ? `ให้คะแนนแล้ว ${s.filled}/${s.total}` : "รอส่งผล"}

@@ -14,7 +14,7 @@ export default function CharacteristicsPage() {
     <>
       <PageHeader
         title="คุณลักษณะอันพึงประสงค์"
-        subtitle={`ประเมิน 8 ด้าน · ครูประจำวิชาบันทึก ปพ.5 → ครูประจำชั้นสรุป ปพ.6 · ${store.currentTerm.label}`}
+        subtitle={`${store.currentTerm.label}`}
       />
       {/* เปลี่ยนผู้ใช้ (role switcher) → เริ่มสถานะของหน้าใหม่ */}
       <CharacteristicsContent key={store.currentUser.userId} />

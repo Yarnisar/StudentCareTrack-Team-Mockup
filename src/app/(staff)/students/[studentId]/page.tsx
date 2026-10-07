@@ -67,7 +67,7 @@ export default function StudentDetailPage({
         <div className="mb-4 flex items-center justify-between">
           <Link
             href="/students"
-            className="inline-flex items-center gap-1.5 text-[13.5px] font-semibold text-muted-foreground hover:text-foreground"
+            className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-muted-foreground hover:text-foreground"
           >
             <ChevronLeft className="size-4" /> กลับไปรายชื่อนักเรียน
           </Link>
@@ -88,10 +88,10 @@ export default function StudentDetailPage({
                 <h2 className="text-xl font-bold">{student.fullName}</h2>
                 {sensitive && risk && <RiskBadge group={risk} />}
               </div>
-              <p className="mt-1 text-[13.5px] text-muted-foreground">
+              <p className="mt-1 text-[13px] text-muted-foreground">
                 {student.roomName} เลขที่ {student.classNo}
                 {sensitive ? ` · เลขประจำตัว ${student.studentId}` : ""}
-                {sensitive && screening ? ` · คัดกรอง (รับรองแล้ว) ล่าสุด ${formatThaiDate(screening.screenedAt)}` : ""}
+                {sensitive && screening ? ` · คัดกรองล่าสุด ${formatThaiDate(screening.screenedAt)}` : ""}
               </p>
             </div>
           </CardContent>
@@ -100,16 +100,17 @@ export default function StudentDetailPage({
         <div className="grid gap-5 xl:grid-cols-[1fr_1.45fr]">
           <Card className="self-start">
             <CardContent className="p-6">
-              <h3 className="text-[15.5px] font-bold">ข้อมูลพื้นฐาน</h3>
-              <p className="mt-1 mb-3 text-[11.5px] text-muted-foreground">
-                อ้างอิงจากงานทะเบียนนักเรียนของโรงเรียน — อ่านอย่างเดียว
-                {!sensitive && " · ข้อมูลอื่นเปิดให้เฉพาะครูประจำชั้นของห้องนี้และแอดมิน"}
-              </p>
-              <dl className="divide-y divide-border">
+              <h3 className="text-[15px] font-bold">ข้อมูลพื้นฐาน</h3>
+              {!sensitive && (
+                <p className="mt-1 text-[12px] text-muted-foreground">
+                  ข้อมูลอื่นเปิดให้เฉพาะครูประจำชั้นและแอดมิน
+                </p>
+              )}
+              <dl className="mt-3 divide-y divide-border">
                 {info.map(([label, value]) => (
                   <div key={label} className="flex gap-3 py-2.5">
                     <dt className="w-36 shrink-0 text-[13px] text-muted-foreground">{label}</dt>
-                    <dd className="flex-1 text-[13.5px] font-medium">{value}</dd>
+                    <dd className="flex-1 text-[13px] font-medium">{value}</dd>
                   </div>
                 ))}
               </dl>

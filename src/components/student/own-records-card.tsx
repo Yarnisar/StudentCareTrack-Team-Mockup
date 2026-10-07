@@ -21,7 +21,7 @@ const outcomeLabel = (r: "normal" | "needs_care") => (r === "needs_care" ? "ค�
 function Group({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div className="border-t border-border pt-3 first:border-t-0 first:pt-0">
-      <div className="mb-2 text-[12.5px] font-semibold text-muted-foreground">{title}</div>
+      <div className="mb-2 text-[12px] font-semibold text-muted-foreground">{title}</div>
       <div className="space-y-2">{children}</div>
     </div>
   );
@@ -71,7 +71,6 @@ export function OwnRecordsCard({ studentId }: { studentId: string }) {
   return (
     <SectionCard
       title="บันทึกที่คุณเคยบันทึกไว้"
-      aside={<Chip>อ่านอย่างเดียว</Chip>}
       note="คุณเคยเป็นครูประจำชั้นของนักเรียนคนนี้ จึงเห็นเฉพาะบันทึกที่ตัวเองบันทึกไว้ และแก้ไขไม่ได้"
     >
       <div className="space-y-3">
@@ -165,7 +164,7 @@ export function OwnRecordsCard({ studentId }: { studentId: string }) {
                     {c.status === "active" ? "เปิดอยู่" : "ปิดแล้ว"}
                   </Chip>
                 </div>
-                <ul className="mt-1.5 space-y-1 text-[12.5px] text-muted-foreground">
+                <ul className="mt-1.5 space-y-1 text-[12px] text-muted-foreground">
                   {opened && <li>คุณเปิด case เมื่อ {formatThaiDate(c.openedAt)}</li>}
                   {closed && c.closedAt && (
                     <li>

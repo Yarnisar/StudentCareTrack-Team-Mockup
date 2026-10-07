@@ -41,7 +41,7 @@ export function SdqCard({ studentId }: { studentId: string }) {
           {nextHref && (
             <Link
               href={`/assessment/${nextHref}/${studentId}`}
-              className="text-[12.5px] font-semibold text-primary hover:underline"
+              className="text-[12px] font-semibold text-primary hover:underline"
             >
               ไปที่แบบประเมิน →
             </Link>
@@ -50,7 +50,7 @@ export function SdqCard({ studentId }: { studentId: string }) {
       }
     >
       {combined && (
-        <div className="mb-3 flex flex-wrap items-center gap-2 text-[12.5px]">
+        <div className="mb-3 flex flex-wrap items-center gap-2 text-[12px]">
           <span className="text-muted-foreground">ผลรวม:</span>
           <CombinedSdqSummary combined={combined} />
         </div>
@@ -68,12 +68,12 @@ export function SdqCard({ studentId }: { studentId: string }) {
                   done ? "rounded-xl border border-border p-4" : "rounded-xl border border-dashed border-border bg-surface p-4"
                 }
               >
-                <div className="text-[12.5px] text-muted-foreground">{SDQ_RATER_LABEL[rater]}</div>
+                <div className="text-[12px] text-muted-foreground">{SDQ_RATER_LABEL[rater]}</div>
                 {done && rec ? (
                   <>
                     <div className="my-1.5 text-2xl font-bold">
                       {rec.totalDifficulties}
-                      <span className="ml-1 text-xs font-medium text-muted-foreground">คะแนน</span>
+                      <span className="ml-1 text-[12px] font-medium text-muted-foreground">คะแนน</span>
                     </div>
                     {rec.level && <SdqLevelBadge level={rec.level} />}
                     <div className="mt-1.5 text-[11px] text-muted-foreground">
@@ -100,7 +100,7 @@ export function SdqCard({ studentId }: { studentId: string }) {
       )}
 
       {previous && (
-        <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-border pt-3 text-[12.5px]">
+        <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-border pt-3 text-[12px]">
           <span className="text-muted-foreground">
             ครั้งที่ {previous.round} ({termLabelOf(previous.termId)}):
           </span>

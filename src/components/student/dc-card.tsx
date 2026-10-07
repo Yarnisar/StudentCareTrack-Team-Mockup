@@ -57,7 +57,7 @@ export function DcCard({ studentId }: { studentId: string }) {
         </>
       )}
       {documents.length > 0 && (
-        <div className="mt-3 border-t border-border pt-3 text-[12.5px]">
+        <div className="mt-3 border-t border-border pt-3 text-[12px]">
           <div className="mb-1 font-semibold">เอกสารที่ออกแล้ว</div>
           {documents.map((d) => (
             <div key={d.docId} className="text-muted-foreground">
