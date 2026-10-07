@@ -13,22 +13,14 @@ import { windowSaveConfirm, type ImpactContext } from "@/components/settings/con
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { compareThaiDate, formatThaiDate, thaiDateOf } from "@/lib/format";
+import { OperatingWindowCards } from "./operating-window-cards";
+import { OperatingWindowsTimeline } from "./operating-windows-timeline";
+import { addDaysThai, compareThaiDate, formatThaiDate, thaiDateOf } from "@/lib/format";
 import { useStore } from "@/lib/store";
 import {
-  OPERATING_ACTIVITIES,
   OPERATING_ACTIVITY_LABEL,
-  WINDOW_STATUS_LABEL,
   type OperatingActivity,
-  type WindowStatus,
 } from "@/lib/types";
-
-const STATUS_CLASS: Record<WindowStatus, string> = {
-  open: "bg-risk-green-bg text-risk-green",
-  upcoming: "bg-accent text-primary",
-  closed: "bg-muted text-muted-foreground",
-  none: "bg-risk-amber-bg text-risk-amber",
-};
 
 interface Draft {
   opensAt: string;
@@ -37,62 +29,19 @@ interface Draft {
 }
 
 export function OperatingWindowsPanel({ impact }: { impact: ImpactContext }) {
-  const store = useStore();
   const [selected, setSelected] = useState<OperatingActivity | null>(null);
 
   return (
-    <div className="flex min-h-0 flex-1">
+    <div className="relative flex min-h-0 min-w-0 flex-1">
       <div className="min-w-0 flex-1 overflow-y-auto p-6">
         <h2 className="text-[15.5px] font-bold">ช่วงดำเนินงาน</h2>
         <p className="mt-0.5 mb-3 text-[12.5px] text-muted-foreground">
-          คลิกแถวเพื่อแก้ไข · มีได้ 1 ช่วงต่อกิจกรรมต่อภาคเรียน · หลังวันปิดระบบล็อกการบันทึกเสมอ
+          มีได้ 1 ช่วงต่อกิจกรรมต่อภาคเรียน · หลังวันปิดระบบล็อกการบันทึกเสมอ
           ดูข้อมูลเดิมได้แต่บันทึกเพิ่มไม่ได้
         </p>
 
-        <table className="w-full text-[13px]">
-          <thead>
-            <tr className="border-b border-border text-left text-[12px] text-muted-foreground">
-              <th className="py-2 font-medium">กิจกรรม</th>
-              <th className="py-2 font-medium">เปิด</th>
-              <th className="py-2 font-medium">ปิด</th>
-              <th className="py-2 text-center font-medium">แจ้งล่วงหน้า (วัน)</th>
-              <th className="py-2 font-medium">สถานะ</th>
-            </tr>
-          </thead>
-          <tbody>
-            {OPERATING_ACTIVITIES.map((activity) => {
-              const w = store.windowOf(activity);
-              const status = store.windowStatusOf(activity);
-              return (
-                <tr
-                  key={activity}
-                  onClick={() => setSelected(activity)}
-                  className={`cursor-pointer border-b border-border hover:bg-muted/50 ${
-                    selected === activity ? "bg-accent" : ""
-                  }`}
-                >
-                  <td className="py-2.5 font-medium">{OPERATING_ACTIVITY_LABEL[activity]}</td>
-                  <td className="py-2.5 text-muted-foreground">
-                    {w ? formatThaiDate(w.opensAt) : "-"}
-                  </td>
-                  <td className="py-2.5 text-muted-foreground">
-                    {w ? formatThaiDate(w.closesAt) : "-"}
-                  </td>
-                  <td className="py-2.5 text-center text-muted-foreground">
-                    {w ? w.remindDaysBefore : "-"}
-                  </td>
-                  <td className="py-2.5">
-                    <span
-                      className={`rounded-full px-2.5 py-1 text-[11.5px] font-semibold ${STATUS_CLASS[status]}`}
-                    >
-                      {WINDOW_STATUS_LABEL[status]}
-                    </span>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+        <OperatingWindowsTimeline today={impact.today} selected={selected} onSelect={setSelected} />
+        <OperatingWindowCards impact={impact} onEdit={setSelected} />
       </div>
 
       {selected && (
@@ -157,7 +106,7 @@ function WindowDrawer({
   };
 
   return (
-    <aside className="w-96 shrink-0 overflow-y-auto border-l border-border bg-card p-5">
+    <aside className="absolute inset-y-0 right-0 z-20 w-96 max-w-full shrink-0 overflow-y-auto border-l border-border bg-card p-5 shadow-xl xl:static xl:z-auto xl:shadow-none">
       <div className="mb-4 flex items-center gap-2">
         <h3 className="flex-1 text-[14.5px] font-bold">
           {OPERATING_ACTIVITY_LABEL[activity]}
@@ -202,6 +151,30 @@ function WindowDrawer({
             }
           />
         </Field>
+
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="text-[12px] text-muted-foreground">ทางลัดวันปิด:</span>
+          {[7, 14].map((d) => (
+            <Button
+              key={d}
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={!draft.closesAt}
+              onClick={() => set("closesAt", addDaysThai(draft.closesAt, d))}
+            >
+              +{d} วัน
+            </Button>
+          ))}
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => set("closesAt", store.currentTerm.endDate)}
+          >
+            ปิดสิ้นภาคเรียน
+          </Button>
+        </div>
 
         {!valid && (
           <p className="text-[12.5px] text-risk-red">วันเปิดต้องไม่อยู่หลังวันปิด</p>
