@@ -1,16 +1,18 @@
 "use client";
 
 /**
- * กฎความประพฤติ (behavior_rules) — ตาราง + แผงแก้ไขด้านขวา
+ * กฎความประพฤติ (behavior_rules) — รายการ + แผงแก้ไขด้านขวา
  * แก้ไขรายละเอียด = ยืนยันในที่ · ปิดใช้งานกฎ = กล่องยืนยันกลางจอ (กระทบตัวเลือกของครูทุกคน)
  * ไม่มีการลบกฎ บันทึกเดิมอ้างอิงกฎอยู่ — ใช้การปิดใช้งานแทนเสมอ
  */
 
 import { useMemo, useState } from "react";
-import { Plus, X } from "lucide-react";
+import { CircleCheck, CircleOff, Plus } from "lucide-react";
 import { ConfirmModal, InlineConfirm } from "@/components/settings/confirm";
 import { ruleActiveConfirm, ruleSaveConfirm } from "@/components/settings/confirm-text";
+import { SideDrawer } from "@/components/settings/drawer";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useStore } from "@/lib/store";
@@ -46,7 +48,7 @@ interface Draft {
   notifyGuardian: boolean;
 }
 
-export function BehaviorRulesPanel({ ruleUsage }: { ruleUsage: Record<string, number> }) {
+export function BehaviorRulesSection({ ruleUsage }: { ruleUsage: Record<string, number> }) {
   const store = useStore();
   const [selected, setSelected] = useState<string | null>(null);
 
@@ -54,74 +56,53 @@ export function BehaviorRulesPanel({ ruleUsage }: { ruleUsage: Record<string, nu
   const creating = selected === NEW_RULE;
 
   return (
-    <div className="flex min-h-0 flex-1">
-      <div className="min-w-0 flex-1 overflow-y-auto p-6">
-        <div className="mb-3 flex items-center gap-3">
-          <div className="min-w-0">
-            <h2 className="text-[15.5px] font-bold">กฎความประพฤติ</h2>
-            <p className="text-[12.5px] text-muted-foreground">
-              กฎที่ปิดใช้งานจะไม่ปรากฏในตัวเลือกของครู แต่บันทึกเดิมยังคงอยู่และยังคิดคะแนนตามเดิม
+    <Card>
+      <CardContent className="p-5 lg:p-6">
+        <div className="mb-4 flex items-center gap-3">
+          <div className="min-w-0 flex-1">
+            <h2 className="text-[15px] font-bold">กฎความประพฤติ</h2>
+            <p className="mt-0.5 text-[12px] text-muted-foreground">
+              กฎที่ปิดใช้งานจะไม่แสดงให้ครูเลือก บันทึกเดิมยังอยู่
             </p>
           </div>
-          <span className="flex-1" />
-          <Button size="lg" onClick={() => setSelected(NEW_RULE)}>
+          <Button variant="outline" size="sm" onClick={() => setSelected(NEW_RULE)}>
             <Plus className="size-4" /> เพิ่มกฎ
           </Button>
         </div>
 
-        <table className="w-full text-[13px]">
-          <thead>
-            <tr className="border-b border-border text-left text-[12px] text-muted-foreground">
-              <th className="py-2 font-medium">ชื่อกฎ</th>
-              <th className="py-2 font-medium">ระดับ</th>
-              <th className="py-2 text-center font-medium">คะแนน</th>
-              <th className="py-2 text-center font-medium">แจ้งผู้ปกครอง</th>
-              <th className="py-2 text-center font-medium">ถูกใช้</th>
-              <th className="py-2 font-medium">สถานะ</th>
-            </tr>
-          </thead>
-          <tbody>
-            {store.behaviorRules.map((r) => (
-              <tr
-                key={r.ruleId}
-                onClick={() => setSelected(r.ruleId)}
-                className={`cursor-pointer border-b border-border hover:bg-muted/50 ${
-                  selected === r.ruleId ? "bg-accent" : ""
+        <ul className="divide-y divide-border rounded-xl border border-border">
+          {store.behaviorRules.map((r) => (
+            <li key={r.ruleId} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3">
+              <span className="min-w-0 flex-1 basis-40 text-[13px] font-medium">
+                {r.name || <span className="text-muted-foreground">(ยังไม่ตั้งชื่อ)</span>}
+              </span>
+              <span className="w-16 text-[12px] text-muted-foreground">{SEVERITY_LABEL[r.severity]}</span>
+              <span
+                className={`w-9 text-right text-[13px] font-bold ${
+                  r.scoreDelta > 0 ? "text-risk-green" : "text-risk-red"
                 }`}
               >
-                <td className="py-2.5 font-medium">
-                  {r.name || <span className="text-muted-foreground">(ยังไม่ตั้งชื่อ)</span>}
-                </td>
-                <td className="py-2.5 text-muted-foreground">{SEVERITY_LABEL[r.severity]}</td>
-                <td
-                  className={`py-2.5 text-center font-bold ${
-                    r.scoreDelta > 0 ? "text-risk-green" : "text-risk-red"
-                  }`}
-                >
-                  {r.scoreDelta > 0 ? `+${r.scoreDelta}` : r.scoreDelta}
-                </td>
-                <td className="py-2.5 text-center text-muted-foreground">
-                  {r.notifyGuardian ? "แจ้ง" : "ไม่แจ้ง"}
-                </td>
-                <td className="py-2.5 text-center text-muted-foreground">
-                  {ruleUsage[r.ruleId] ?? 0}
-                </td>
-                <td className="py-2.5">
-                  <span
-                    className={`rounded-full px-2.5 py-1 text-[11.5px] font-semibold ${
-                      r.isActive
-                        ? "bg-risk-green-bg text-risk-green"
-                        : "bg-muted text-muted-foreground"
-                    }`}
-                  >
-                    {r.isActive ? "ใช้งาน" : "ปิดใช้งาน"}
-                  </span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+                {r.scoreDelta > 0 ? `+${r.scoreDelta}` : r.scoreDelta}
+              </span>
+              <span
+                className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11.5px] font-semibold ${
+                  r.isActive ? "bg-risk-green-bg text-risk-green" : "bg-muted text-muted-foreground"
+                }`}
+              >
+                {r.isActive ? (
+                  <CircleCheck className="size-3.5" aria-hidden />
+                ) : (
+                  <CircleOff className="size-3.5" aria-hidden />
+                )}
+                {r.isActive ? "ใช้งาน" : "ปิดใช้งาน"}
+              </span>
+              <Button size="sm" variant="ghost" onClick={() => setSelected(r.ruleId)}>
+                แก้ไข
+              </Button>
+            </li>
+          ))}
+        </ul>
+      </CardContent>
 
       {(rule || creating) && (
         <RuleDrawer
@@ -132,7 +113,7 @@ export function BehaviorRulesPanel({ ruleUsage }: { ruleUsage: Record<string, nu
           onCreated={(ruleId) => setSelected(ruleId)}
         />
       )}
-    </div>
+    </Card>
   );
 }
 
@@ -210,21 +191,7 @@ function RuleDrawer({
   };
 
   return (
-    <aside className="w-96 shrink-0 overflow-y-auto border-l border-border bg-card p-5">
-      <div className="mb-4 flex items-center gap-2">
-        <h3 className="flex-1 text-[14.5px] font-bold">
-          {rule ? "แก้ไขกฎความประพฤติ" : "เพิ่มกฎความประพฤติ"}
-        </h3>
-        <button
-          type="button"
-          aria-label="ปิดแผง"
-          onClick={onClose}
-          className="flex size-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted"
-        >
-          <X className="size-4" />
-        </button>
-      </div>
-
+    <SideDrawer title={rule ? "แก้ไขกฎ" : "เพิ่มกฎ"} onClose={onClose}>
       <div className="space-y-3.5">
         <div>
           <Label htmlFor="rule-name" className="text-[12px] text-muted-foreground">
@@ -259,7 +226,7 @@ function RuleDrawer({
 
         <div>
           <Label htmlFor="rule-delta" className="text-[12px] text-muted-foreground">
-            คะแนนที่เปลี่ยนแปลงต่อครั้ง (ติดลบคือหัก)
+            คะแนนต่อครั้ง (ติดลบ = หัก)
           </Label>
           <Input
             id="rule-delta"
@@ -277,10 +244,10 @@ function RuleDrawer({
             checked={draft.notifyGuardian}
             onChange={(e) => set("notifyGuardian", e.target.checked)}
           />
-          แจ้งผู้ปกครองทันทีเมื่อบันทึกถูกยืนยัน
+          แจ้งผู้ปกครองเมื่อยืนยันบันทึก
         </label>
 
-        {saved && <p className="text-[12.5px] text-risk-green">บันทึกการแก้ไขแล้ว</p>}
+        {saved && <p className="text-[12px] text-risk-green">บันทึกการแก้ไขแล้ว</p>}
 
         {confirmingSave ? (
           <InlineConfirm
@@ -301,10 +268,9 @@ function RuleDrawer({
 
         {rule && (
           <>
-            <div className="rounded-lg bg-surface px-3 py-2.5 text-[12px] leading-relaxed text-muted-foreground">
-              กฎนี้ถูกใช้บันทึกไปแล้ว <b>{usedCount}</b> ครั้ง — ไม่มีการลบกฎ
-              ถ้าไม่ต้องการให้ครูเลือกกฎนี้อีกให้ปิดใช้งาน บันทึกเดิมจะยังคิดคะแนนตามค่าที่บันทึกไว้ ณ ตอนนั้น
-            </div>
+            <p className="text-[12px] text-muted-foreground">
+              ใช้บันทึกไปแล้ว {usedCount} ครั้ง · ไม่มีการลบกฎ ให้ปิดใช้งานแทน
+            </p>
             <Button
               size="lg"
               variant={rule.isActive ? "destructive" : "outline"}
@@ -324,6 +290,6 @@ function RuleDrawer({
           onCancel={() => setConfirmingActive(false)}
         />
       )}
-    </aside>
+    </SideDrawer>
   );
 }

@@ -7,11 +7,12 @@
  */
 
 import { useMemo, useState } from "react";
-import { Plus, Search, X } from "lucide-react";
+import { Plus } from "lucide-react";
 import { InlineConfirm } from "@/components/settings/confirm";
 import { teacherAssignmentConfirm } from "@/components/settings/confirm-text";
+import { SideDrawer } from "@/components/settings/drawer";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useDemoPageTool } from "@/lib/demo/page-tools";
 import { subjects } from "@/lib/mock-data";
@@ -20,18 +21,15 @@ import { ROLE_LABEL, type SubjectTeaching, type User, type UserRole } from "@/li
 
 const isTeacher = (u: User) => u.role === "teacher_general" || u.role === "teacher_homeroom";
 
-/** สิ่งที่ครูทำได้ในแต่ละบทบาท — แสดงให้ผู้ดูแลระบบเห็นผลก่อนบันทึก (ตรงกับ lib/navigation.ts และ lib/permissions.ts) */
+/** สิ่งที่ครูทำได้ในแต่ละบทบาท (ตรงกับ lib/navigation.ts และ lib/permissions.ts) */
 const ABILITIES: Record<"teacher_general" | "teacher_homeroom", string[]> = {
   teacher_general: [
-    "ดูข้อมูลพื้นฐานของนักเรียน (ชื่อ ห้อง) ความประพฤติ และคุณลักษณะอันพึงประสงค์",
-    "บันทึกความประพฤติ และให้คะแนนคุณลักษณะฯ (ปพ.5) ในวิชาที่ตัวเองสอน",
-    "ไม่เห็นข้อมูลอ่อนไหว (ที่อยู่ เบอร์โทร ผลคัดกรอง เยี่ยมบ้าน การดูแลช่วยเหลือ) และไม่เห็นเมนูภาพรวม คัดกรอง ประเมิน เยี่ยมบ้าน ดูแลและติดตาม",
+    "ดูข้อมูลพื้นฐาน บันทึกความประพฤติ และให้คะแนนคุณลักษณะฯ ในวิชาที่สอน",
+    "ไม่เห็นข้อมูลอ่อนไหวและเมนูคัดกรอง ประเมิน เยี่ยมบ้าน ดูแลและติดตาม",
   ],
   teacher_homeroom: [
     "ทุกอย่างของครูทั่วไป",
-    "เห็นและบันทึกข้อมูลอ่อนไหวของนักเรียนในห้องที่เป็นครูประจำชั้นเท่านั้น",
-    "ใช้เมนูภาพรวม คัดกรอง ประเมิน เยี่ยมบ้าน ดูแลและติดตาม ยืนยันความประพฤติ สรุปคุณลักษณะฯ (ปพ.6) และส่งต่อ",
-    "ห้องที่ไม่ได้เป็นครูประจำชั้นยังเห็นได้แค่ข้อมูลพื้นฐาน",
+    "เห็นข้อมูลอ่อนไหวและใช้เมนูคัดกรอง ประเมิน เยี่ยมบ้าน ดูแลและติดตามของห้องที่ประจำชั้น",
   ],
 };
 
@@ -40,58 +38,41 @@ const roleBadge = (role: UserRole) =>
 
 function RoleBadge({ role }: { role: UserRole }) {
   return (
-    <span className={`rounded-full px-2.5 py-1 text-[11.5px] font-semibold ${roleBadge(role)}`}>
+    <span className={`whitespace-nowrap rounded-full px-2.5 py-1 text-[11.5px] font-semibold ${roleBadge(role)}`}>
       {ROLE_LABEL[role]}
     </span>
   );
 }
 
-export function TeachersPanel() {
+export function TeachersSection() {
   const store = useStore();
-  const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<string | null>(null);
 
   const roomName = (roomId: string) => store.classrooms.find((c) => c.roomId === roomId)?.roomName ?? roomId;
   const subjectName = (subjectId: string) => subjects.find((s) => s.subjectId === subjectId)?.name ?? subjectId;
   const teachingLabel = (t: SubjectTeaching) => `${subjectName(t.subjectId)} ${roomName(t.roomId)}`;
 
-  const teachers = useMemo(
-    () => store.users.filter(isTeacher).filter((u) => u.name.includes(query.trim())),
-    [store.users, query]
-  );
+  const teachers = useMemo(() => store.users.filter(isTeacher), [store.users]);
   const teacher = selected ? (store.getUser(selected) ?? null) : null;
 
   return (
-    <div className="flex min-h-0 flex-1">
-      <div className="min-w-0 flex-1 overflow-y-auto p-6">
-        <div className="mb-3 flex items-center gap-3">
-          <div className="min-w-0">
-            <h2 className="text-[15.5px] font-bold">ครูและสิทธิ์</h2>
-            <p className="text-[12.5px] text-muted-foreground">
-              เลือกว่าครูเป็นครูประจำชั้นห้องใดและสอนวิชาใด — สิทธิ์ของครูคำนวณจากการมอบหมายนี้ ไม่ต้องตั้งเอง และมีผลทันที
-            </p>
-          </div>
-          <span className="flex-1" />
-          <div className="relative w-64">
-            <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              aria-label="ค้นหาครู"
-              className="pl-9"
-              placeholder="ค้นหาชื่อครู"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-          </div>
-        </div>
+    <Card>
+      <CardContent className="p-5 lg:p-6">
+        <h2 className="text-[15px] font-bold">ครูและสิทธิ์</h2>
+        <p className="mt-0.5 mb-4 text-[12px] text-muted-foreground">
+          สิทธิ์คำนวณจากห้องประจำชั้นที่มอบหมาย
+        </p>
 
         <table className="w-full text-[13px]">
           <thead>
             <tr className="border-b border-border text-left text-[12px] text-muted-foreground">
-              <th className="py-2 font-medium">ชื่อครู</th>
-              <th className="py-2 font-medium">สิทธิ์ (คำนวณจากการมอบหมาย)</th>
-              <th className="py-2 font-medium">ครูประจำชั้น</th>
-              <th className="py-2 font-medium">วิชาที่สอน</th>
-              <th className="py-2 font-medium">สถานะ</th>
+              <th className="py-2 pr-2 font-medium">ชื่อครู</th>
+              <th className="py-2 pr-2 font-medium">สิทธิ์</th>
+              <th className="py-2 pr-2 font-medium whitespace-nowrap">ประจำชั้น</th>
+              <th className="py-2 pr-2 font-medium">วิชาที่สอน</th>
+              <th className="py-2">
+                <span className="sr-only">การจัดการ</span>
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -99,52 +80,40 @@ export function TeachersPanel() {
               const rooms = store.homeroomRoomIdsOfTeacher(u.userId).map(roomName);
               const taught = store.teachingsOfTeacher(u.userId).map(teachingLabel);
               return (
-                <tr
-                  key={u.userId}
-                  onClick={() => setSelected(u.userId)}
-                  className={`cursor-pointer border-b border-border hover:bg-muted/50 ${
-                    selected === u.userId ? "bg-accent" : ""
-                  }`}
-                >
-                  <td className="py-2.5 font-medium">{u.name}</td>
-                  <td className="py-2.5">
+                <tr key={u.userId} className="border-b border-border align-top last:border-0">
+                  <td className="py-2.5 pr-2 font-medium">{u.name}</td>
+                  <td className="py-2.5 pr-2">
                     <RoleBadge role={u.role} />
                   </td>
-                  <td className="py-2.5 text-muted-foreground">
+                  <td className="py-2.5 pr-2 text-muted-foreground">
                     {rooms.length > 0 ? rooms.join(", ") : "—"}
                   </td>
-                  <td className="py-2.5 text-muted-foreground">
+                  <td className="py-2.5 pr-2 text-muted-foreground">
                     {taught.length > 0
                       ? taught.length > 2
                         ? `${taught.slice(0, 2).join(", ")} +${taught.length - 2}`
                         : taught.join(", ")
                       : "—"}
                   </td>
-                  <td className="py-2.5">
-                    <span
-                      className={`rounded-full px-2.5 py-1 text-[11.5px] font-semibold ${
-                        u.isActive ? "bg-risk-green-bg text-risk-green" : "bg-muted text-muted-foreground"
-                      }`}
+                  <td className="py-1.5 text-right">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      aria-label={`แก้ไข ${u.name}`}
+                      onClick={() => setSelected(u.userId)}
                     >
-                      {u.isActive ? "ใช้งาน" : "ปิดใช้งาน"}
-                    </span>
+                      แก้ไข
+                    </Button>
                   </td>
                 </tr>
               );
             })}
-            {teachers.length === 0 && (
-              <tr>
-                <td colSpan={5} className="py-6 text-center text-muted-foreground">
-                  ไม่พบครูที่ตรงกับคำค้นหา
-                </td>
-              </tr>
-            )}
           </tbody>
         </table>
-      </div>
+      </CardContent>
 
       {teacher && <TeacherDrawer key={teacher.userId} teacher={teacher} onClose={() => setSelected(null)} />}
-    </div>
+    </Card>
   );
 }
 
@@ -272,7 +241,7 @@ function TeacherDrawer({ teacher, onClose }: { teacher: User; onClose: () => voi
       setMessage({ ok: false, text: result.error });
       return;
     }
-    setMessage({ ok: true, text: `บันทึกแล้ว (${result.changes} รายการ) สิทธิ์ของครูเปลี่ยนตามการมอบหมายทันที` });
+    setMessage({ ok: true, text: `บันทึกแล้ว ${result.changes} รายการ` });
     // แบบร่างเริ่มใหม่จากค่าที่บันทึกแล้ว
     setDraftSubjects((rows) =>
       rows
@@ -310,27 +279,12 @@ function TeacherDrawer({ teacher, onClose }: { teacher: User; onClose: () => voi
   const dirty = changes.length > 0;
 
   return (
-    <aside className="w-[26rem] shrink-0 overflow-y-auto border-l border-border bg-card p-5">
-      <div className="mb-4 flex items-center gap-2">
-        <div className="min-w-0 flex-1">
-          <h3 className="text-[14.5px] font-bold">{teacher.name}</h3>
-          <p className="text-[12px] text-muted-foreground">จัดการการมอบหมายและสิทธิ์</p>
-        </div>
-        <button
-          type="button"
-          aria-label="ปิดแผง"
-          onClick={onClose}
-          className="flex size-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted"
-        >
-          <X className="size-4" />
-        </button>
-      </div>
-
+    <SideDrawer title={teacher.name} subtitle="การมอบหมายและสิทธิ์" onClose={onClose}>
       <div className="space-y-5">
         <section>
-          <h4 className="mb-1 text-[12.5px] font-semibold">ครูประจำชั้น ปีการศึกษา {store.currentTerm.academicYear}</h4>
+          <h4 className="text-[13px] font-semibold">ครูประจำชั้น</h4>
           <p className="mb-2 text-[12px] text-muted-foreground">
-            ห้องละไม่เกิน {MAX_HOMEROOM_TEACHERS_PER_ROOM} คน สิทธิ์เท่ากัน
+            ห้องละไม่เกิน {MAX_HOMEROOM_TEACHERS_PER_ROOM} คน
           </p>
           <div className="space-y-1.5">
             {store.classrooms.map((c) => {
@@ -349,27 +303,27 @@ function TeacherDrawer({ teacher, onClose }: { teacher: User; onClose: () => voi
                   />
                   <span className="min-w-0 flex-1">
                     <span className="font-medium">{c.roomName}</span>
-                    <span className="block text-[11.5px] text-muted-foreground">
-                      {others.length > 0
-                        ? `ครูประจำชั้นคนอื่น: ${others.map((h) => h.teacher.name).join(", ")}`
-                        : "ยังไม่มีครูประจำชั้นคนอื่น"}
-                    </span>
+                    {others.length > 0 && (
+                      <span className="block text-[12px] text-muted-foreground">
+                        กับ {others.map((h) => h.teacher.name).join(", ")}
+                      </span>
+                    )}
                   </span>
                 </label>
               );
             })}
           </div>
           {roomError && (
-            <p role="alert" className="mt-2 rounded-lg bg-risk-red-bg px-3 py-2 text-[12.5px] text-risk-red">
+            <p role="alert" className="mt-2 rounded-lg bg-risk-red-bg px-3 py-2 text-[12px] text-risk-red">
               {roomError}
             </p>
           )}
         </section>
 
         <section>
-          <h4 className="mb-1 text-[12.5px] font-semibold">วิชาที่สอน {store.currentTerm.label}</h4>
+          <h4 className="mb-2 text-[13px] font-semibold">วิชาที่สอน</h4>
           <ul className="space-y-1.5">
-            {draftSubjects.length === 0 && <li className="text-[12.5px] text-muted-foreground">ยังไม่ได้สอนวิชาใด</li>}
+            {draftSubjects.length === 0 && <li className="text-[12px] text-muted-foreground">ยังไม่ได้สอนวิชาใด</li>}
             {draftSubjects.map((row) => (
               <li
                 key={row.key}
@@ -430,14 +384,14 @@ function TeacherDrawer({ teacher, onClose }: { teacher: User; onClose: () => voi
             </Button>
           </div>
           {subjectError && (
-            <p role="alert" className="mt-2 rounded-lg bg-risk-red-bg px-3 py-2 text-[12.5px] text-risk-red">
+            <p role="alert" className="mt-2 rounded-lg bg-risk-red-bg px-3 py-2 text-[12px] text-risk-red">
               {subjectError}
             </p>
           )}
         </section>
 
         <section className="rounded-xl bg-surface p-3">
-          <h4 className="text-[12.5px] font-semibold">สิ่งที่ครูคนนี้ทำได้</h4>
+          <h4 className="text-[13px] font-semibold">สิทธิ์ของครู</h4>
           <p className="mt-1 flex items-center gap-2 text-[12px] text-muted-foreground">
             {roleBefore !== roleAfter ? (
               <>
@@ -446,9 +400,9 @@ function TeacherDrawer({ teacher, onClose }: { teacher: User; onClose: () => voi
             ) : (
               <RoleBadge role={roleAfter} />
             )}
-            <span>{roleBefore !== roleAfter ? "หลังบันทึก" : "คำนวณจากการมอบหมาย"}</span>
+            {roleBefore !== roleAfter && <span>หลังบันทึก</span>}
           </p>
-          <ul className="mt-2 list-disc space-y-1 pl-4 text-[12.5px] leading-relaxed">
+          <ul className="mt-2 list-disc space-y-1 pl-4 text-[12px] leading-relaxed">
             {ABILITIES[roleAfter as "teacher_general" | "teacher_homeroom"].map((line) => (
               <li key={line}>{line}</li>
             ))}
@@ -456,7 +410,7 @@ function TeacherDrawer({ teacher, onClose }: { teacher: User; onClose: () => voi
         </section>
 
         {message && (
-          <p className={`text-[12.5px] ${message.ok ? "text-risk-green" : "text-risk-red"}`} role="status">
+          <p className={`text-[12px] ${message.ok ? "text-risk-green" : "text-risk-red"}`} role="status">
             {message.text}
           </p>
         )}
@@ -465,10 +419,10 @@ function TeacherDrawer({ teacher, onClose }: { teacher: User; onClose: () => voi
           <InlineConfirm content={confirmContent} onConfirm={save} onCancel={() => setConfirming(false)} />
         ) : (
           <Button size="lg" className="w-full" disabled={!dirty} onClick={() => setConfirming(true)}>
-            บันทึกการมอบหมาย
+            บันทึก
           </Button>
         )}
       </div>
-    </aside>
+    </SideDrawer>
   );
 }

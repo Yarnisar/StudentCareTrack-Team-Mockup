@@ -11,17 +11,16 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { formatThaiDateTime } from "@/lib/format";
 import { useStore, type SchoolSettingsPatch } from "@/lib/store";
 
 type Draft = Required<SchoolSettingsPatch>;
 
 const FIELD_LABEL: Record<keyof Draft, string> = {
   schoolStartTime: "เวลาเข้าเรียน",
-  lateAlertThreshold: "แจ้งเตือนเมื่อมาสายครบ (ครั้ง/เดือน)",
-  behaviorAlertScore: "คะแนนความประพฤติที่แนะนำให้เปิด case",
-  pendingAutoConfirmDays: "ยืนยันอัตโนมัติเมื่อครบ (วันทำการ)",
-  sdq2ForNormalStudents: "ให้นักเรียนผลปกติทำ SDQ ครั้งที่ 2",
+  lateAlertThreshold: "เตือนมาสายครบ (ครั้ง/เดือน)",
+  behaviorAlertScore: "เกณฑ์คะแนนแนะนำเปิด case",
+  pendingAutoConfirmDays: "ยืนยันอัตโนมัติ (วันทำการ)",
+  sdq2ForNormalStudents: "SDQ ครั้งที่ 2 สำหรับนักเรียนปกติ",
 };
 
 const shown = (v: Draft[keyof Draft]) =>
@@ -65,27 +64,36 @@ export function SchoolSettingsCard({ impact }: { impact: ImpactContext }) {
   const num = (v: string) => (v === "" ? 0 : Math.round(Number(v)));
 
   return (
-    <Card className="mx-8 mt-4 shrink-0">
-      <CardContent className="px-6 py-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="min-w-0">
-            <h2 className="text-[15px] font-bold">ตั้งค่าโรงเรียน</h2>
-            <p className="mt-0.5 text-[12.5px] text-muted-foreground">
-              เข้าเรียน {s.schoolStartTime} น. · แจ้งเตือนมาสายครบ {s.lateAlertThreshold} ครั้ง/เดือน ·
-              แนะนำเปิด case เมื่อคะแนนต่ำกว่า {s.behaviorAlertScore} · ยืนยันอัตโนมัติ{" "}
-              {s.pendingAutoConfirmDays} วันทำการ · แก้ไขล่าสุดโดย {store.nameOf(s.updatedBy)}{" "}
-              {formatThaiDateTime(s.updatedAt)}
-            </p>
-          </div>
-          <Button variant="outline" size="sm" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
-            {open ? "ซ่อน" : "แก้ไข"}
+    <Card>
+      <CardContent className="p-5 lg:p-6">
+        <div className="mb-4 flex items-center justify-between gap-2">
+          <h2 className="text-[15px] font-bold">ตั้งค่าโรงเรียน</h2>
+          <Button
+            variant="outline"
+            size="sm"
+            aria-expanded={open}
+            onClick={() => {
+              setOpen((v) => !v);
+              setDraft(fromStore());
+              setConfirming(false);
+            }}
+          >
+            {open ? "ปิด" : "แก้ไข"}
           </Button>
         </div>
 
-        {open && (
-          <div className="mt-4">
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              <Field label="เวลาเข้าเรียน" hint="เช็คอินหลังเวลานี้ครบ 1 นาที = มาสาย" id="start">
+        {!open ? (
+          <dl className="grid grid-cols-2 gap-x-4 gap-y-3 lg:grid-cols-3">
+            <Item label="เวลาเข้าเรียน" value={`${s.schoolStartTime} น.`} />
+            <Item label="เตือนมาสายครบ" value={`${s.lateAlertThreshold} ครั้ง/เดือน`} />
+            <Item label="เกณฑ์คะแนนแนะนำเปิด case" value={`ต่ำกว่า ${s.behaviorAlertScore}`} />
+            <Item label="ยืนยันอัตโนมัติ" value={`${s.pendingAutoConfirmDays} วันทำการ`} />
+            <Item label="SDQ ครั้งที่ 2 สำหรับนักเรียนปกติ" value={shown(s.sdq2ForNormalStudents)} />
+          </dl>
+        ) : (
+          <div>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-3 lg:grid-cols-3">
+              <Field label="เวลาเข้าเรียน" id="start">
                 <Input
                   id="start"
                   type="time"
@@ -93,7 +101,7 @@ export function SchoolSettingsCard({ impact }: { impact: ImpactContext }) {
                   onChange={(e) => set("schoolStartTime", e.target.value)}
                 />
               </Field>
-              <Field label="แจ้งเตือนเมื่อมาสายครบ (ครั้ง/เดือน)" id="late">
+              <Field label="เตือนมาสายครบ (ครั้ง/เดือน)" id="late">
                 <Input
                   id="late"
                   type="number"
@@ -102,7 +110,7 @@ export function SchoolSettingsCard({ impact }: { impact: ImpactContext }) {
                   onChange={(e) => set("lateAlertThreshold", num(e.target.value))}
                 />
               </Field>
-              <Field label="แนะนำเปิด case เมื่อคะแนนความประพฤติต่ำกว่า" id="score">
+              <Field label="เกณฑ์คะแนนแนะนำเปิด case" id="score">
                 <Input
                   id="score"
                   type="number"
@@ -112,7 +120,7 @@ export function SchoolSettingsCard({ impact }: { impact: ImpactContext }) {
                   onChange={(e) => set("behaviorAlertScore", num(e.target.value))}
                 />
               </Field>
-              <Field label="ยืนยันบันทึกรอยืนยันอัตโนมัติเมื่อครบ (วันทำการ)" id="auto">
+              <Field label="ยืนยันอัตโนมัติ (วันทำการ)" id="auto">
                 <Input
                   id="auto"
                   type="number"
@@ -121,20 +129,21 @@ export function SchoolSettingsCard({ impact }: { impact: ImpactContext }) {
                   onChange={(e) => set("pendingAutoConfirmDays", num(e.target.value))}
                 />
               </Field>
+              <Field label="SDQ ครั้งที่ 2 สำหรับนักเรียนปกติ" id="sdq2">
+                <select
+                  id="sdq2"
+                  value={draft.sdq2ForNormalStudents ? "yes" : "no"}
+                  onChange={(e) => set("sdq2ForNormalStudents", e.target.value === "yes")}
+                  className="h-10 w-full rounded-lg border border-border bg-card px-3 text-[13px]"
+                >
+                  <option value="yes">ทำ</option>
+                  <option value="no">ไม่ทำ</option>
+                </select>
+              </Field>
             </div>
 
-            <label className="mt-4 flex items-center gap-2.5 text-[13.5px]">
-              <input
-                type="checkbox"
-                className="size-4 accent-primary"
-                checked={draft.sdq2ForNormalStudents}
-                onChange={(e) => set("sdq2ForNormalStudents", e.target.checked)}
-              />
-              ให้นักเรียนที่ผลปกติในภาคเรียนที่ 1 ทำ SDQ ครั้งที่ 2 ด้วย
-            </label>
-
-            <div className="mt-5 flex items-center justify-end gap-2">
-              {!valid && <span className="mr-auto text-[12.5px] text-risk-red">ค่าที่กรอกไม่ถูกต้อง</span>}
+            <div className="mt-4 flex items-center justify-end gap-2">
+              {!valid && <span className="mr-auto text-[12px] text-risk-red">ค่าที่กรอกไม่ถูกต้อง</span>}
               <Button
                 variant="ghost"
                 disabled={!dirty}
@@ -146,7 +155,7 @@ export function SchoolSettingsCard({ impact }: { impact: ImpactContext }) {
                 คืนค่า
               </Button>
               <Button disabled={!dirty || !valid || confirming} onClick={() => setConfirming(true)}>
-                บันทึกการตั้งค่าโรงเรียน
+                บันทึก
               </Button>
             </div>
 
@@ -169,24 +178,22 @@ export function SchoolSettingsCard({ impact }: { impact: ImpactContext }) {
   );
 }
 
-function Field({
-  label,
-  hint,
-  id,
-  children,
-}: {
-  label: string;
-  hint?: string;
-  id: string;
-  children: React.ReactNode;
-}) {
+function Item({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <dt className="text-[12px] text-muted-foreground">{label}</dt>
+      <dd className="mt-0.5 text-[13px] font-semibold">{value}</dd>
+    </div>
+  );
+}
+
+function Field({ label, id, children }: { label: string; id: string; children: React.ReactNode }) {
   return (
     <div className="space-y-1.5">
       <Label htmlFor={id} className="text-[12px] text-muted-foreground">
         {label}
       </Label>
       {children}
-      {hint && <p className="text-[11.5px] text-muted-foreground">{hint}</p>}
     </div>
   );
 }
