@@ -11,7 +11,7 @@
  *
 
  * ลำดับ: core → audit → notifications → settings → consent  (รวมเป็น base: PlatformSlice)
- *        → assignments (เขตแดนเขียนตารางมอบหมายครู ADR-0003) → behavior → checkin → cards → care → assessment → screening → home-visit → dc → documents
+ *        → assignments (เขตแดนเขียนตารางมอบหมายครู ADR-0003) → behavior → checkin → cards → care → assessment → screening → home-visit → dc → documents → exam
  * (assessment ส่งเหตุเปิด case ผ่าน care; screening อ่านผล Red Flag/9S จาก assessment และมาสายจาก behavior)
  * slice ของโมดูลรับ base เป็นอาร์กิวเมนต์แรก (base.logAudit / base.notify / base.isWindowOpen /
  * base.schoolSettings / base.consentOf) slice ที่ต้องเรียก slice โมดูลอื่น (เช่น เปิด case อัตโนมัติ)
@@ -33,6 +33,7 @@ import { useCheckinSlice, type CheckinSlice } from "./checkin";
 import { useCoreSlice, type CoreSlice } from "./core";
 import { useDcSlice, type DcSlice } from "./dc";
 import { useDocumentsSlice, type DocumentsSlice } from "./documents";
+import { useExamSlice, type ExamSlice } from "./exam";
 import { useHomeVisitSlice, type HomeVisitSlice } from "./home-visit";
 import { useScreeningSlice, type ScreeningSlice } from "./screening";
 
@@ -50,7 +51,8 @@ export type StoreValue = CoreSlice &
   AssessmentSlice &
   HomeVisitSlice &
   DcSlice &
-  DocumentsSlice;
+  DocumentsSlice &
+  ExamSlice;
 
 export type { CheckinOutcome } from "./checkin";
 export type { CardLookup, CardResult, CardTemplatePatch } from "./cards";
@@ -68,6 +70,7 @@ export { MAX_HOMEROOM_TEACHERS_PER_ROOM } from "./assignments";
 export type { ConsentStatus, RecordConsentResult } from "./consent";
 export type { CreateAppointmentInput, HomeVisitResult } from "./home-visit";
 export type { DcOverrides, DcResult, DcScoreEntry, DcSummaryReadiness } from "./dc";
+export type { ExamReassign, ExamResult, ExamRoomInput, ExamSessionInput } from "./exam";
 export type { DocumentReadiness, GenerateDocumentResult } from "./documents";
 export type {
   AssessmentResult,
@@ -103,6 +106,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const homeVisit = useHomeVisitSlice(base);
   const dc = useDcSlice(base);
   const documents = useDocumentsSlice(base, dc);
+  const exam = useExamSlice(base);
 
   const value = useMemo<StoreValue>(
     () => ({
@@ -117,8 +121,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       ...homeVisit,
       ...dc,
       ...documents,
+      ...exam,
     }),
-    [base, assignments, behavior, checkin, cards, care, screening, assessment, homeVisit, dc, documents]
+    [base, assignments, behavior, checkin, cards, care, screening, assessment, homeVisit, dc, documents, exam]
   );
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;

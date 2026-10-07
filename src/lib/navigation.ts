@@ -37,6 +37,7 @@ export const STAFF_NAV: NavEntry[] = [
   { group: "school", href: "/characteristics", label: "คุณลักษณะฯ", roles: ALL_STAFF },
   { group: "school", href: "/documents", label: "เอกสาร ปพ.", roles: ALL_STAFF },
   { group: "school", href: "/checkin", label: "บัตรและเช็กชื่อ", roles: ALL_STAFF, alsoActiveOn: ["/cards"] },
+  { group: "school", href: "/exam-rooms", label: "จัดห้องสอบ", roles: ["admin_school"] },
   { group: "school", href: "/approvals", label: "อนุมัติเอกสารส่งต่อ", roles: ["admin_school"] },
 ];
 

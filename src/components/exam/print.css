@@ -1,0 +1,60 @@
+/*
+ * ใบผังที่นั่งสอบ — ขนาดทุกอย่างอิงความกว้างหน้ากระดาษ (--mm = 1 มม. ของหน้า A4 แนวนอน)
+ * จอแสดงตัวอย่างย่อส่วนอัตโนมัติ ตอนพิมพ์ 1 มม. = 1 มม. จริง ทั้งสองใช้คอมโพเนนต์เดียวกัน
+ * กฎพิมพ์ผูกกับ body:has([data-print-sheet]) เหมือนหน้าบัตร — ไม่รั่วไปหน้าอื่น
+ */
+
+.exam-page {
+  --mm: calc(100cqw / 281);
+  container-type: inline-size;
+  width: 100%;
+  aspect-ratio: 281 / 194;
+  background: #ffffff;
+  color: #111111;
+  border: 1px solid #d4d4d8;
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.08);
+  overflow: hidden;
+  font-family: var(--font-sarabun), system-ui, sans-serif;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+
+.exam-print-root {
+  display: none;
+}
+
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 8mm;
+  }
+
+  body:has([data-print-sheet]) {
+    background: #ffffff;
+  }
+
+  /* ซ่อนทุกอย่างในหน้าเว็บ (sidebar / header / แผงสาธิต / ปุ่ม) เหลือแต่แผ่นพิมพ์ */
+  body:has([data-print-sheet]) > *:not([data-print-sheet]) {
+    display: none !important;
+  }
+
+  body:has([data-print-sheet]) [data-print-sheet] {
+    display: block;
+  }
+
+  body:has([data-print-sheet]) [data-print-sheet] .exam-page {
+    width: 281mm;
+    height: 193mm;
+    aspect-ratio: auto;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    break-after: page;
+    break-inside: avoid;
+  }
+
+  body:has([data-print-sheet]) [data-print-sheet] .exam-page:last-child {
+    break-after: auto;
+  }
+}
