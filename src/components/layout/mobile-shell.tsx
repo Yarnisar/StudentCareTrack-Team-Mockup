@@ -41,8 +41,8 @@ export function MobileShell({
       {brand ? (
         <header className="flex items-start gap-2 bg-primary px-5 py-5">
           <div className="min-w-0 flex-1">
-            <h1 className="text-[18.5px] font-bold text-primary-foreground">{title}</h1>
-            {subtitle && <p className="mt-0.5 text-[12.5px] text-blue-100">{subtitle}</p>}
+            <h1 className="text-[18px] font-bold text-primary-foreground">{title}</h1>
+            {subtitle && <p className="mt-0.5 text-[12px] text-blue-100">{subtitle}</p>}
           </div>
           <NotificationBell allHref="/portal/notifications" tone="inverse" />
         </header>
@@ -77,7 +77,7 @@ export function MobileShell({
               }
             >
               <Icon className="size-5" />
-              <span className={active ? "text-[10.5px] font-semibold" : "text-[10.5px]"}>
+              <span className={active ? "text-[11px] font-semibold" : "text-[11px]"}>
                 {label}
               </span>
             </Link>
@@ -92,7 +92,7 @@ export function MobileShell({
           }
         >
           <User className="size-5" />
-          <span className="text-[10.5px]">โปรไฟล์</span>
+          <span className="text-[11px]">โปรไฟล์</span>
         </Link>
       </nav>
     </div>

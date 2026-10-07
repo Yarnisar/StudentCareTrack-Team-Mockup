@@ -34,18 +34,18 @@ export default function StudentHomePage() {
                 <ClipboardList className="size-5 text-primary" />
               </div>
               <div className="flex-1">
-                <div className="text-[14.5px] font-bold">แบบประเมิน SDQ ฉบับนักเรียน</div>
-                <p className="mt-1 text-[12.5px] leading-relaxed text-muted-foreground">
-                  ครูขอให้ช่วยตอบแบบประเมินตนเอง 25 ข้อ (ประมาณ 10 นาที)
+                <div className="text-[15px] font-bold">แบบประเมินตนเอง</div>
+                <p className="mt-1 text-[12px] leading-relaxed text-muted-foreground">
+                  25 ข้อ ใช้เวลาประมาณ 10 นาที
                 </p>
-                <div className="mt-2 text-[13px] font-bold text-primary">เริ่มทำแบบประเมิน →</div>
+                <div className="mt-2 text-[13px] font-bold text-primary">เริ่มทำ →</div>
               </div>
             </div>
           </Link>
         )}
         {sdq?.status === "submitted" && sdq.submittedAt && (
-          <p className="rounded-xl bg-card px-4 py-3 text-[12.5px] text-muted-foreground">
-            แบบประเมิน SDQ: <b className="text-foreground">ส่งแล้ว</b> เมื่อ {formatThaiDate(sdq.submittedAt)}
+          <p className="rounded-xl bg-card px-4 py-3 text-[12px] text-muted-foreground">
+            แบบประเมิน: <b className="text-foreground">ส่งแล้ว</b> เมื่อ {formatThaiDate(sdq.submittedAt)}
           </p>
         )}
 
@@ -53,7 +53,7 @@ export default function StudentHomePage() {
           <Card>
             <CardContent className="flex items-center gap-3 p-4">
               <QrCode className="size-6 text-primary" />
-              <span className="flex-1 text-[14px] font-semibold">บัตรนักเรียนสำหรับเช็คอิน</span>
+              <span className="flex-1 text-[13px] font-semibold">บัตรนักเรียน</span>
               <ChevronRight className="size-4 text-muted-foreground" />
             </CardContent>
           </Card>

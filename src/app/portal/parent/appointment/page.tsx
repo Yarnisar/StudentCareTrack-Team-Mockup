@@ -47,7 +47,7 @@ function ParentAppointmentPageContent() {
       <MobileShell title="นัดหมายเยี่ยมบ้าน" role="parent" back="/portal/parent">
         <div className="space-y-4 p-5">
           <ChildSwitcher />
-          <p className="text-sm text-muted-foreground">ยังไม่มีนัดหมายเยี่ยมบ้านในขณะนี้</p>
+          <p className="text-sm text-muted-foreground">ยังไม่มีนัดหมาย</p>
         </div>
       </MobileShell>
     );
@@ -63,21 +63,21 @@ function ParentAppointmentPageContent() {
         <Card>
           <CardContent className="p-5">
             <div className="flex items-center justify-between">
-              <span className="text-[12.5px] font-semibold text-muted-foreground">
+              <span className="text-[13px] font-semibold text-muted-foreground">
                 {VISIT_TYPE_LABEL[appointment.visitType]}
               </span>
               <span
                 className={
                   confirmed
-                    ? "rounded-full bg-risk-green-bg px-2.5 py-1 text-[11.5px] font-semibold text-risk-green"
-                    : "rounded-full bg-risk-amber-bg px-2.5 py-1 text-[11.5px] font-semibold text-risk-amber"
+                    ? "rounded-full bg-risk-green-bg px-2.5 py-1 text-[12px] font-semibold text-risk-green"
+                    : "rounded-full bg-risk-amber-bg px-2.5 py-1 text-[12px] font-semibold text-risk-amber"
                 }
               >
                 {APPOINTMENT_STATUS_LABEL[appointment.status]}
               </span>
             </div>
 
-            <div className="mt-3 text-[22px] font-bold">
+            <div className="mt-3 text-xl font-bold">
               {formatThaiDate(appointment.proposedDate)}
             </div>
             <div className="mt-0.5 text-base font-semibold text-primary">
@@ -89,7 +89,7 @@ function ParentAppointmentPageContent() {
             <div className="space-y-2.5">
               <Row icon={<User className="size-4" />} title={store.nameOf(appointment.teacherId)} sub="ครูประจำชั้น" />
               {isGuardian && (
-                <Row icon={<Home className="size-4" />} title={student.address} sub="ที่อยู่ตามทะเบียนนักเรียน" />
+                <Row icon={<Home className="size-4" />} title={student.address} sub="ที่อยู่" />
               )}
             </div>
           </CardContent>
@@ -109,21 +109,16 @@ function ParentAppointmentPageContent() {
           </div>
         )}
         {appointment.status === "reschedule_requested" && (
-          <p className="rounded-xl bg-risk-amber-bg px-3.5 py-2.5 text-[12.5px] text-risk-amber">
-            ส่งคำขอเปลี่ยนวันเวลาแล้ว รอครูประจำชั้นเสนอวันใหม่
+          <p className="rounded-xl bg-risk-amber-bg px-3.5 py-2.5 text-[12px] text-risk-amber">
+            ส่งคำขอแล้ว รอครูเสนอวันใหม่
           </p>
-        )}
-        {pending && (
-          <p className="text-[11.5px] text-muted-foreground">ผู้ปกครองคนใดของนักเรียนก็ยืนยันหรือขอเปลี่ยนวันได้</p>
         )}
         {error && <p className="text-[12px] font-semibold text-risk-red">{error}</p>}
 
         <Card>
           <CardContent className="p-5">
-            <h2 className="text-[15px] font-bold">ข้อมูลประกอบการเยี่ยมบ้าน</h2>
-            <p className="mt-1 mb-4 text-[12px] leading-relaxed text-muted-foreground">
-              กรอกข้อมูลล่วงหน้าเพื่อให้ครูเตรียมตัวก่อนลงพื้นที่ (ไม่บังคับ)
-            </p>
+            <h2 className="text-[15px] font-bold">ข้อมูลถึงครู</h2>
+            <p className="mt-1 mb-4 text-[12px] text-muted-foreground">ไม่บังคับ</p>
 
             <div className="space-y-3">
               <div className="space-y-1.5">
@@ -131,14 +126,13 @@ function ParentAppointmentPageContent() {
                 <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="away-stay-with">ช่วงที่ผู้ปกครองไม่อยู่บ้าน นักเรียนพักอยู่กับใคร</Label>
+                <Label htmlFor="away-stay-with">ช่วงที่ไม่อยู่บ้าน นักเรียนอยู่กับใคร</Label>
                 <Input
                   id="away-stay-with"
                   value={awayStayWith}
                   onChange={(e) => setAwayStayWith(e.target.value)}
                   placeholder="เช่น ยาย (นางบุญมา สายใจ)"
                 />
-                <p className="text-[11px] text-muted-foreground">ใช้เป็นข้อมูลประกอบให้ครูเท่านั้น</p>
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="note">สิ่งที่อยากให้ครูช่วยเหลือ</Label>
@@ -169,8 +163,8 @@ function ParentAppointmentPageContent() {
               </Button>
 
               {sent && (
-                <p className="rounded-lg bg-risk-green-bg px-3 py-2 text-center text-[12.5px] font-semibold text-risk-green">
-                  ส่งข้อมูลให้ครูประจำชั้นเรียบร้อยแล้ว
+                <p className="rounded-lg bg-risk-green-bg px-3 py-2 text-center text-[12px] font-semibold text-risk-green">
+                  ส่งให้ครูแล้ว
                 </p>
               )}
             </div>
@@ -188,8 +182,8 @@ function Row({ icon, title, sub }: { icon: React.ReactNode; title: string; sub: 
         {icon}
       </div>
       <div className="min-w-0">
-        <div className="truncate text-[13.5px] font-semibold">{title}</div>
-        <div className="text-[11.5px] text-muted-foreground">{sub}</div>
+        <div className="truncate text-[13px] font-semibold">{title}</div>
+        <div className="text-[12px] text-muted-foreground">{sub}</div>
       </div>
     </div>
   );

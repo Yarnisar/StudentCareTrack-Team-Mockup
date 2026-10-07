@@ -13,10 +13,10 @@ export default function LoginPage() {
         <div className="absolute -bottom-28 -left-16 size-96 rounded-full bg-white/[0.07]" />
 
         <div className="relative flex items-center gap-3">
-          <div className="flex size-11 items-center justify-center rounded-xl bg-white/20 text-[17px] font-bold text-white">
+          <div className="flex size-11 items-center justify-center rounded-xl bg-white/20 text-[18px] font-bold text-white">
             SC
           </div>
-          <span className="text-[19px] font-bold text-white">Student Care Track</span>
+          <span className="text-[18px] font-bold text-white">Student Care Track</span>
         </div>
 
         <div className="relative">
@@ -25,9 +25,8 @@ export default function LoginPage() {
             <br />
             แบบครบวงจร
           </h2>
-          <p className="mt-4 max-w-md text-[15.5px] leading-relaxed text-blue-100">
-            คัดกรอง ประเมิน บันทึกความประพฤติ เยี่ยมบ้าน และติดตามช่วยเหลือนักเรียนในที่เดียว
-            สำหรับครูประจำชั้นและบุคลากรโรงเรียน
+          <p className="mt-4 max-w-md text-[15px] leading-relaxed text-blue-100">
+            คัดกรอง ประเมิน เยี่ยมบ้าน และติดตามช่วยเหลือนักเรียนในที่เดียว
           </p>
         </div>
 
@@ -40,7 +39,7 @@ export default function LoginPage() {
         <div className="w-full max-w-sm">
           <h1 className="text-2xl font-bold">เข้าสู่ระบบ</h1>
           <p className="mt-1.5 mb-8 text-sm text-muted-foreground">
-            กรอกข้อมูลบัญชีของโรงเรียนเพื่อเข้าใช้งาน
+            ใช้บัญชีของโรงเรียน
           </p>
 
           <form className="space-y-4">
@@ -70,7 +69,7 @@ export default function LoginPage() {
 
           <div className="my-7 flex items-center gap-3">
             <span className="h-px flex-1 bg-border" />
-            <span className="text-xs text-muted-foreground">เลือกผู้ใช้เพื่อดูต้นแบบตามบทบาท</span>
+            <span className="text-xs text-muted-foreground">เลือกบทบาทเพื่อดูต้นแบบ</span>
             <span className="h-px flex-1 bg-border" />
           </div>
 

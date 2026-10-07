@@ -36,7 +36,7 @@ export function ChildSwitcher() {
             </span>
             <span>
               <span className="block leading-tight">{child.fullName}</span>
-              <span className="block text-[11.5px] font-normal text-muted-foreground">
+              <span className="block text-[12px] font-normal text-muted-foreground">
                 {child.roomName} เลขที่ {child.classNo}
               </span>
             </span>

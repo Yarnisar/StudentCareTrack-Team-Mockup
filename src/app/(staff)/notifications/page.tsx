@@ -14,7 +14,7 @@ export default function NotificationsPage() {
     <>
       <PageHeader
         title="การแจ้งเตือน"
-        subtitle={`ทั้งหมด ${store.myNotifications.length} รายการ · ยังไม่อ่าน ${store.myUnreadCount} รายการ`}
+        subtitle={`ยังไม่อ่าน ${store.myUnreadCount} รายการ`}
       />
       <div className="flex-1 overflow-y-auto p-8">
         <div className="mx-auto max-w-3xl space-y-4">
@@ -22,7 +22,7 @@ export default function NotificationsPage() {
           <Card>
             <CardContent className="p-0">
               <div className="flex items-center justify-between border-b border-border px-5 py-3.5">
-                <h2 className="text-[15px] font-bold">รายการแจ้งเตือน</h2>
+                <h2 className="text-[15px] font-bold">รายการ</h2>
                 <Button
                   size="sm"
                   variant="outline"

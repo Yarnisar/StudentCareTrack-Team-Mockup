@@ -71,11 +71,11 @@ function ParentResultsPageContent() {
 
   if (mode === "read" && submitted) {
     return (
-      <MobileShell title="แบบประเมิน SDQ" subtitle="ฉบับผู้ปกครองที่ส่งแล้ว" role="parent" back="/portal/parent/results">
+      <MobileShell title="แบบประเมิน SDQ" subtitle="ฉบับผู้ปกครอง" role="parent" back="/portal/parent/results">
         <div className="space-y-4 p-5">
           <ChildSwitcher />
           <Button variant="outline" className="w-full" onClick={() => setMode("view")}>
-            กลับไปหน้าผลของบุตรหลาน
+            กลับ
           </Button>
           <SdqForm rater="parent" layout="mobile" readOnly initialAnswers={submitted.answers} onSubmit={() => {}} />
         </div>
@@ -94,34 +94,34 @@ function ParentResultsPageContent() {
         <ChildSwitcher />
         <Card>
           <CardContent className="p-5">
-            <h2 className="mb-3 text-[14.5px] font-bold">ผลการประเมิน SDQ</h2>
+            <h2 className="mb-3 text-[15px] font-bold">ผลการประเมิน SDQ</h2>
             {combined?.level ? (
               <div className="rounded-xl bg-surface p-3.5">
-                <div className="text-[11.5px] text-muted-foreground">
+                <div className="text-[12px] text-muted-foreground">
                   ผลรวม ครั้งที่ {combined.round} · {termLabelOf(combined.termId)}
                 </div>
                 <div className="mt-2 flex flex-wrap items-center gap-2">
                   <SdqLevelBadge level={combined.level} />
-                  <span className="text-[11.5px] text-muted-foreground">{combinedSdqBasisLabel(combined)}</span>
+                  <span className="text-[12px] text-muted-foreground">{combinedSdqBasisLabel(combined)}</span>
                 </div>
               </div>
             ) : (
               <p className="rounded-xl bg-surface p-3.5 text-[13px] text-muted-foreground">
-                ยังไม่มีผล — ผลจะแสดงเมื่อครูประจำชั้นส่งแบบประเมินฉบับครูแล้ว
+                ยังไม่มีผล รอครูส่งแบบประเมิน
               </p>
             )}
 
             {parentSdq && (
-              <div className="mt-3 rounded-xl border border-border p-3.5 text-[12.5px]">
+              <div className="mt-3 rounded-xl border border-border p-3.5 text-[12px]">
                 <div className="font-semibold">ฉบับผู้ปกครอง ครั้งที่ {parentSdq.round}</div>
                 {submitted ? (
                   <>
                     <p className="mt-1 text-muted-foreground">
-                      ส่งแล้วโดย{" "}
+                      ส่งโดย{" "}
                       {submitted.raterUserId === store.currentUser.userId
                         ? "คุณ"
                         : store.nameOf(submitted.raterUserId)}{" "}
-                      เมื่อ {submitted.submittedAt ? formatThaiDate(submitted.submittedAt) : "-"} · แก้ไขไม่ได้
+                      เมื่อ {submitted.submittedAt ? formatThaiDate(submitted.submittedAt) : "-"}
                     </p>
                     <Button variant="outline" size="sm" className="mt-2" onClick={() => setMode("read")}>
                       ดูคำตอบที่ส่งแล้ว
@@ -130,7 +130,7 @@ function ParentResultsPageContent() {
                 ) : canTake ? (
                   <>
                     <p className="mt-1 text-muted-foreground">
-                      ผู้ปกครองคนใดทำก็ได้ 1 ฉบับ — เมื่อส่งแล้วผู้ปกครองคนอื่นจะเห็นแต่แก้ไขไม่ได้
+                      ผู้ปกครองคนใดทำก็ได้ 1 ฉบับ
                     </p>
                     <Button
                       className="mt-3 h-12 w-full"
@@ -139,7 +139,7 @@ function ParentResultsPageContent() {
                         setMode("take");
                       }}
                     >
-                      เริ่มทำแบบประเมินฉบับผู้ปกครอง
+                      เริ่มทำแบบประเมิน
                     </Button>
                     <Button
                       variant="outline"
@@ -159,8 +159,8 @@ function ParentResultsPageContent() {
             )}
             {error && <p className="mt-2 text-[12px] font-semibold text-risk-red">{error}</p>}
 
-            <p className="mt-3 text-[11.5px] leading-relaxed text-muted-foreground">
-              ผลประเมินใช้เพื่อการดูแลช่วยเหลือ ไม่มีผลต่อการเรียนหรือคะแนนของนักเรียน
+            <p className="mt-3 text-[12px] leading-relaxed text-muted-foreground">
+              ผลประเมินใช้เพื่อการดูแลช่วยเหลือ ไม่มีผลต่อคะแนนการเรียน
             </p>
           </CardContent>
         </Card>
@@ -169,14 +169,14 @@ function ParentResultsPageContent() {
           <Card>
             <CardContent className="p-5">
               <div className="mb-1 flex items-center justify-between">
-                <h2 className="text-[14.5px] font-bold">คุณลักษณะอันพึงประสงค์</h2>
+                <h2 className="text-[15px] font-bold">คุณลักษณะอันพึงประสงค์</h2>
                 {passesAllCriteria(dcLevels) && (
-                  <span className="rounded-full bg-risk-green-bg px-2.5 py-1 text-[11.5px] font-semibold text-risk-green">
+                  <span className="rounded-full bg-risk-green-bg px-2.5 py-1 text-[12px] font-semibold text-risk-green">
                     ผ่านทุกด้าน
                   </span>
                 )}
               </div>
-              <p className="mb-2 text-[11.5px] text-muted-foreground">{termLabelOf(dc.termId)}</p>
+              <p className="mb-2 text-[12px] text-muted-foreground">{termLabelOf(dc.termId)}</p>
               <div className="divide-y divide-border">
                 {store.dcCriteria.map((c) => {
                   const level = dc.levels[c.criteriaId];
@@ -184,7 +184,7 @@ function ParentResultsPageContent() {
                     <div key={c.criteriaId} className="flex items-center justify-between gap-2 py-2.5">
                       <span className="text-[13px]">{c.name}</span>
                       <span
-                        className={`rounded-full px-2.5 py-1 text-[11.5px] font-semibold ${
+                        className={`rounded-full px-2.5 py-1 text-[12px] font-semibold ${
                           level == null ? "bg-muted text-muted-foreground" : DC_LEVEL_STYLE[level]
                         }`}
                       >
@@ -201,7 +201,7 @@ function ParentResultsPageContent() {
         <Card>
           <CardContent className="p-5">
             <div className="mb-1 flex items-center justify-between">
-              <h2 className="text-[14.5px] font-bold">ความประพฤติล่าสุด</h2>
+              <h2 className="text-[15px] font-bold">ความประพฤติ</h2>
               <span className="text-[13px] font-semibold">
                 {behaviorScore}/{BEHAVIOR_SCORE_BASE} คะแนน
               </span>
@@ -212,13 +212,13 @@ function ParentResultsPageContent() {
                 const positive = (rule?.scoreDelta ?? 0) > 0;
                 return (
                   <div key={rec.recordId} className="flex items-center gap-3 py-2.5">
-                    <span className="w-20 shrink-0 text-[11.5px] text-muted-foreground">
+                    <span className="w-20 shrink-0 text-[12px] text-muted-foreground">
                       {formatThaiDate(rec.occurredAt)}
                     </span>
                     <span className="flex-1 text-[13px]">{rule?.name}</span>
                     <span
                       className={
-                        positive ? "text-[13.5px] font-bold text-risk-green" : "text-[13.5px] font-bold text-risk-red"
+                        positive ? "text-[13px] font-bold text-risk-green" : "text-[13px] font-bold text-risk-red"
                       }
                     >
                       {positive ? `+${rule?.scoreDelta}` : rule?.scoreDelta}
@@ -230,9 +230,6 @@ function ParentResultsPageContent() {
                 <p className="py-3 text-[13px] text-muted-foreground">ยังไม่มีบันทึกความประพฤติ</p>
               )}
             </div>
-            <p className="mt-3 text-[11.5px] leading-relaxed text-muted-foreground">
-              แสดงเฉพาะรายการที่ครูยืนยันแล้ว ไม่แสดงรายละเอียดภายในของโรงเรียน
-            </p>
           </CardContent>
         </Card>
       </div>

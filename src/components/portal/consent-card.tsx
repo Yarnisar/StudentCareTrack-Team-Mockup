@@ -21,8 +21,8 @@ export function ConsentCard({ studentId }: { studentId: string }) {
     return (
       <div className="flex gap-3 rounded-2xl border border-border bg-card p-4">
         <ShieldCheck className="size-5 shrink-0 text-muted-foreground" />
-        <p className="text-[12.5px] leading-relaxed text-muted-foreground">
-          ความยินยอมส่งต่อข้อมูลปีการศึกษา {year}:{" "}
+        <p className="text-[12px] leading-relaxed text-muted-foreground">
+          ความยินยอมส่งต่อข้อมูล {year}:{" "}
           <b className="text-foreground">{consent.granted ? "ยินยอม" : "ไม่ยินยอม"}</b> · ตอบโดย{" "}
           {consent.guardianUserId === store.currentUser.userId ? "คุณ" : store.nameOf(consent.guardianUserId)} เมื่อ{" "}
           {formatThaiDate(consent.respondedAt)}
@@ -44,10 +44,9 @@ export function ConsentCard({ studentId }: { studentId: string }) {
           <ShieldCheck className="size-5 text-primary" />
         </div>
         <div className="min-w-0 flex-1">
-          <div className="text-[14.5px] font-bold">ความยินยอมส่งต่อข้อมูล ปีการศึกษา {year}</div>
-          <p className="mt-1 text-[12.5px] leading-relaxed text-muted-foreground">
-            หากบุตรหลานต้องได้รับความช่วยเหลือจากหน่วยงานภายนอก (เช่น โรงพยาบาล) โรงเรียนจะส่งต่อข้อมูลได้เมื่อได้รับความยินยอมเท่านั้น
-            ไม่มีผลต่อการดูแลภายในโรงเรียน ผู้ปกครองคนใดตอบก็ได้ ปีละ 1 ครั้ง
+          <div className="text-[15px] font-bold">ความยินยอมส่งต่อข้อมูล {year}</div>
+          <p className="mt-1 text-[12px] leading-relaxed text-muted-foreground">
+            โรงเรียนส่งข้อมูลให้หน่วยงานภายนอกได้เมื่อได้รับความยินยอมเท่านั้น ไม่มีผลต่อการดูแลในโรงเรียน ตอบปีละ 1 ครั้ง
           </p>
         </div>
       </div>
@@ -62,7 +61,7 @@ export function ConsentCard({ studentId }: { studentId: string }) {
         </div>
       ) : (
         <div className="mt-3 rounded-xl bg-card p-3">
-          <p className="text-[12.5px]">
+          <p className="text-[12px]">
             ยืนยันคำตอบ <b>{choice ? "ยินยอม" : "ไม่ยินยอม"}</b>? เมื่อตอบแล้วจะแก้ไขในปีการศึกษานี้ไม่ได้
           </p>
           <div className="mt-2.5 flex gap-2.5">

@@ -51,15 +51,15 @@ export default function ParentHomePage() {
               {student.fullName.replace(/^(ด\.ช\.|ด\.ญ\.)\s*/, "").charAt(0)}
             </div>
             <div>
-              <div className="text-[15.5px] font-bold">{student.fullName}</div>
-              <div className="mt-0.5 text-[12.5px] text-muted-foreground">
+              <div className="text-[15px] font-bold">{student.fullName}</div>
+              <div className="mt-0.5 text-[12px] text-muted-foreground">
                 {student.roomName} เลขที่ {student.classNo}
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <h2 className="pt-1 text-sm font-bold">สิ่งที่ต้องดำเนินการ</h2>
+        <h2 className="pt-1 text-[15px] font-bold">ต้องทำ</h2>
 
         {appointment && appointment.status === "pending" && (
           <ActionCard
@@ -67,8 +67,8 @@ export default function ParentHomePage() {
             tone="warn"
             icon={<Home className="size-5 text-risk-amber" />}
             title={`${VISIT_TYPE_LABEL[appointment.visitType]} รอการยืนยัน`}
-            description={`${store.nameOf(appointment.teacherId)} ขอนัดเยี่ยมบ้านวันที่ ${formatThaiDate(appointment.proposedDate)} เวลา ${formatThaiTime(appointment.proposedDate)}`}
-            cta="ดูรายละเอียดและยืนยัน"
+            description={`${formatThaiDate(appointment.proposedDate)} เวลา ${formatThaiTime(appointment.proposedDate)}`}
+            cta="ยืนยันนัดหมาย"
           />
         )}
 
@@ -78,8 +78,8 @@ export default function ParentHomePage() {
             tone="info"
             icon={<Home className="size-5 text-primary" />}
             title={`${VISIT_TYPE_LABEL[appointment.visitType]} · ${APPOINTMENT_STATUS_LABEL[appointment.status]}`}
-            description={`นัดหมายวันที่ ${formatThaiDate(appointment.proposedDate)} เวลา ${formatThaiTime(appointment.proposedDate)} · เพิ่มข้อมูลประกอบได้`}
-            cta="ดูรายละเอียดนัดหมาย"
+            description={`${formatThaiDate(appointment.proposedDate)} เวลา ${formatThaiTime(appointment.proposedDate)}`}
+            cta="ดูนัดหมาย"
           />
         )}
 
@@ -89,8 +89,8 @@ export default function ParentHomePage() {
             tone="info"
             icon={<ClipboardList className="size-5 text-primary" />}
             title="แบบประเมิน SDQ ฉบับผู้ปกครอง"
-            description="กรุณาทำแบบประเมินเพื่อให้ครูเห็นภาพรวมของบุตรหลานได้ครบถ้วน (ใช้เวลาประมาณ 10 นาที) ผู้ปกครองคนใดทำก็ได้ 1 ฉบับ"
-            cta="ดูรายละเอียด"
+            description="ใช้เวลาประมาณ 10 นาที ผู้ปกครองคนใดทำก็ได้"
+            cta="ทำแบบประเมิน"
           />
         )}
 
@@ -100,7 +100,7 @@ export default function ParentHomePage() {
             tone="warn"
             icon={<FileSignature className="size-5 text-risk-amber" />}
             title={`เอกสารส่งต่อรอลงนาม ${pendingSignatures.length} ฉบับ`}
-            description="โปรดตรวจเนื้อหาที่โรงเรียนจะส่งให้หน่วยงานภายนอก แล้วลงนามหรือแจ้งเหตุผลที่ไม่ลงนาม"
+            description="ตรวจเนื้อหาก่อนส่งหน่วยงานภายนอก"
             cta="ตรวจและลงนาม"
           />
         )}
@@ -108,33 +108,33 @@ export default function ParentHomePage() {
         {!answeredConsent && <ConsentCard studentId={portalStudentId} />}
 
         {!appointment && !canTakeSdq && answeredConsent && pendingSignatures.length === 0 && (
-          <p className="rounded-xl bg-card px-4 py-3 text-[12.5px] text-muted-foreground">ไม่มีรายการที่ต้องดำเนินการ</p>
+          <p className="rounded-xl bg-card px-4 py-3 text-[12px] text-muted-foreground">ไม่มีรายการค้าง</p>
         )}
 
-        <h2 className="pt-1 text-sm font-bold">ภาพรวมของบุตรหลาน</h2>
+        <h2 className="pt-1 text-[15px] font-bold">ภาพรวม</h2>
 
         <Link href="/portal/parent/results">
           <Card>
             <CardContent className="p-4">
               <div className="mb-3 flex items-center justify-between">
-                <span className="text-[13.5px] font-semibold text-muted-foreground">ผลล่าสุด</span>
+                <span className="text-[13px] font-semibold text-muted-foreground">ผลล่าสุด</span>
                 <ChevronRight className="size-4 text-muted-foreground" />
               </div>
               <div className="grid grid-cols-3 gap-2.5">
                 <div className="rounded-xl bg-surface p-3">
-                  <div className="text-[11.5px] text-muted-foreground">SDQ (ผลรวม)</div>
+                  <div className="text-[12px] text-muted-foreground">SDQ</div>
                   <div className="mt-1.5">
                     {sdq?.level ? (
-                      <SdqLevelBadge level={sdq.level} className="text-[11.5px]" />
+                      <SdqLevelBadge level={sdq.level} className="text-[12px]" />
                     ) : (
-                      <span className="text-[12.5px] text-muted-foreground">ยังไม่มีผล</span>
+                      <span className="text-[12px] text-muted-foreground">ยังไม่มีผล</span>
                     )}
                   </div>
-                  {sdq && <div className="mt-1 text-[10.5px] text-muted-foreground">{combinedSdqBasisLabel(sdq)}</div>}
+                  {sdq && <div className="mt-1 text-[11px] text-muted-foreground">{combinedSdqBasisLabel(sdq)}</div>}
                 </div>
                 <div className="rounded-xl bg-surface p-3">
-                  <div className="text-[11.5px] text-muted-foreground">คุณลักษณะฯ</div>
-                  <div className="mt-1.5 text-[12.5px] font-semibold">
+                  <div className="text-[12px] text-muted-foreground">คุณลักษณะฯ</div>
+                  <div className="mt-1.5 text-[13px] font-semibold">
                     {!dc ? (
                       <span className="font-normal text-muted-foreground">รอสรุปผล</span>
                     ) : passesAllCriteria(dcLevels) ? (
@@ -143,10 +143,10 @@ export default function ParentHomePage() {
                       <span className="text-risk-amber">ไม่ผ่าน {dcFailed} ด้าน</span>
                     )}
                   </div>
-                  {dc && <div className="mt-1 text-[10.5px] text-muted-foreground">{termLabelOf(dc.termId)}</div>}
+                  {dc && <div className="mt-1 text-[11px] text-muted-foreground">{termLabelOf(dc.termId)}</div>}
                 </div>
                 <div className="rounded-xl bg-surface p-3">
-                  <div className="text-[11.5px] text-muted-foreground">ความประพฤติ</div>
+                  <div className="text-[12px] text-muted-foreground">ความประพฤติ</div>
                   <div className="mt-1.5 text-[15px] font-bold">
                     {behaviorScore}
                     <span className="text-[11px] font-normal text-muted-foreground">/{BEHAVIOR_SCORE_BASE}</span>
@@ -159,10 +159,7 @@ export default function ParentHomePage() {
 
         {answeredConsent && <ConsentCard studentId={portalStudentId} />}
 
-        <p className="rounded-xl border border-dashed border-border bg-surface p-3.5 text-[12px] leading-relaxed text-muted-foreground">
-          ผู้ปกครองสามารถดูข้อมูลของบุตรหลานตนเองได้เท่านั้น
-          การแก้ไขข้อมูลทั้งหมดดำเนินการโดยครูประจำชั้น
-        </p>
+        <p className="px-1 text-[12px] text-muted-foreground">แก้ไขข้อมูลได้ที่ครูประจำชั้น</p>
       </div>
     </MobileShell>
   );
@@ -196,8 +193,8 @@ function ActionCard({
           {icon}
         </div>
         <div className="flex-1">
-          <div className="text-[14.5px] font-bold">{title}</div>
-          <p className="mt-1 text-[12.5px] leading-relaxed text-muted-foreground">{description}</p>
+          <div className="text-[15px] font-bold">{title}</div>
+          <p className="mt-1 text-[12px] leading-relaxed text-muted-foreground">{description}</p>
           <div className={`mt-2.5 text-[13px] font-bold ${ctaColor}`}>{cta} →</div>
         </div>
       </div>

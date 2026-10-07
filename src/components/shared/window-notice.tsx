@@ -25,7 +25,7 @@ export function WindowNotice({ activity, className }: { activity: OperatingActiv
         className={`flex items-center gap-2.5 rounded-xl border border-amber-200 bg-risk-amber-bg px-4 py-3 text-[13px] text-risk-amber ${className ?? ""}`}
       >
         <CalendarClock className="size-4 shrink-0" />
-        ช่วงดำเนินงาน{label} จะปิดวันที่ {formatThaiDate(win.closesAt)} — หลังจากนั้นระบบล็อก บันทึกเพิ่มไม่ได้
+        ช่วงดำเนินงาน{label} จะปิดวันที่ {formatThaiDate(win.closesAt)} หลังจากนั้นบันทึกไม่ได้
       </div>
     );
   }
@@ -42,7 +42,7 @@ export function WindowNotice({ activity, className }: { activity: OperatingActiv
       className={`flex items-center gap-2.5 rounded-xl border border-border bg-muted px-4 py-3 text-[13px] text-muted-foreground ${className ?? ""}`}
     >
       <Lock className="size-4 shrink-0" />
-      {text} — ดูข้อมูลได้ แต่บันทึกไม่ได้
+      {text} ดูได้อย่างเดียว
     </div>
   );
 }

@@ -47,13 +47,13 @@ export function NotificationList({
               className={cn("mt-1.5 size-2 shrink-0 rounded-full", n.readAt ? "bg-transparent" : "bg-primary")}
             />
             <span className="min-w-0 flex-1">
-              <span className="block text-[11.5px] font-semibold text-muted-foreground">
+              <span className="block text-[12px] font-semibold text-muted-foreground">
                 {NOTIFICATION_EVENT_LABEL[n.eventType]}
               </span>
-              <span className={cn("block text-[13.5px] leading-snug", !n.readAt && "font-semibold")}>
+              <span className={cn("block text-[13px] leading-snug", !n.readAt && "font-semibold")}>
                 {n.message}
               </span>
-              <span className="mt-1 flex items-center gap-2 text-[11.5px] text-muted-foreground">
+              <span className="mt-1 flex items-center gap-2 text-[12px] text-muted-foreground">
                 {formatThaiDateTime(n.createdAt)}
                 {n.emailedAt && (
                   <span className="inline-flex items-center gap-1">

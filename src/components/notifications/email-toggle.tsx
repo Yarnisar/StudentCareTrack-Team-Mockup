@@ -13,11 +13,11 @@ export function EmailToggle() {
   return (
     <div className="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3">
       <div className="min-w-0 flex-1">
-        <div className="text-[13.5px] font-semibold">รับการแจ้งเตือนทางอีเมล</div>
+        <div className="text-[13px] font-semibold">รับทางอีเมล</div>
         <div className="text-[12px] text-muted-foreground">
           {hasEmail
-            ? `ส่งไปที่ ${currentUser.email} · การแจ้งเตือนในระบบได้รับเสมอ`
-            : "บัญชีนี้ยังไม่มีอีเมลในระบบ จึงได้รับเฉพาะการแจ้งเตือนในระบบ"}
+            ? `ส่งไปที่ ${currentUser.email}`
+            : "ยังไม่มีอีเมลในบัญชีนี้"}
         </div>
       </div>
       <button

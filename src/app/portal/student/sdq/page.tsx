@@ -27,15 +27,15 @@ export default function StudentSdqPage() {
   const canTake = form?.status === "pending" && block === null;
 
   return (
-    <MobileShell title="แบบประเมิน SDQ" subtitle="ฉบับนักเรียนประเมินตนเอง" role="student" back="/portal/student">
+    <MobileShell title="แบบประเมิน SDQ" subtitle="ฉบับนักเรียน" role="student" back="/portal/student">
       <div className="space-y-4 p-5">
         {form?.status === "submitted" ? (
           <Card>
             <CardContent className="flex flex-col items-center p-6 text-center">
               <CheckCircle2 className="size-10 text-risk-green" />
-              <h2 className="mt-2 text-base font-bold">ส่งแล้ว</h2>
+              <h2 className="mt-2 text-[15px] font-bold">ส่งแล้ว</h2>
               <p className="mt-1 text-[13px] text-muted-foreground">
-                เมื่อ {form.submittedAt ? formatThaiDate(form.submittedAt) : "-"} · ขอบคุณที่ตอบแบบประเมิน
+                เมื่อ {form.submittedAt ? formatThaiDate(form.submittedAt) : "-"} ขอบคุณนะ
               </p>
             </CardContent>
           </Card>
@@ -43,8 +43,8 @@ export default function StudentSdqPage() {
           <>
             <div className="flex gap-2.5 rounded-xl border border-blue-200 bg-accent p-3.5">
               <HeartHandshake className="size-5 shrink-0 text-primary" />
-              <p className="text-[12.5px] leading-relaxed text-accent-foreground">
-                ไม่มีคำตอบถูกหรือผิด ตอบตามความรู้สึกจริงในช่วง 6 เดือนที่ผ่านมา คำตอบใช้เพื่อการดูแลช่วยเหลือเท่านั้น
+              <p className="text-[12px] leading-relaxed text-accent-foreground">
+                ไม่มีถูกหรือผิด ตอบตามความรู้สึก 6 เดือนที่ผ่านมา ใช้เพื่อดูแลช่วยเหลือเท่านั้น
               </p>
             </div>
             <SdqForm

@@ -38,7 +38,7 @@ export function NotificationBell({
       >
         <Bell className="size-5" />
         {unread > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-risk-red px-1 text-[10px] font-bold text-white">
+          <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-risk-red px-1 text-[11px] font-bold text-white">
             {unread > 9 ? "9+" : unread}
           </span>
         )}
@@ -59,7 +59,7 @@ export function NotificationBell({
             )}
           >
             <div className="flex items-center justify-between border-b border-border px-4 py-3">
-              <span className="text-[14px] font-bold">การแจ้งเตือน</span>
+              <span className="text-[15px] font-bold">การแจ้งเตือน</span>
               {unread > 0 && (
                 <button
                   type="button"

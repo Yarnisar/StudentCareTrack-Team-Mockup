@@ -30,17 +30,14 @@ export default function ParentReferralsPage() {
   return (
     <MobileShell
       title="เอกสารส่งต่อหน่วยงานภายนอก"
-      subtitle="ตรวจเอกสารและลงนาม"
+      subtitle="ตรวจและลงนาม"
       role="parent"
       back="/portal/parent"
     >
       <div className="space-y-4 p-5">
-        <div className="flex gap-3 rounded-2xl border border-border bg-card p-4">
-          <ShieldCheck className="size-5 shrink-0 text-muted-foreground" />
-          <p className="text-[12.5px] leading-relaxed text-muted-foreground">
-            โรงเรียนจะส่งข้อมูลให้หน่วยงานภายนอกได้ก็ต่อเมื่อมีความยินยอมประจำปีการศึกษา
-            และเอกสารฉบับนั้นผ่านการลงนามของผู้ปกครองและการอนุมัติของผู้ดูแลระบบแล้ว
-          </p>
+        <div className="flex gap-2 px-1 text-[12px] text-muted-foreground">
+          <ShieldCheck className="size-4 shrink-0" />
+          <p>ส่งข้อมูลได้เมื่อมีความยินยอม ผู้ปกครองลงนาม และผู้ดูแลระบบอนุมัติ</p>
         </div>
 
         {pending.map((entry) => (
@@ -49,7 +46,7 @@ export default function ParentReferralsPage() {
         {pending.length === 0 && (
           <Card>
             <CardContent className="p-6 text-center text-[13px] text-muted-foreground">
-              ตอนนี้ไม่มีเอกสารที่รอการลงนามของท่าน
+              ไม่มีเอกสารรอลงนาม
             </CardContent>
           </Card>
         )}
@@ -57,7 +54,7 @@ export default function ParentReferralsPage() {
         {others.length > 0 && (
           <Card>
             <CardContent className="p-4">
-              <h2 className="mb-2 text-[14.5px] font-bold">เอกสารอื่น ๆ</h2>
+              <h2 className="mb-2 text-[15px] font-bold">เอกสารอื่น</h2>
               <ul className="space-y-3">
                 {others.map(({ referral, studentId }) => (
                   <li key={referral.referralId} className="rounded-xl border border-border p-3">
@@ -120,14 +117,13 @@ function SignCard({ entry }: { entry: ReferralEntry }) {
           <ReferralStatusChip referral={referral} />
         </div>
         <p className="text-[12px] text-muted-foreground">
-          หน่วยงานที่รับส่งต่อ: {referral.externalAgency} · จัดทำโดย {store.nameOf(referral.createdBy)} เมื่อ{" "}
-          {formatThaiDate(referral.createdAt)}
+          ส่งถึง {referral.externalAgency} · {formatThaiDate(referral.createdAt)}
         </p>
 
         <ReferralChain referral={referral} />
 
         <div>
-          <div className="mb-1 text-[13px] font-semibold">เนื้อหาที่จะส่งต่อ</div>
+          <div className="mb-1 text-[13px] font-semibold">เนื้อหาที่จะส่ง</div>
           <p className="rounded-xl bg-surface p-3.5 text-[13px] leading-relaxed whitespace-pre-line">
             {referral.content}
           </p>
@@ -175,9 +171,6 @@ function SignCard({ entry }: { entry: ReferralEntry }) {
               />
               <span className="text-[13px] leading-relaxed">
                 ข้าพเจ้าได้อ่านเนื้อหาที่จะส่งต่อแล้ว และยินยอมให้โรงเรียนส่งข้อมูลนี้ให้หน่วยงานข้างต้น
-                <span className="block text-[11.5px] text-muted-foreground">
-                  หลังลงนาม เอกสารจะถูกส่งให้ผู้ดูแลระบบอนุมัติต่อ
-                </span>
               </span>
             </label>
             <div>
@@ -191,9 +184,6 @@ function SignCard({ entry }: { entry: ReferralEntry }) {
                 onChange={(e) => setName(e.target.value)}
                 placeholder={store.currentUser.name}
               />
-              <p className="mt-1 text-[11.5px] text-muted-foreground">
-                ระบบบันทึกการลงนามด้วยบัญชีของท่าน ({store.currentUser.name})
-              </p>
             </div>
             <div className="flex gap-2">
               <Button
@@ -214,7 +204,7 @@ function SignCard({ entry }: { entry: ReferralEntry }) {
           </>
         )}
         {blocked && <p className="text-[12px] text-muted-foreground">{blocked}</p>}
-        {error && <p className="text-[12.5px] font-semibold text-risk-red">{error}</p>}
+        {error && <p className="text-[12px] font-semibold text-risk-red">{error}</p>}
       </CardContent>
     </Card>
   );

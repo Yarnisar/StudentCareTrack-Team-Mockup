@@ -12,7 +12,7 @@ export default function PortalNotificationsPage() {
   return (
     <MobileShell
       title="การแจ้งเตือน"
-      subtitle={`ยังไม่อ่าน ${store.myUnreadCount} รายการ`}
+      subtitle={`ยังไม่อ่าน ${store.myUnreadCount}`}
       role={role}
       back={role === "student" ? "/portal/student" : "/portal/parent"}
     >
@@ -20,7 +20,7 @@ export default function PortalNotificationsPage() {
         <EmailToggle />
         <div className="overflow-hidden rounded-xl border border-border bg-card">
           <div className="flex items-center justify-between border-b border-border px-4 py-3">
-            <span className="text-[14px] font-bold">รายการแจ้งเตือน</span>
+            <span className="text-[15px] font-bold">รายการแจ้งเตือน</span>
             {store.myUnreadCount > 0 && (
               <button
                 type="button"
