@@ -13,10 +13,18 @@ export const ID_CARD_STATUS_LABEL: Record<IdCardStatus, string> = {
   revoked: "เพิกถอนแล้ว",
 };
 
+/** เจ้าของบัตร — คำนวณจากบทบาทของ users ไม่เก็บซ้ำในแถวบัตร */
+export type CardOwnerKind = "student" | "staff";
+
+export const CARD_OWNER_LABEL: Record<CardOwnerKind, string> = {
+  student: "นักเรียน",
+  staff: "บุคลากร",
+};
+
 /** id_cards */
 export interface IdCard {
   cardId: string;
-  /** เจ้าของบัตร (users.user_id — ต้นแบบนี้ออกบัตรให้นักเรียน) */
+  /** เจ้าของบัตร (users.user_id — นักเรียนหรือบุคลากร ดู CardOwnerKind) */
   userId: string;
   /** รหัส QR เฉพาะใบ (UNIQUE) — สุ่ม ไม่ผูกกับรหัสนักเรียน */
   qrCode: string;
@@ -38,6 +46,8 @@ export const REVOKE_REASONS = [
   "ออกบัตรใหม่แทนใบเดิม",
   "นักเรียนย้ายออก / จบการศึกษา",
 ] as const;
+
+export const STAFF_REVOKE_REASONS = ["บัตรหาย", "บัตรชำรุด", "ออกบัตรใหม่แทนใบเดิม", "พ้นจากตำแหน่ง"] as const;
 
 /** การใช้งาน QR บนบัตร */
 export type CardQrUsage = "checkin" | "checkin_behavior";
