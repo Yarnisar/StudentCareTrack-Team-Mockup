@@ -31,7 +31,7 @@ export function BehaviorPendingQueue() {
     setMessage(
       sent.length > 0
         ? `ส่งการแจ้งเตือนแล้ว ${sent.length} รายการ`
-        : "ไม่มีการแจ้งเตือนที่ต้องส่ง (ไม่มีรายการ หรือส่งไปแล้วในรอบนี้)"
+        : "ไม่มีการแจ้งเตือนที่ต้องส่ง"
     );
   };
 
@@ -39,14 +39,13 @@ export function BehaviorPendingQueue() {
     <Card>
       <CardContent className="p-6">
         <div className="mb-1 flex flex-wrap items-center gap-2">
-          <h2 className="text-[15.5px] font-bold">บันทึกรอยืนยัน</h2>
-          <span className="rounded-full bg-risk-amber-bg px-2.5 py-0.5 text-[12px] font-bold text-risk-amber">
+          <h2 className="text-[15px] font-bold">บันทึกรอยืนยัน</h2>
+          <span className="rounded-full bg-risk-amber-bg px-2.5 py-0.5 text-[12px] font-semibold text-risk-amber">
             {pending.length} รายการ
           </span>
         </div>
-        <p className="mb-4 text-xs text-muted-foreground">
-          บันทึกมาสายจากการสแกน QR ยังไม่มีผลกับคะแนนและผู้ปกครองยังไม่เห็น จนกว่าจะยืนยัน · ถ้าไม่มีใครกดครบ{" "}
-          {store.schoolSettings.pendingAutoConfirmDays} วันทำการ ระบบยืนยันให้เอง
+        <p className="mb-4 text-[12px] text-muted-foreground">
+          มาสายจากการสแกน QR · ยังไม่มีผลกับคะแนนจนกว่าจะยืนยัน หรือครบ {store.schoolSettings.pendingAutoConfirmDays} วันทำการ
         </p>
 
         {pending.length === 0 ? (
@@ -107,12 +106,12 @@ function PendingRow({ rec }: { rec: BehaviorRecord }) {
               · {student?.roomName} เลขที่ {student?.classNo}
             </span>
           </div>
-          <div className="text-[12.5px] text-muted-foreground">
+          <div className="text-[12px] text-muted-foreground">
             {rule?.name ?? rec.ruleId} ({rule && rule.scoreDelta > 0 ? `+${rule.scoreDelta}` : rule?.scoreDelta}) ·{" "}
             {formatThaiDateTime(rec.occurredAt)}
           </div>
           {autoAt && (
-            <div className="mt-0.5 flex items-center gap-1 text-[11.5px] text-risk-amber">
+            <div className="mt-0.5 flex items-center gap-1 text-[11px] text-risk-amber">
               <Clock className="size-3" /> ระบบจะยืนยันอัตโนมัติ {formatThaiDate(autoAt)}
             </div>
           )}

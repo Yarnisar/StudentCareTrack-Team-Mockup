@@ -69,38 +69,38 @@ export function VisitRecordSummary({ record }: { record: HomeVisitRecord }) {
       <Card>
         <CardContent className="p-6">
           <div className="mb-3 flex flex-wrap items-center gap-2">
-            <h3 className="flex-1 text-[15.5px] font-bold">สมาชิกครัวเรือนและรายได้</h3>
+            <h3 className="flex-1 text-[15px] font-bold">สมาชิกครัวเรือนและรายได้</h3>
             {record.signedAt ? (
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-risk-green-bg px-2.5 py-1 text-[11.5px] font-semibold text-risk-green">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-risk-green-bg px-2.5 py-1 text-[11px] font-semibold text-risk-green">
                 <Lock className="size-3" /> รับรองแล้ว
               </span>
             ) : (
-              <span className="rounded-full bg-risk-amber-bg px-2.5 py-1 text-[11.5px] font-semibold text-risk-amber">
+              <span className="rounded-full bg-risk-amber-bg px-2.5 py-1 text-[11px] font-semibold text-risk-amber">
                 ร่าง — ยังไม่รับรอง
               </span>
             )}
           </div>
           <div className="overflow-hidden rounded-xl border border-border">
-            <div className="flex bg-surface px-4 py-2.5 text-[12.5px] font-semibold text-muted-foreground">
+            <div className="flex bg-surface px-4 py-2.5 text-[12px] font-semibold text-muted-foreground">
               <span className="w-36">ความสัมพันธ์</span>
               <span className="w-20">อายุ</span>
               <span className="flex-1">พิการ</span>
               <span className="w-32 text-right">รายได้ (บาท/เดือน)</span>
             </div>
             {record.form.members.map((m) => (
-              <div key={m.id} className="flex border-t border-border px-4 py-2.5 text-[13.5px]">
+              <div key={m.id} className="flex border-t border-border px-4 py-2.5 text-[13px]">
                 <span className="w-36">{m.relation || "-"}</span>
                 <span className="w-20">{m.age === "" ? "-" : m.age}</span>
                 <span className="flex-1">{m.disability ? "มี" : "-"}</span>
                 <span className="w-32 text-right">{formatBaht(memberTotal(m))}</span>
               </div>
             ))}
-            <div className="flex border-t border-border bg-risk-amber-bg px-4 py-2.5 text-[13.5px] font-bold text-risk-amber">
+            <div className="flex border-t border-border bg-risk-amber-bg px-4 py-2.5 text-[13px] font-bold text-risk-amber">
               <span className="flex-1">รายได้เฉลี่ยต่อคนต่อเดือน</span>
               <span className="w-32 text-right">{formatBaht(record.householdIncomeAvg)} บาท</span>
             </div>
           </div>
-          <div className="mt-3 flex flex-wrap gap-2 text-[12.5px]">
+          <div className="mt-3 flex flex-wrap gap-2 text-[12px]">
             <StatusChip label="ความด้อยโอกาส" labels={disadvantages} none="ไม่ด้อยโอกาส" />
             <StatusChip label="ความพิการ" labels={disabilities} none="ไม่พิการ" />
             <StatusChip label="ภัยพิบัติในพื้นที่" labels={disasters} none="ไม่มีความเสี่ยง" />
@@ -117,8 +117,7 @@ export function VisitRecordSummary({ record }: { record: HomeVisitRecord }) {
           )}
           {record.livesWith && (
             <p className="mt-3 text-[13px] text-muted-foreground">
-              นักเรียนอาศัยอยู่กับ: <span className="text-foreground">{record.livesWith}</span>{" "}
-              (ข้อมูลประกอบ ไม่เปลี่ยนสิทธิ์ของผู้ปกครองในระบบ)
+              นักเรียนอาศัยอยู่กับ: <span className="text-foreground">{record.livesWith}</span>
             </p>
           )}
         </CardContent>
@@ -127,18 +126,18 @@ export function VisitRecordSummary({ record }: { record: HomeVisitRecord }) {
       <div className="grid gap-5 lg:grid-cols-2">
         <Card>
           <CardContent className="p-6">
-            <h3 className="mb-3 text-[15.5px] font-bold">ความเสี่ยงที่พบ</h3>
+            <h3 className="mb-3 text-[15px] font-bold">ความเสี่ยงที่พบ</h3>
             {risks.length > 0 ? (
               <ul className="space-y-2">
                 {risks.map((f) => (
-                  <li key={f} className="flex gap-2.5 text-[13.5px]">
+                  <li key={f} className="flex gap-2.5 text-[13px]">
                     <span className="mt-1.5 size-2 shrink-0 rounded-full bg-risk-amber" />
                     {f}
                   </li>
                 ))}
               </ul>
             ) : (
-              <p className="text-[13.5px] text-muted-foreground">ไม่พบความเสี่ยงตามแบบบันทึก</p>
+              <p className="text-[13px] text-muted-foreground">ไม่พบความเสี่ยงตามแบบบันทึก</p>
             )}
             <div className="mt-4 border-t border-border pt-3 text-[13px] text-muted-foreground">
               ผู้ให้ข้อมูล: {record.informantName || "-"}
@@ -155,7 +154,7 @@ export function VisitRecordSummary({ record }: { record: HomeVisitRecord }) {
 
         <Card>
           <CardContent className="p-6">
-            <h3 className="mb-3 text-[15.5px] font-bold">ภาพถ่ายประกอบ</h3>
+            <h3 className="mb-3 text-[15px] font-bold">ภาพถ่ายประกอบ</h3>
             {record.cannotAccessHome && (
               <div className="mb-3 rounded-lg bg-accent px-3.5 py-2.5 text-[13px] text-accent-foreground">
                 <b>เข้าเยี่ยมที่บ้านไม่ได้</b> — {record.cannotAccessReason || "-"}
@@ -179,7 +178,7 @@ export function VisitRecordSummary({ record }: { record: HomeVisitRecord }) {
                 ))}
               </div>
             ) : (
-              <p className="text-[13.5px] text-muted-foreground">ยังไม่ได้แนบภาพ</p>
+              <p className="text-[13px] text-muted-foreground">ยังไม่ได้แนบภาพ</p>
             )}
           </CardContent>
         </Card>

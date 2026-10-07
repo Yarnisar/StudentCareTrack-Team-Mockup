@@ -1,6 +1,6 @@
 "use client";
 
-import { AutoBadge, Field, SectionCard } from "../field-shell";
+import { Field, SectionCard } from "../field-shell";
 import { ChipGroup, ChipSelect } from "../option-inputs";
 import { Input } from "@/components/ui/input";
 import {
@@ -23,7 +23,7 @@ export function RiskSection({ api }: { api: RecordFormApi }) {
   const f = api.form;
 
   return (
-    <SectionCard no="6." title="พฤติกรรมและความเสี่ยง" description="หน้า 2–3 ของแบบฟอร์ม">
+    <SectionCard no="6." title="พฤติกรรมและความเสี่ยง">
       <div className="space-y-6">
         <ChipGroup
           label="6.1 สุขภาพ"
@@ -32,11 +32,6 @@ export function RiskSection({ api }: { api: RecordFormApi }) {
           onToggle={(id) => api.toggleIn("healthRisks", id)}
           onClear={() => api.setForm("healthRisks", [])}
           source={api.sourceOf("healthRisks")}
-          hint={
-            api.sourceOf("healthRisks")
-              ? "ผลคัดกรองมิติสุขภาพกายของนักเรียนเข้าเกณฑ์ — ตรวจสอบและเลือกรายการที่พบจริง"
-              : undefined
-          }
           noneLabel="สุขภาพปกติดี"
           columns={2}
         />
@@ -48,19 +43,13 @@ export function RiskSection({ api }: { api: RecordFormApi }) {
           onToggle={(id) => api.toggleIn("welfareRisks", id)}
           onClear={() => api.setForm("welfareRisks", [])}
           source={api.sourceOf("welfareRisks")}
-          hint={
-            api.sourceOf("welfareRisks")
-              ? "ผลคัดกรองมิติสวัสดิภาพเข้าเกณฑ์ — ตรวจสอบรายการที่เกี่ยวข้อง"
-              : undefined
-          }
           noneLabel="ไม่พบความเสี่ยง"
           columns={2}
         />
 
         <div>
           <div className="mb-2.5 flex flex-wrap items-center gap-2">
-            <span className="text-[13.5px] font-semibold">6.3 ระยะทางและการเดินทางมาโรงเรียน</span>
-            {api.sourceOf("travelKm") && <AutoBadge source="previous" />}
+            <span className="text-[13px] font-semibold">6.3 ระยะทางและการเดินทางมาโรงเรียน</span>
           </div>
           <div className="grid gap-3 md:grid-cols-3">
             <Field label="ระยะทางไป-กลับ (กิโลเมตร)" htmlFor="km" carry={api.carryOf("travelKm")}>
@@ -151,11 +140,6 @@ export function RiskSection({ api }: { api: RecordFormApi }) {
           onToggle={(id) => api.toggleIn("gaming", id)}
           onClear={() => api.setForm("gaming", [])}
           source={api.sourceOf("gaming")}
-          hint={
-            api.sourceOf("gaming")
-              ? "ผลคัดกรองมิติพฤติกรรมเข้าเกณฑ์ — ตรวจสอบรายการที่เกี่ยวข้อง"
-              : undefined
-          }
           noneLabel="ไม่พบความเสี่ยง"
           columns={3}
         />

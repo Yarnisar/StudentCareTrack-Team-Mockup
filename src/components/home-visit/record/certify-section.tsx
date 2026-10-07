@@ -30,7 +30,7 @@ export function CertifySection({
   const photoSlots = input.cannotAccessHome ? PHOTO_SLOTS_INACCESSIBLE : PHOTO_SLOTS_HOME;
 
   return (
-    <SectionCard no="8." title="ผู้ให้ข้อมูลและการรับรองข้อมูล" description="หน้า 3–4 ของแบบฟอร์ม">
+    <SectionCard no="8." title="ผู้ให้ข้อมูลและการรับรองข้อมูล">
       <div className="space-y-6">
         <div>
           <div className="flex flex-wrap items-center gap-2">
@@ -57,8 +57,8 @@ export function CertifySection({
                 }
                 className={
                   input.informantRelation === opt
-                    ? "min-h-12 rounded-xl border border-primary bg-accent px-3 py-2 text-[13.5px] font-semibold text-primary"
-                    : "min-h-12 rounded-xl border border-border bg-card px-3 py-2 text-[13.5px] text-muted-foreground hover:bg-muted"
+                    ? "min-h-12 rounded-xl border border-primary bg-accent px-3 py-2 text-[13px] font-semibold text-primary"
+                    : "min-h-12 rounded-xl border border-border bg-card px-3 py-2 text-[13px] text-muted-foreground hover:bg-muted"
                 }
               >
                 {opt}
@@ -82,8 +82,8 @@ export function CertifySection({
           <Label className="text-[13px] font-semibold">การเข้าเยี่ยม</Label>
           <div className="mt-2 grid gap-2 sm:grid-cols-2">
             {[
-              { v: false, label: "เข้าเยี่ยมในบ้านได้", sub: "แนบภาพภายนอกและภายในที่พักอาศัย (2 ภาพ)" },
-              { v: true, label: "เข้าเยี่ยมที่บ้านไม่ได้", sub: "ใช้ภาพนักเรียนคู่ป้ายโรงเรียน พร้อมเหตุผล" },
+              { v: false, label: "เข้าเยี่ยมในบ้านได้", sub: "ภาพภายนอกและภายใน (2 ภาพ)" },
+              { v: true, label: "เข้าเยี่ยมที่บ้านไม่ได้", sub: "ภาพนักเรียนคู่ป้ายโรงเรียน + เหตุผล" },
             ].map((o) => (
               <button
                 key={o.label}
@@ -96,7 +96,7 @@ export function CertifySection({
                     : "min-h-14 rounded-xl border border-border bg-card px-4 py-2.5 text-left hover:bg-muted"
                 }
               >
-                <div className="text-[13.5px] font-semibold">{o.label}</div>
+                <div className="text-[13px] font-semibold">{o.label}</div>
                 <div className="text-[12px] text-muted-foreground">{o.sub}</div>
               </button>
             ))}
@@ -113,14 +113,14 @@ export function CertifySection({
                 />
               </Field>
               <p className="mt-1.5 text-[12px] text-muted-foreground">
-                นับว่าเยี่ยมแล้ว แต่รายงานแยกนับเป็นกลุ่มเข้าบ้านไม่ได้
+                นับว่าเยี่ยมแล้ว แต่รายงานแยกเป็นกลุ่มเข้าบ้านไม่ได้
               </p>
             </div>
           )}
         </div>
 
         <ChipSelect
-          label="ภาพที่พักอาศัยของนักเรียนได้มาจาก (ต่อการเยี่ยม — ไม่ยกจากภาคเรียนก่อน)"
+          label="ภาพที่พักอาศัยได้มาจาก"
           options={PHOTO_SOURCE_OPTIONS}
           value={api.form.photoSource}
           onChange={(v) => api.setForm("photoSource", v)}
@@ -129,11 +129,6 @@ export function CertifySection({
         />
 
         <div>
-          <p className="mb-2 text-[12.5px] text-muted-foreground">
-            {input.cannotAccessHome
-              ? "กรณีที่พักอาศัยอยู่ต่างจังหวัด/ต่างประเทศ หรือไม่ได้รับอนุญาตให้ถ่ายภาพ ใช้ภาพนักเรียนคู่ป้ายสถานศึกษาแทน"
-              : "แบบฟอร์มบังคับ 2 ภาพ: ภายนอกที่พักอาศัย และภายในที่พักอาศัย"}
-          </p>
           <div className="grid gap-3 md:grid-cols-2">
             {photoSlots.map((t, i) => {
               const attached = api.hasPhoto(t);
@@ -150,10 +145,10 @@ export function CertifySection({
                   }
                 >
                   {attached ? <Check className="size-6" /> : <Camera className="size-6" />}
-                  <span className="text-[12.5px]">
+                  <span className="text-[12px]">
                     รูปที่ {i + 1} {PHOTO_TYPE_LABEL[t]}
                   </span>
-                  <span className="text-[11.5px]">
+                  <span className="text-[11px]">
                     {attached ? "แนบแล้ว · แตะเพื่อนำออก" : "แตะเพื่อถ่าย / แนบภาพ"}
                   </span>
                 </button>
@@ -163,10 +158,10 @@ export function CertifySection({
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
-          <Field label="ครูผู้ไปเยี่ยมและรับรองข้อมูล (1 คน)" source="registry">
+          <Field label="ครูผู้ไปเยี่ยมและรับรองข้อมูล (1 คน)">
             <ReadOnly value={certifierName} />
           </Field>
-          <Field label="ตำแหน่ง" source="registry">
+          <Field label="ตำแหน่ง">
             <ReadOnly value="ครูประจำชั้น" />
           </Field>
         </div>

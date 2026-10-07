@@ -41,7 +41,7 @@ export default function BehaviorPage() {
     <>
       <PageHeader
         title="การจัดการความประพฤติ"
-        subtitle={`บันทึกและติดตามความประพฤตินักเรียน · ${CURRENT_TERM.label}`}
+        subtitle={`${CURRENT_TERM.label}`}
       />
 
       <div className="flex-1 overflow-y-auto p-8 pb-24">
@@ -53,10 +53,8 @@ export default function BehaviorPage() {
 
         <div className="mt-5 grid gap-5 xl:grid-cols-[1.8fr_1fr]">
           <div>
-            <h2 className="text-[15.5px] font-bold">ประวัติการบันทึกความประพฤติ</h2>
-            <p className="mt-1 mb-3 text-xs text-muted-foreground">
-              ครูทั่วไปบันทึกได้ทุกห้องที่สอน · ครูประจำชั้นดูแลนักเรียนในห้องตนเอง
-            </p>
+            <h2 className="text-[15px] font-bold">ประวัติการบันทึกความประพฤติ</h2>
+            <div className="mb-3" />
             <BehaviorRecordFeed records={pager.slice} />
             <PagerNumbered
               page={pager.page}
@@ -76,10 +74,10 @@ export default function BehaviorPage() {
           <div className="space-y-5">
             <Card>
               <CardContent className="p-6">
-                <h2 className="mb-4 text-[15.5px] font-bold">บันทึกความประพฤติใหม่</h2>
+                <h2 className="mb-4 text-[15px] font-bold">บันทึกความประพฤติใหม่</h2>
                 <NewRecordFields form={form} />
-                <p className="mt-3 text-[11.5px] leading-relaxed text-muted-foreground">
-                  กฎที่ตั้งค่าให้แจ้งผู้ปกครอง ระบบจะแจ้งผู้ปกครองของนักเรียนทันทีเมื่อบันทึกมีผล
+                <p className="mt-3 text-[12px] text-muted-foreground">
+                  กฎที่ตั้งให้แจ้งผู้ปกครอง จะแจ้งทันทีเมื่อบันทึกมีผล
                 </p>
               </CardContent>
             </Card>
@@ -87,8 +85,8 @@ export default function BehaviorPage() {
             <Card>
               <CardContent className="p-6">
                 <div className="mb-2 flex items-center justify-between">
-                  <h2 className="text-[15.5px] font-bold">กฎความประพฤติ</h2>
-                  <span className="text-xs text-muted-foreground">จัดการโดยแอดมิน</span>
+                  <h2 className="text-[15px] font-bold">กฎความประพฤติ</h2>
+                  <span className="text-[12px] text-muted-foreground">จัดการโดยแอดมิน</span>
                 </div>
                 <RulesList />
               </CardContent>

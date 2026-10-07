@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
-import { CreditCard, Printer, ShieldCheck } from "lucide-react";
+import { CreditCard, Printer } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { CheckinCardsTabs } from "@/components/layout/checkin-cards-tabs";
 import { CardRoster } from "@/components/cards/card-roster";
@@ -70,7 +69,7 @@ export default function CardsPage() {
     <>
       <PageHeader
         title="บัตรนักเรียน"
-        subtitle="ออกบัตร เพิกถอนบัตร และพิมพ์บัตรจริงขนาด CR80"
+        subtitle="ออกบัตร เพิกถอน และพิมพ์"
         action={
           <Button onClick={() => window.print()} disabled={printItems.length === 0}>
             <Printer className="size-4" /> พิมพ์บัตรที่เลือก {printItems.length || ""}
@@ -88,17 +87,6 @@ export default function CardsPage() {
             <Stat label="บัตรที่เพิกถอนแล้ว" value={`${revokedCount} ใบ`} />
           </div>
 
-          <div className="rounded-xl border border-blue-200 bg-accent px-4 py-3 text-[13.5px] text-accent-foreground">
-            <ShieldCheck className="mr-1.5 inline size-4" />
-            QR บนบัตรเป็น<b>รหัสอ้างอิงแบบสุ่ม</b> ไม่มีรหัสนักเรียน ชื่อ หรือข้อมูลส่วนตัวอยู่ในรหัส
-            ระบบจะแปลงกลับเป็นนักเรียนได้ก็ต่อเมื่อค้นในฐานข้อมูลบัตรเท่านั้น
-            บัตรที่เพิกถอนแล้วจะสแกนที่หน้า{" "}
-            <Link href="/checkin" className="font-semibold underline">
-              เช็คอิน
-            </Link>{" "}
-            ไม่ได้
-          </div>
-
           <div className="grid gap-5 xl:grid-cols-[1fr_380px]">
             <div className="space-y-5">
               <CardRoster selected={selected} onToggle={toggle} />
@@ -109,13 +97,13 @@ export default function CardsPage() {
               <Card>
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between gap-2">
-                    <h2 className="text-[15.5px] font-bold">พรีวิวและพิมพ์</h2>
+                    <h2 className="text-[15px] font-bold">พรีวิวและพิมพ์</h2>
                     <Button variant="ghost" size="sm" onClick={selectAll}>
                       เลือกทุกใบ
                     </Button>
                   </div>
-                  <p className="mt-0.5 text-[13px] text-muted-foreground">
-                    เลือกไว้ {printItems.length} ใบ · สั่งพิมพ์แล้วจะได้เฉพาะบัตร (A4 หน้าละหลายใบ)
+                  <p className="mt-0.5 text-[12px] text-muted-foreground">
+                    เลือกไว้ {printItems.length} ใบ
                   </p>
 
                   <div className="mt-4 flex justify-center overflow-x-auto">
@@ -159,7 +147,7 @@ function Stat({ label, value }: { label: string; value: string }) {
   return (
     <Card>
       <CardContent className="p-4">
-        <div className="text-[12.5px] font-semibold text-muted-foreground">{label}</div>
+        <div className="text-[12px] text-muted-foreground">{label}</div>
         <div className="mt-1 text-xl font-bold">{value}</div>
       </CardContent>
     </Card>

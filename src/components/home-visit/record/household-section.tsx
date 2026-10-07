@@ -38,22 +38,16 @@ export function HouseholdSection({ api }: { api: RecordFormApi }) {
       <SectionCard
         no="3."
         title="จำนวนสมาชิกในครัวเรือนและรายได้"
-        description="รวมตัวนักเรียน · รายได้เฉลี่ยต่อเดือนแยกตามประเภท (บาท/เดือน)"
+        description="รวมตัวนักเรียน · รายได้เป็นบาท/เดือน"
       >
         {api.sourceOf("members") && (
-          <div className="mb-3 flex flex-wrap items-center gap-2">
-            <AutoBadge source="previous" />
-            {membersCarry && <CarryBadge state={membersCarry} />}
-            <span className="text-[12.5px] text-muted-foreground">
-              ดึงรายชื่อสมาชิกและรายได้จากการเยี่ยมบ้านครั้งก่อนมาแล้ว ครูเพียงตรวจสอบและแก้ไขเฉพาะที่เปลี่ยนแปลง
-            </span>
-          </div>
+          <div className="mb-3">{membersCarry ? <CarryBadge state={membersCarry} /> : <AutoBadge source="previous" />}</div>
         )}
 
         <div className="overflow-x-auto">
           <table className="w-full min-w-[820px] text-[13px]">
             <thead>
-              <tr className="border-b-2 border-border text-[11.5px] text-muted-foreground">
+              <tr className="border-b-2 border-border text-[11px] text-muted-foreground">
                 <th className="pb-2 text-left font-semibold">ความสัมพันธ์</th>
                 <th className="w-16 pb-2 text-center font-semibold">อายุ</th>
                 <th className="w-16 pb-2 text-center font-semibold">พิการ</th>
@@ -184,7 +178,7 @@ export function HouseholdSection({ api }: { api: RecordFormApi }) {
         </div>
       </SectionCard>
 
-      <SectionCard no="4." title="สถานะของครัวเรือน" description="กรอกเฉพาะบุคคลที่อาศัยในบ้านปัจจุบัน">
+      <SectionCard no="4." title="สถานะของครัวเรือน" description="เฉพาะผู้ที่อาศัยในบ้านปัจจุบัน">
         <div className="space-y-6">
           <ChipGroup
             label="4.1 ภาระพึ่งพิงของครัวเรือน"

@@ -61,7 +61,7 @@ export default function CheckinPage() {
     <>
       <PageHeader
         title="สแกน QR เช็คอิน"
-        subtitle="บันทึกการมาเรียน / มาสายด้วยบัตรนักเรียนดิจิทัล"
+        subtitle="บันทึกการมาเรียนด้วยบัตรนักเรียน"
       />
 
       <CheckinCardsTabs />
@@ -81,9 +81,7 @@ export default function CheckinPage() {
                   <span className="flex items-center gap-2 text-[13px] font-semibold text-slate-400">
                     <span className="size-2.5 rounded-full bg-risk-green" /> กล้องพร้อมสแกน
                   </span>
-                  <span className="text-[13px] text-slate-500">
-                    โหมดจำลอง — พิมพ์เลขประจำตัวแทนการสแกน
-                  </span>
+                  <span className="text-[12px] text-slate-500">โหมดจำลอง</span>
                 </div>
 
                 <div className="relative flex size-56 items-center justify-center rounded-2xl bg-white">
@@ -97,7 +95,7 @@ export default function CheckinPage() {
                 <div className="mt-7 w-full max-w-sm space-y-2.5">
                   <div className="flex items-center justify-between gap-3">
                     <Label htmlFor="code" className="text-slate-300">
-                      รหัส QR จากบัตร (หรือเลขประจำตัวเมื่อไม่มีบัตร)
+                      รหัส QR หรือเลขประจำตัว
                     </Label>
                     <select
                       aria-label="เวลาที่สแกน (สำหรับสาธิต)"
@@ -130,7 +128,7 @@ export default function CheckinPage() {
                         <button
                           key={s.studentId}
                           onClick={() => scan(card ? card.qrCode : s.studentId)}
-                          className="rounded-md bg-slate-800 px-2.5 py-1 text-[11.5px] font-medium text-slate-300 hover:bg-slate-700"
+                          className="rounded-md bg-slate-800 px-2.5 py-1 text-[11px] font-medium text-slate-300 hover:bg-slate-700"
                         >
                           {card ? "QR" : "ไม่มีบัตร"} · {s.fullName.split(" ")[1]}
                         </button>
@@ -144,7 +142,7 @@ export default function CheckinPage() {
             {error && (
               <div className="flex items-center gap-3 rounded-xl border border-red-200 bg-risk-red-bg px-4 py-3">
                 <AlertTriangle className="size-5 shrink-0 text-risk-red" />
-                <p className="text-[13.5px] text-risk-red">{error}</p>
+                <p className="text-[13px] text-risk-red">{error}</p>
               </div>
             )}
 
@@ -165,7 +163,7 @@ export default function CheckinPage() {
                     </div>
                     <div className="flex-1">
                       <div className="text-[15px] font-bold">{last.student.fullName}</div>
-                      <div className="text-[12.5px] text-muted-foreground">
+                      <div className="text-[12px] text-muted-foreground">
                         {last.student.roomName} เลขที่ {last.student.classNo} ·{" "}
                         {formatThaiTime(last.log.scannedAt)}
                       </div>
@@ -173,10 +171,10 @@ export default function CheckinPage() {
                     <span
                       className={
                         last.alreadyCheckedIn
-                          ? "rounded-full bg-white px-3 py-1 text-[12.5px] font-bold text-muted-foreground"
+                          ? "rounded-full bg-white px-3 py-1 text-[12px] font-bold text-muted-foreground"
                           : last.isLate
-                            ? "rounded-full bg-white px-3 py-1 text-[12.5px] font-bold text-risk-amber"
-                            : "rounded-full bg-white px-3 py-1 text-[12.5px] font-bold text-risk-green"
+                            ? "rounded-full bg-white px-3 py-1 text-[12px] font-bold text-risk-amber"
+                            : "rounded-full bg-white px-3 py-1 text-[12px] font-bold text-risk-green"
                       }
                     >
                       {last.alreadyCheckedIn ? "เช็คอินแล้ว" : last.isLate ? "มาสาย" : "ตรงเวลา"}
@@ -184,42 +182,34 @@ export default function CheckinPage() {
                   </div>
 
                   {last.alreadyCheckedIn && (
-                    <p className="mt-3 flex items-center gap-2 rounded-lg bg-white/70 px-3 py-2 text-[12.5px]">
+                    <p className="mt-3 flex items-center gap-2 rounded-lg bg-white/70 px-3 py-2 text-[12px]">
                       <CheckCircle2 className="size-4 shrink-0 text-muted-foreground" />
-                      เช็คอินแล้ววันนี้เมื่อ {formatThaiTime(last.log.scannedAt)} (
-                      {last.isLate ? "มาสาย" : "ตรงเวลา"}) — เช็คอินได้วันละ 1 ครั้ง ไม่มีการบันทึกซ้ำ
+                      เช็คอินแล้ววันนี้ ({last.isLate ? "มาสาย" : "ตรงเวลา"}) — เช็คอินได้วันละ 1 ครั้ง
                     </p>
                   )}
 
                   {!last.alreadyCheckedIn && last.isLate && (
-                    <p className="mt-3 rounded-lg bg-white/70 px-3 py-2 text-[12.5px]">
-                      สร้างบันทึก &quot;มาสาย&quot; รอครูประจำชั้นยืนยันแล้ว — ยังไม่มีผลกับคะแนนจนกว่าจะยืนยัน
-                      (หรือครบ {store.schoolSettings.pendingAutoConfirmDays} วันทำการ) · มาสายที่ยืนยันแล้วเดือนนี้{" "}
-                      {last.lateCountThisMonth} ครั้ง
+                    <p className="mt-3 rounded-lg bg-white/70 px-3 py-2 text-[12px]">
+                      บันทึก &quot;มาสาย&quot; รอครูประจำชั้นยืนยัน (ครบ {store.schoolSettings.pendingAutoConfirmDays} วันทำการยืนยันเอง) ·
+                      เดือนนี้มาสายแล้ว {last.lateCountThisMonth} ครั้ง
                     </p>
                   )}
 
                   {last.exceededThreshold && (
-                    <p className="mt-2 flex items-center gap-2 rounded-lg bg-risk-red-bg px-3 py-2 text-[12.5px] font-semibold text-risk-red">
+                    <p className="mt-2 flex items-center gap-2 rounded-lg bg-risk-red-bg px-3 py-2 text-[12px] font-semibold text-risk-red">
                       <AlertTriangle className="size-4" />
-                      มาสาย (ยืนยันแล้ว) ครบเกณฑ์ {threshold} ครั้งต่อเดือน — ระบบแจ้งครูประจำชั้นเมื่อครบเกณฑ์
+                      มาสายครบเกณฑ์ {threshold} ครั้งต่อเดือน — แจ้งครูประจำชั้นแล้ว
                     </p>
                   )}
                 </CardContent>
               </Card>
             )}
-
-            <div className="rounded-xl border border-blue-200 bg-accent px-4 py-3 text-[13.5px] text-accent-foreground">
-              เช็คอินวันละ 1 ครั้ง · การสแกนหลังเวลา {startTime} น. ระบบจะสร้างบันทึก <b>&quot;มาสาย&quot;</b>{" "}
-              รอครูประจำชั้นยืนยัน เมื่อยืนยันแล้ว (หรือครบ {store.schoolSettings.pendingAutoConfirmDays} วันทำการ)
-              จึงหักคะแนนและนับรวมในมิติพฤติกรรมของการคัดกรอง ครบ {threshold} ครั้งต่อเดือนระบบแจ้งครูประจำชั้น
-            </div>
           </div>
 
           <Card>
             <CardContent className="p-6">
               <div className="mb-4 flex items-center justify-between">
-                <h2 className="text-[15.5px] font-bold">รายการสแกนล่าสุด</h2>
+                <h2 className="text-[15px] font-bold">รายการสแกนล่าสุด</h2>
                 <Link
                   href="/behavior"
                   className="text-[13px] font-semibold text-primary hover:underline"
@@ -253,8 +243,8 @@ export default function CheckinPage() {
                         <span
                           className={
                             log.isLate
-                              ? "text-[11.5px] font-semibold text-risk-amber"
-                              : "text-[11.5px] font-semibold text-risk-green"
+                              ? "text-[11px] font-semibold text-risk-amber"
+                              : "text-[11px] font-semibold text-risk-green"
                           }
                         >
                           {log.isLate ? "มาสาย" : "ตรงเวลา"}
@@ -276,7 +266,7 @@ function MiniStat({ label, value, warn }: { label: string; value: string; warn?:
   return (
     <Card className={warn ? "border-amber-200" : undefined}>
       <CardContent className="p-4">
-        <div className={warn ? "text-[12.5px] font-semibold text-risk-amber" : "text-[12.5px] font-semibold text-muted-foreground"}>
+        <div className={warn ? "text-[12px] font-semibold text-risk-amber" : "text-[12px] font-semibold text-muted-foreground"}>
           {label}
         </div>
         <div className={warn ? "mt-1 text-xl font-bold text-risk-amber" : "mt-1 text-xl font-bold"}>

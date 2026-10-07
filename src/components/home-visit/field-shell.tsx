@@ -25,7 +25,7 @@ export const SOURCE_STYLE: Record<FillSource, string> = {
 export function AutoBadge({ source }: { source: FillSource }) {
   return (
     <span
-      className={`inline-flex shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-[10.5px] font-semibold ${SOURCE_STYLE[source]}`}
+      className={`inline-flex shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] ${SOURCE_STYLE[source]}`}
     >
       <Sparkles className="size-3" />
       {SOURCE_LABEL[source]}
@@ -41,14 +41,14 @@ export function AutoBadge({ source }: { source: FillSource }) {
 export function CarryBadge({ state }: { state: CarryState }) {
   if (state === "changed") {
     return (
-      <span className="inline-flex shrink-0 items-center gap-1 rounded-md bg-risk-amber-bg px-1.5 py-0.5 text-[10.5px] font-semibold text-risk-amber">
+      <span className="inline-flex shrink-0 items-center gap-1 text-[11px] text-risk-amber">
         <PencilLine className="size-3" />
-        แก้จากข้อมูลภาคเรียนก่อน
+        แก้จากภาคเรียนก่อน
       </span>
     );
   }
   return (
-    <span className="inline-flex shrink-0 items-center gap-1 rounded-md bg-surface px-1.5 py-0.5 text-[10.5px] font-semibold text-muted-foreground">
+    <span className="inline-flex shrink-0 items-center gap-1 text-[11px] text-muted-foreground">
       <History className="size-3" />
       ข้อมูลจากภาคเรียนก่อน
     </span>
@@ -70,7 +70,7 @@ export function CopyButton({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-[12px] font-semibold text-primary transition-colors hover:bg-accent disabled:pointer-events-none disabled:opacity-50"
+      className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-[12px] font-medium text-primary transition-colors hover:bg-accent disabled:pointer-events-none disabled:opacity-50"
     >
       <Copy className="size-3.5" />
       {label}
@@ -99,10 +99,10 @@ export function Field({
   return (
     <div className={className}>
       <div className="mb-1.5 flex flex-wrap items-center gap-2">
-        <Label htmlFor={htmlFor} className="text-[12.5px] text-muted-foreground">
+        <Label htmlFor={htmlFor} className="text-[13px] text-muted-foreground">
           {label}
         </Label>
-        {source && <AutoBadge source={source} />}
+        {source && !(carry && source === "previous") && <AutoBadge source={source} />}
         {carry && <CarryBadge state={carry} />}
         {action && (
           <>
@@ -119,7 +119,7 @@ export function Field({
 /** ช่องข้อมูลที่ระบบกรอกให้และแก้ไขในแบบฟอร์มนี้ไม่ได้ */
 export function ReadOnly({ value }: { value: string }) {
   return (
-    <div className="rounded-lg border border-border bg-surface px-3.5 py-2.5 text-[13.5px] font-medium">
+    <div className="rounded-lg border border-border bg-surface px-3.5 py-2.5 text-[13px] font-medium">
       {value}
     </div>
   );
@@ -139,11 +139,11 @@ export function SectionCard({
   return (
     <section className="rounded-xl border border-border bg-card p-6">
       <div className="mb-4">
-        <h2 className="text-[15.5px] font-bold">
+        <h2 className="text-[15px] font-bold">
           <span className="mr-2 text-primary">{no}</span>
           {title}
         </h2>
-        {description && <p className="mt-1 text-xs text-muted-foreground">{description}</p>}
+        {description && <p className="mt-1 text-[12px] text-muted-foreground">{description}</p>}
       </div>
       {children}
     </section>

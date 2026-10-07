@@ -1,6 +1,6 @@
 "use client";
 
-import { AutoBadge, Field, SectionCard } from "../field-shell";
+import { Field, SectionCard } from "../field-shell";
 import { ChipGroup, ChipSelect, SegmentedRows } from "../option-inputs";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -39,7 +39,7 @@ export function FamilySection({
   };
 
   return (
-    <SectionCard no="5." title="ความสัมพันธ์ในครอบครัว" description="หน้า 2 ของแบบฟอร์ม">
+    <SectionCard no="5." title="ความสัมพันธ์ในครอบครัว">
       <div className="space-y-6">
         <div className="grid gap-4 md:grid-cols-2">
           <Field
@@ -59,7 +59,7 @@ export function FamilySection({
 
         <SegmentedRows
           label="5.2 ความสัมพันธ์ระหว่างนักเรียนกับสมาชิกในครอบครัว"
-          hint="แถวมาจากสมาชิกครัวเรือนที่กรอกไว้ในข้อ 3 หากไม่มีสมาชิกคนนั้นให้เลือก “ไม่มี”"
+          hint="แถวมาจากสมาชิกในข้อ 3"
           rows={relationRows}
           choices={RELATIONSHIP_LEVELS}
           values={f.relations}
@@ -78,9 +78,8 @@ export function FamilySection({
 
         {awayStayWith && (
           <div className="flex items-center gap-2 rounded-lg bg-risk-green-bg px-3.5 py-2.5">
-            <AutoBadge source="guardian" />
-            <span className="text-[12.5px] text-risk-green">
-              ผู้ปกครองระบุไว้ล่วงหน้าว่า: {awayStayWith}
+            <span className="text-[12px] text-risk-green">
+              ผู้ปกครองระบุไว้: {awayStayWith}
             </span>
           </div>
         )}
@@ -94,7 +93,7 @@ export function FamilySection({
           columns={3}
         />
         <p className="-mt-4 text-[12px] text-muted-foreground">
-          เป็นข้อมูลประกอบเท่านั้น ไม่ทำให้ผู้ปกครองคนใดมีสิทธิ์ในระบบมากกว่าคนอื่น
+          เป็นข้อมูลประกอบ ไม่ให้สิทธิ์ในระบบเพิ่ม
         </p>
 
         <ChipGroup

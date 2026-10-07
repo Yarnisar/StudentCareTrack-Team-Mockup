@@ -60,7 +60,7 @@ export default function HomeVisitsPage() {
     <>
       <PageHeader
         title="จัดการการเยี่ยมบ้าน"
-        subtitle="นัดหมาย ยืนยัน และบันทึกผลตามแบบฟอร์มการเยี่ยมบ้านนักเรียน"
+        subtitle="นัดหมายและบันทึกผลการเยี่ยมบ้าน"
         action={
           <Button size="sm" variant="outline" disabled={!windowOpen} onClick={() => setCreating(true)}>
             <Plus className="size-4" /> สร้างนัดหมาย
@@ -106,14 +106,14 @@ export default function HomeVisitsPage() {
                         }
                       >
                         <div className="flex items-center justify-between gap-2">
-                          <span className="truncate text-[13.5px] font-semibold">{s?.fullName}</span>
+                          <span className="truncate text-[13px] font-semibold">{s?.fullName}</span>
                           <span
                             className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${STATUS_STYLE[a.status]}`}
                           >
                             {APPOINTMENT_STATUS_LABEL[a.status]}
                           </span>
                         </div>
-                        <div className="mt-1 flex flex-wrap gap-x-2 text-[11.5px] text-muted-foreground">
+                        <div className="mt-1 flex flex-wrap gap-x-2 text-[11px] text-muted-foreground">
                           <span>
                             {formatThaiDate(a.proposedDate)} {formatThaiTime(a.proposedDate)}
                           </span>
@@ -194,24 +194,24 @@ function AppointmentDetail({ appointment }: { appointment: HomeVisitAppointment 
           <div className="flex flex-wrap items-center gap-4">
             <div className="min-w-0 flex-1">
               <h2 className="text-lg font-bold">{student.fullName}</h2>
-              <p className="mt-1 text-[13.5px] text-muted-foreground">
+              <p className="mt-1 text-[13px] text-muted-foreground">
                 {student.roomName} เลขที่ {student.classNo} · นัดหมาย{" "}
                 {formatThaiDate(appointment.proposedDate)} {formatThaiTime(appointment.proposedDate)} · ครูผู้นัด{" "}
                 {store.nameOf(appointment.teacherId)}
               </p>
               <div className="mt-2 flex flex-wrap gap-2 text-[12px]">
-                <span className="rounded-md bg-surface px-2 py-0.5 font-semibold">
+                <span className="rounded-md bg-surface px-2 py-0.5">
                   {VISIT_TYPE_LABEL[appointment.visitType]} · ปีการศึกษา {appointment.academicYear}
                 </span>
                 {appointment.caseId && (
-                  <span className="rounded-md bg-accent px-2 py-0.5 font-semibold text-primary">
+                  <span className="rounded-md bg-accent px-2 py-0.5 text-primary">
                     ติดตาม case {appointment.caseId}
                   </span>
                 )}
               </div>
             </div>
             <span
-              className={`rounded-full px-3 py-1.5 text-[12.5px] font-semibold ${STATUS_STYLE[appointment.status]}`}
+              className={`rounded-full px-3 py-1.5 text-[12px] font-semibold ${STATUS_STYLE[appointment.status]}`}
             >
               {APPOINTMENT_STATUS_LABEL[appointment.status]}
             </span>
@@ -224,7 +224,7 @@ function AppointmentDetail({ appointment }: { appointment: HomeVisitAppointment 
           )}
           {appointment.status === "reschedule_requested" && (
             <p className="rounded-lg bg-risk-amber-bg px-3.5 py-2.5 text-[13px] text-risk-amber">
-              ผู้ปกครองขอเปลี่ยนวันเวลา — กด “เลื่อนนัด” เพื่อเสนอวันใหม่ ระบบจะแจ้งผู้ปกครองทุกคน
+              ผู้ปกครองขอเปลี่ยนวันเวลา — กด “เลื่อนนัด” เพื่อเสนอวันใหม่
             </p>
           )}
 
@@ -253,9 +253,9 @@ function AppointmentDetail({ appointment }: { appointment: HomeVisitAppointment 
               </>
             )}
           </div>
-          {open && block && <p className="text-[12.5px] text-muted-foreground">{block} — ดูข้อมูลได้ แต่บันทึกไม่ได้</p>}
-          {!block && (appointment.status === "pending" || appointment.status === "reschedule_requested") && (
-            <p className="text-[12.5px] text-muted-foreground">รอผู้ปกครองยืนยันนัดหมายก่อนจึงจะบันทึกผลได้</p>
+          {open && block && <p className="text-[12px] text-muted-foreground">{block} — ดูข้อมูลได้ แต่บันทึกไม่ได้</p>}
+          {!block && appointment.status === "pending" && (
+            <p className="text-[12px] text-muted-foreground">รอผู้ปกครองยืนยันนัดหมายก่อนจึงจะบันทึกผลได้</p>
           )}
 
           {panel === "reschedule" && (
@@ -270,8 +270,8 @@ function AppointmentDetail({ appointment }: { appointment: HomeVisitAppointment 
           )}
           {panel === "cancel" && (
             <div className="space-y-3 rounded-xl border border-border bg-surface p-4">
-              <Label htmlFor="hv-cancel" className="text-[12.5px] text-muted-foreground">
-                เหตุผลการยกเลิก (บังคับ) — นัดหมายยังอยู่ในระบบ ไม่ถูกลบ
+              <Label htmlFor="hv-cancel" className="text-[12px] text-muted-foreground">
+                เหตุผลการยกเลิก (บังคับ)
               </Label>
               <Textarea id="hv-cancel" rows={2} value={reason} onChange={(e) => setReason(e.target.value)} />
               <div className="flex justify-end">
@@ -290,7 +290,7 @@ function AppointmentDetail({ appointment }: { appointment: HomeVisitAppointment 
       {sensitive && (appointment.guardianNote || appointment.guardianPhone || appointment.awayStayWith) && (
         <Card>
           <CardContent className="p-6">
-            <h3 className="text-[15.5px] font-bold">ข้อมูลที่ผู้ปกครองให้ไว้ล่วงหน้า</h3>
+            <h3 className="text-[15px] font-bold">ข้อมูลที่ผู้ปกครองให้ไว้ล่วงหน้า</h3>
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
               <Field label="เบอร์ติดต่อที่สะดวก" value={appointment.guardianPhone || "-"} />
               <Field label="เมื่อผู้ปกครองไม่อยู่บ้าน นักเรียนอยู่กับใคร" value={appointment.awayStayWith || "-"} />
@@ -318,8 +318,8 @@ function AppointmentDetail({ appointment }: { appointment: HomeVisitAppointment 
 function Field({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <Label className="text-[12.5px] text-muted-foreground">{label}</Label>
-      <div className="mt-1.5 rounded-lg border border-border bg-surface px-3.5 py-2.5 text-[13.5px]">{value}</div>
+      <Label className="text-[12px] text-muted-foreground">{label}</Label>
+      <div className="mt-1.5 rounded-lg border border-border bg-surface px-3.5 py-2.5 text-[13px]">{value}</div>
     </div>
   );
 }
