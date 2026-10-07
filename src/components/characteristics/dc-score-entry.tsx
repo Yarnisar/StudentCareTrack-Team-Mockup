@@ -85,11 +85,11 @@ export function DcScoreEntry({ teachingId }: { teachingId: string }) {
       <CardContent className="p-6">
         <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h2 className="text-[15.5px] font-bold">
-              บันทึกคะแนนคุณลักษณะอันพึงประสงค์ (ปพ.5) · {subject?.subjectCode} {subject?.name} {roomName}
+            <h2 className="text-[15px] font-bold">
+              คะแนน ปพ.5 · {subject?.subjectCode} {subject?.name} {roomName}
             </h2>
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              ให้คะแนน 0–3 ทุกตัวชี้วัด รายวิชาจะนับว่าส่งแล้วเมื่อให้คะแนนครบทุกคน
+            <p className="mt-0.5 text-[12px] text-muted-foreground">
+              ให้คะแนน 0–3 ครบทุกคนจึงนับว่าส่งแล้ว
             </p>
           </div>
           {submission?.submitted ? (
@@ -105,15 +105,15 @@ export function DcScoreEntry({ teachingId }: { teachingId: string }) {
 
         {deadline && (
           <div
-            className={`mb-4 flex items-center gap-2.5 rounded-xl px-4 py-2.5 text-[12.5px] ${
+            className={`mb-4 flex items-center gap-2.5 rounded-xl px-4 py-2.5 text-[12px] ${
               deadlinePassed && !submission?.submitted ? "bg-risk-amber-bg text-risk-amber" : "bg-surface text-muted-foreground"
             }`}
           >
             <CalendarClock className="size-4 shrink-0" />
-            กำหนดส่งคะแนน {formatThaiDate(deadline.date)} (ข้อมูลจากงานวิชาการ)
+            กำหนดส่ง {formatThaiDate(deadline.date)}
             {deadlinePassed &&
               !submission?.submitted &&
-              " — เลยกำหนดแล้ว ยังบันทึกได้ แต่ครูประจำชั้นอาจสรุปผลไปก่อนโดยระบุว่ารายวิชานี้ยังไม่ส่ง"}
+              " — เลยกำหนดแล้ว ยังบันทึกได้ แต่ครูประจำชั้นอาจสรุปผลไปก่อน"}
           </div>
         )}
 
@@ -127,7 +127,7 @@ export function DcScoreEntry({ teachingId }: { teachingId: string }) {
                 key={c.criteriaId}
                 type="button"
                 onClick={() => setCriteriaId(c.criteriaId)}
-                className={`rounded-lg border px-3 py-1.5 text-[12.5px] font-semibold ${
+                className={`rounded-lg border px-3 py-1.5 text-[12px] font-semibold ${
                   active ? "border-primary bg-accent text-primary" : "border-border hover:bg-muted/50"
                 }`}
               >
@@ -144,7 +144,7 @@ export function DcScoreEntry({ teachingId }: { teachingId: string }) {
               <tr className="border-b-2 border-border">
                 <th className="pb-2.5 text-left text-[12px] font-semibold text-muted-foreground">นักเรียน</th>
                 {indicators.map((i) => (
-                  <th key={i.indicatorId} className="max-w-48 px-2 pb-2.5 text-center align-bottom text-[11.5px] font-semibold text-muted-foreground">
+                  <th key={i.indicatorId} className="max-w-48 px-2 pb-2.5 text-center align-bottom text-[12px] font-semibold text-muted-foreground">
                     <span className="block text-foreground">ตัวชี้วัด {i.code}</span>
                     <span className="block font-normal">{i.description}</span>
                   </th>
@@ -155,8 +155,8 @@ export function DcScoreEntry({ teachingId }: { teachingId: string }) {
               {roomStudents.map((s) => (
                 <tr key={s.studentId} className="border-b border-border">
                   <td className="py-2.5 pr-3">
-                    <div className="text-[13.5px] font-semibold">{s.fullName}</div>
-                    <div className="text-[11.5px] text-muted-foreground">เลขที่ {s.classNo}</div>
+                    <div className="text-[13px] font-semibold">{s.fullName}</div>
+                    <div className="text-[12px] text-muted-foreground">เลขที่ {s.classNo}</div>
                   </td>
                   {indicators.map((i) => {
                     const value = valueOf(s.studentId, i.indicatorId);
@@ -174,7 +174,7 @@ export function DcScoreEntry({ teachingId }: { teachingId: string }) {
                                 disabled={!canEdit}
                                 title={DC_LEVEL_LABEL[lv]}
                                 onClick={() => setCell(s.studentId, i.indicatorId, lv)}
-                                className={`size-7 rounded-md text-[12.5px] font-bold ${
+                                className={`size-7 rounded-md text-[12px] font-bold ${
                                   selected ? DC_LEVEL_STYLE[lv] : "border border-border text-muted-foreground hover:bg-muted"
                                 } disabled:cursor-not-allowed`}
                               >
@@ -194,12 +194,12 @@ export function DcScoreEntry({ teachingId }: { teachingId: string }) {
 
         {canEdit && (
           <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
-            <div className="flex flex-wrap items-center gap-2 text-[12.5px]">
+            <div className="flex flex-wrap items-center gap-2 text-[12px]">
               <span className="text-muted-foreground">ช่องว่างให้ระดับ</span>
               <select
                 value={fillLevel}
                 onChange={(e) => setFillLevel(Number(e.target.value) as DcLevel)}
-                className="h-8 rounded-lg border border-border bg-card px-2 text-[12.5px]"
+                className="h-8 rounded-lg border border-border bg-card px-2 text-[12px]"
               >
                 {DC_LEVELS.map((lv) => (
                   <option key={lv} value={lv}>
@@ -216,12 +216,12 @@ export function DcScoreEntry({ teachingId }: { teachingId: string }) {
             </div>
             <div className="flex items-center gap-3">
               {message && (
-                <span className={`text-[12.5px] font-semibold ${message.ok ? "text-risk-green" : "text-risk-red"}`}>
+                <span className={`text-[12px] font-semibold ${message.ok ? "text-risk-green" : "text-risk-red"}`}>
                   {message.text}
                 </span>
               )}
               {unsaved > 0 && !message && (
-                <span className="text-[12.5px] text-muted-foreground">ยังไม่บันทึก {unsaved} ช่อง</span>
+                <span className="text-[12px] text-muted-foreground">ยังไม่บันทึก {unsaved} ช่อง</span>
               )}
               <Button onClick={save} disabled={unsaved === 0}>
                 บันทึกคะแนน

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Download, FileText, Info } from "lucide-react";
+import { Check, Download, FileText } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { DcLevelChip } from "@/components/characteristics/dc-level";
 import { GradeSourceBadge } from "@/components/documents/grade-source-badge";
@@ -23,7 +23,7 @@ import {
 interface DocSpec {
   code: DocumentType;
   purpose: string;
-  /** ข้อมูลที่ระบบดึงมาสร้างเอกสาร (ตามตารางแหล่งข้อมูลของ ปพ. ใน data dictionary) */
+  /** ข้อมูลที่ใช้ (ตามตารางแหล่งข้อมูลของ ปพ. ใน data dictionary) */
   dataSources: { text: string; source: DocumentCheckSource }[];
   issuedBy: string;
   issuedWhen: string;
@@ -118,7 +118,7 @@ export default function DocumentsPage() {
     <>
       <PageHeader
         title="เอกสารประเมินผลทางการศึกษา"
-        subtitle={`จัดทำเอกสาร ปพ. จากข้อมูลที่บันทึกไว้ในระบบ · ${store.currentTerm.label}`}
+        subtitle={`${store.currentTerm.label}`}
       />
       <DocumentsContent key={store.currentUser.userId} />
     </>
@@ -178,21 +178,11 @@ function DocumentsContent() {
 
   return (
     <div className="flex-1 overflow-y-auto p-8">
-      <div className="mb-5 flex items-start gap-3 rounded-xl border border-blue-200 bg-accent px-4 py-3.5">
-        <Info className="size-5 shrink-0 text-primary" />
-        <p className="text-[13.5px] leading-relaxed text-accent-foreground">
-          เอกสารหลักฐานการศึกษาแบ่งเป็น 2 กลุ่ม — <b>ปพ.1 ปพ.2 และ ปพ.3</b> เป็นเอกสารที่กระทรวงศึกษาธิการกำหนดรูปแบบตายตัว
-          ส่วน <b>ปพ.4 ถึง ปพ.9</b> สถานศึกษากำหนดรูปแบบเองได้ ระบบนี้สร้างเอกสารจากข้อมูลที่บันทึกไว้แล้ว
-          ส่วนผลการเรียนและข้อมูลทะเบียนอ่านจากงานวิชาการและงานทะเบียน (แก้ไขในระบบนี้ไม่ได้)
-        </p>
-      </div>
-
       <div className="grid gap-5 xl:grid-cols-[1.5fr_1fr]">
         <div className="space-y-5">
           <Card>
             <CardContent className="p-6">
-              <h2 className="mb-1 text-[15.5px] font-bold">เลือกประเภทเอกสาร</h2>
-              <p className="mb-4 text-xs text-muted-foreground">เลือกเพื่อดูว่าเอกสารแต่ละประเภทใช้ข้อมูลจากส่วนใด</p>
+              <h2 className="mb-3 text-[15px] font-bold">เลือกประเภทเอกสาร</h2>
 
               <div className="space-y-2.5">
                 {DOCS.map((d) => {
@@ -217,8 +207,8 @@ function DocumentsContent() {
                         {d.code}
                       </span>
                       <span className="min-w-0 flex-1">
-                        <span className="block text-sm font-bold">{DOCUMENT_NAME[d.code]}</span>
-                        <span className="mt-0.5 block text-xs text-muted-foreground">
+                        <span className="block text-[13px] font-bold">{DOCUMENT_NAME[d.code]}</span>
+                        <span className="mt-0.5 block text-[12px] text-muted-foreground">
                           ออกโดย {d.issuedBy} · {d.issuedWhen}
                         </span>
                       </span>
@@ -240,26 +230,25 @@ function DocumentsContent() {
           <Card>
             <CardContent className="p-6">
               <div className="mb-3 flex items-center justify-between">
-                <h2 className="text-[15.5px] font-bold">ประวัติการจัดทำเอกสาร</h2>
-                <span className="text-[12.5px] text-muted-foreground">บันทึกใน audit log ทุกครั้ง</span>
+                <h2 className="text-[15px] font-bold" title="บันทึกใน audit log ทุกครั้ง">ประวัติการจัดทำเอกสาร</h2>
               </div>
               <div className="divide-y divide-border">
                 {historyPager.slice.map((d) => (
                   <div key={d.docId} className="flex items-center gap-3 py-3">
-                    <span className="w-36 shrink-0 text-[12.5px] text-muted-foreground">
+                    <span className="w-36 shrink-0 text-[12px] text-muted-foreground">
                       {formatThaiDateTime(d.generatedAt)}
                     </span>
                     <span className="w-16 shrink-0 rounded-md bg-surface px-2 py-1 text-center text-[12px] font-bold">
                       {d.docType}
                     </span>
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-[13.5px] font-medium">{d.target}</span>
-                      <span className="block truncate text-[11.5px] text-muted-foreground">
+                      <span className="block truncate text-[13px] font-medium">{d.target}</span>
+                      <span className="block truncate text-[12px] text-muted-foreground">
                         {termLabel(d.termId)}
                         {d.studentId && d.roomId ? ` · ${roomName(d.roomId)}` : ""}
                       </span>
                     </span>
-                    <span className="w-40 shrink-0 text-[12.5px] text-muted-foreground">{store.nameOf(d.generatedBy)}</span>
+                    <span className="w-40 shrink-0 text-[12px] text-muted-foreground">{store.nameOf(d.generatedBy)}</span>
                     <span title="ต้นแบบยังไม่สร้างไฟล์ PDF จริง">
                       <Download className="size-4 shrink-0 text-muted-foreground" />
                     </span>
@@ -292,27 +281,27 @@ function DocumentsContent() {
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center gap-3">
-                <span className="flex size-12 items-center justify-center rounded-xl bg-accent text-sm font-bold text-primary">
+                <span className="flex size-12 items-center justify-center rounded-xl bg-accent text-[13px] font-bold text-primary">
                   {doc.code}
                 </span>
                 <div>
-                  <h2 className="text-[15.5px] font-bold">{DOCUMENT_NAME[doc.code]}</h2>
-                  <p className="text-xs text-muted-foreground">
+                  <h2 className="text-[15px] font-bold">{DOCUMENT_NAME[doc.code]}</h2>
+                  <p className="text-[12px] text-muted-foreground">
                     ออกโดย {doc.issuedBy} · {doc.issuedWhen}
                   </p>
                 </div>
               </div>
               {DOCUMENT_HAS_GRADES[doc.code] && <GradeSourceBadge className="mt-3" />}
 
-              <p className="mt-4 text-[13.5px] leading-relaxed">{doc.purpose}</p>
+              <p className="mt-4 text-[13px] leading-relaxed">{doc.purpose}</p>
 
               {doc.note && (
-                <p className="mt-3 rounded-lg bg-risk-amber-bg px-3.5 py-2.5 text-[12.5px] leading-relaxed text-risk-amber">
+                <p className="mt-3 rounded-lg bg-risk-amber-bg px-3.5 py-2.5 text-[12px] leading-relaxed text-risk-amber">
                   {doc.note}
                 </p>
               )}
 
-              <h3 className="mt-5 mb-2 text-[13.5px] font-bold">ข้อมูลที่ระบบดึงมาสร้างเอกสาร</h3>
+              <h3 className="mt-5 mb-2 text-[13px] font-bold">ข้อมูลที่ใช้</h3>
               <ul className="space-y-2">
                 {doc.dataSources.map((src) => (
                   <li key={src.text} className="flex items-start gap-2.5 text-[13px] leading-relaxed">
@@ -331,7 +320,7 @@ function DocumentsContent() {
           <Card>
             <CardContent className="p-6">
               <h3 className="text-[15px] font-bold">จัดทำเอกสาร</h3>
-              <p className="mt-0.5 mb-3 text-[11.5px] text-muted-foreground">
+              <p className="mt-0.5 mb-3 text-[12px] text-muted-foreground">
                 {kind === "student" ? "รายบุคคล" : kind === "room" ? "ทั้งห้อง" : "รายวิชาของห้อง"} · {store.currentTerm.label}
               </p>
 
@@ -396,7 +385,7 @@ function DocumentsContent() {
                       {c.label}
                       <span className="ml-1.5 text-[11px] text-muted-foreground">({SOURCE_LABEL[c.source]})</span>
                       {c.detail && (!c.ok || c.source === "team_c") && (
-                        <span className={`block text-[11.5px] ${c.ok ? "text-muted-foreground" : "text-risk-amber"}`}>
+                        <span className={`block text-[12px] ${c.ok ? "text-muted-foreground" : "text-risk-amber"}`}>
                           {c.detail}
                         </span>
                       )}
@@ -416,7 +405,7 @@ function DocumentsContent() {
                     ))}
                   </div>
                   {dcPreview.missingSubjects.length > 0 && (
-                    <p className="mt-2 text-[11.5px] text-risk-amber">
+                    <p className="mt-2 text-[12px] text-risk-amber">
                       สรุปขณะยังไม่ส่งคะแนน: {dcPreview.missingSubjects.join(", ")}
                     </p>
                   )}
@@ -438,7 +427,7 @@ function DocumentsContent() {
               )}
 
               {message && (
-                <p className={`mt-3 text-[12.5px] font-semibold ${message.ok ? "text-risk-green" : "text-risk-red"}`}>
+                <p className={`mt-3 text-[12px] font-semibold ${message.ok ? "text-risk-green" : "text-risk-red"}`}>
                   {message.text}
                 </p>
               )}

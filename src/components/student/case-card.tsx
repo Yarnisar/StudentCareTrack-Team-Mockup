@@ -34,13 +34,13 @@ export function CaseCard({ studentId }: { studentId: string }) {
   ) : null;
 
   return (
-    <SectionCard title="การติดตามและช่วยเหลือ (care case)" aside={action}>
+    <SectionCard title="Care case" aside={action}>
       <CaseSuggestionBanner studentId={studentId} className="mb-3" />
       {!careCase ? (
         <p className="text-[13px] text-muted-foreground">ยังไม่มี case ช่วยเหลือ</p>
       ) : (
         <div className="space-y-3">
-          <div className="flex flex-wrap items-center gap-2 text-[12.5px] text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-2 text-[12px] text-muted-foreground">
             <span className="font-semibold text-foreground">{careCase.caseId}</span>
             {careCase.status === "active" ? (
               <Chip tone="blue">กำลังดูแล</Chip>
@@ -64,19 +64,19 @@ export function CaseCard({ studentId }: { studentId: string }) {
             ].map(([label, n]) => (
               <div key={label} className="rounded-lg bg-surface px-3 py-2">
                 <div className="text-lg font-bold">{n}</div>
-                <div className="text-[11.5px] text-muted-foreground">{label}</div>
+                <div className="text-[12px] text-muted-foreground">{label}</div>
               </div>
             ))}
           </div>
           {unplanned > 0 && (
-            <p className="flex items-center gap-2 rounded-lg bg-risk-amber-bg px-3 py-2 text-[12.5px] font-semibold text-risk-amber">
+            <p className="flex items-center gap-2 rounded-lg bg-risk-amber-bg px-3 py-2 text-[12px] font-semibold text-risk-amber">
               <AlertTriangle className="size-4 shrink-0" />
-              มี {unplanned} เหตุที่ยังไม่มีแผนช่วยเหลือรองรับ
+              {unplanned} เหตุยังไม่มีแผน
             </p>
           )}
         </div>
       )}
-      <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-border pt-3 text-[12.5px] text-muted-foreground">
+      <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-border pt-3 text-[12px] text-muted-foreground">
         <span>ส่งต่อภายนอก {careCase?.referrals.length ?? 0} ครั้ง</span>
         <span>· ความยินยอมปีการศึกษา {store.currentTerm.academicYear}:</span>
         <Chip tone={consent.tone}>{consent.label}</Chip>

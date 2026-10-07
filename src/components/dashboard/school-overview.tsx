@@ -120,14 +120,14 @@ export function SchoolOverview() {
           label="เคสที่เปิดอยู่"
           value={totals.openCases}
           unit="เคส"
-          note={`ห้องที่ยังคัดกรองไม่ครบ ${totals.incompleteRooms} จาก ${rooms.length} ห้อง`}
+          note={`${totals.incompleteRooms} ห้องยังคัดกรองไม่ครบ`}
         />
       </div>
 
       <Card className="mt-5">
         <CardContent className="p-6">
           <div className="mb-3 flex flex-wrap items-center gap-3">
-            <h2 className="text-[15.5px] font-bold">ความคืบหน้ารายห้องเรียน</h2>
+            <h2 className="text-[15px] font-bold">ความคืบหน้ารายห้องเรียน</h2>
             <span className="flex-1" />
             <label className="flex cursor-pointer items-center gap-2 text-[13px] text-muted-foreground">
               <input
@@ -164,7 +164,7 @@ export function SchoolOverview() {
           ) : (
             <>
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[720px] text-[13.5px]">
+                <table className="w-full min-w-[720px] text-[13px]">
                   <thead>
                     <tr className="border-b border-border text-left text-[12px] text-muted-foreground">
                       <th className="w-24 py-2 font-medium">ห้อง</th>
@@ -232,9 +232,9 @@ export function SchoolOverview() {
 
       <Card className="mt-5">
         <CardContent className="p-6">
-          <h2 className="text-[15.5px] font-bold">สัดส่วนผลคัดกรองล่าสุดที่รับรองแล้ว</h2>
+          <h2 className="text-[15px] font-bold">ผลคัดกรองล่าสุด</h2>
           <p className="mt-0.5 mb-3 text-[12px] text-muted-foreground">
-            นับจากนักเรียน {rated.toLocaleString("th-TH")} คนที่มีผลคัดกรองรับรองแล้ว
+            {rated.toLocaleString("th-TH")} คน
             {totals.total - rated > 0 && ` · ยังไม่มีผล ${(totals.total - rated).toLocaleString("th-TH")} คน`}
           </p>
           {rated === 0 ? (

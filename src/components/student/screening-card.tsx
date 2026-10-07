@@ -31,10 +31,10 @@ export function ScreeningCard({ studentId }: { studentId: string }) {
   return (
     <SectionCard title="ผลการคัดกรอง 6 มิติ" aside={action}>
       {!screening ? (
-        <p className="py-2 text-sm text-muted-foreground">ยังไม่มีข้อมูลการคัดกรอง</p>
+        <p className="py-2 text-[13px] text-muted-foreground">ยังไม่มีข้อมูลการคัดกรอง</p>
       ) : (
         <>
-          <div className="mb-3 flex flex-wrap items-center gap-2 text-[12.5px] text-muted-foreground">
+          <div className="mb-3 flex flex-wrap items-center gap-2 text-[12px] text-muted-foreground">
             <Chip tone={screening.status === "certified" ? "green" : "amber"}>
               {SCREENING_STATUS_LABEL[screening.status]}
             </Chip>
@@ -46,18 +46,18 @@ export function ScreeningCard({ studentId }: { studentId: string }) {
               </span>
             )}
           </div>
-          {editBlock && current && <p className="mb-3 text-[11.5px] text-muted-foreground">{editBlock}</p>}
+          {editBlock && current && <p className="mb-3 text-[12px] text-muted-foreground">{editBlock}</p>}
           <div className="grid gap-2 sm:grid-cols-2">
             {screening.results.map((r) => {
               const derived = SCREENING_ITEMS.filter((i) => r.derivedItemIds.includes(i.id));
               return (
                 <div key={r.dimension} className="rounded-lg bg-surface px-3.5 py-2.5">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-[13.5px] font-medium">{DIMENSION_LABEL[r.dimension]}</span>
+                    <span className="text-[13px] font-medium">{DIMENSION_LABEL[r.dimension]}</span>
                     <RiskBadge group={r.group} />
                   </div>
                   {r.teacherGroup && (
-                    <p className="mt-1.5 text-[11.5px] leading-relaxed text-muted-foreground">
+                    <p className="mt-1.5 text-[12px] leading-relaxed text-muted-foreground">
                       ระบบคำนวณ {DIMENSION_RESULT_LABEL[r.computedGroup]} → ครูปรับเป็น{" "}
                       {DIMENSION_RESULT_LABEL[r.teacherGroup]}
                       {r.adjustReason ? ` · เหตุผล: ${r.adjustReason}` : ""}
@@ -68,10 +68,10 @@ export function ScreeningCard({ studentId }: { studentId: string }) {
                       {derived.map((i) => (
                         <span
                           key={i.id}
-                          className="rounded bg-accent px-1.5 py-0.5 text-[10.5px] font-semibold text-primary"
+                          className="rounded bg-accent px-1.5 py-0.5 text-[11px] font-semibold text-primary"
                           title={screeningItemLabel(i, { lateAlertThreshold })}
                         >
-                          ระบบกำหนด · {screeningItemLabel(i, { lateAlertThreshold })}
+                          {screeningItemLabel(i, { lateAlertThreshold })}
                         </span>
                       ))}
                     </div>
@@ -83,9 +83,9 @@ export function ScreeningCard({ studentId }: { studentId: string }) {
           {current && (
             <Link
               href={`/screening/${studentId}/result`}
-              className="mt-3 inline-block text-[12.5px] font-semibold text-primary hover:underline"
+              className="mt-3 inline-block text-[12px] font-semibold text-primary hover:underline"
             >
-              ดูผลการคัดกรองและการรับรอง →
+              ดูผลทั้งหมด →
             </Link>
           )}
         </>

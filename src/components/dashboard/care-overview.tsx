@@ -271,7 +271,6 @@ export function TeacherCareOverview() {
           <CalendarDays className="size-4" />
           {store.currentTerm.label}
         </span>
-        <span>ข้อมูล ณ {formatThaiDate(today)}</span>
       </div>
 
       {/* สรุปห้อง */}
@@ -325,7 +324,7 @@ export function TeacherCareOverview() {
                     style={{ width: `${(distribution.red / distribution.rated) * 100}%` }}
                   />
                 </div>
-                <div className="mt-2.5 flex flex-wrap gap-4 text-[12.5px]">
+                <div className="mt-2.5 flex flex-wrap gap-4 text-[12px]">
                   <span className="flex items-center gap-1.5">
                     <RiskDot group="green" /> ปกติ <b>{distribution.green}</b>
                   </span>
@@ -367,15 +366,9 @@ export function TeacherCareOverview() {
             <CardContent className="p-6">
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div>
-                  <h2 className="text-[15.5px] font-bold">
-                    นักเรียนที่ต้องติดตาม{" "}
-                    <span className="ml-1 rounded-full bg-surface px-2 py-0.5 text-[12px] font-semibold text-muted-foreground">
-                      {followups.length}
-                    </span>
+                  <h2 className="text-[15px] font-bold">
+                    นักเรียนที่ต้องติดตาม
                   </h2>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    เคสที่เปิดอยู่ของห้อง เรียงตามวันกำหนดติดตาม
-                  </p>
                 </div>
                 <Link href="/care-cases" className="text-[13px] font-semibold text-primary hover:underline">
                   ดูเคสทั้งหมด
@@ -398,8 +391,8 @@ export function TeacherCareOverview() {
                       onClick={() => setFilter(tab.key)}
                       className={
                         filter === tab.key
-                          ? "h-9 rounded-lg border border-primary bg-accent px-3 text-[12.5px] font-semibold text-primary"
-                          : "h-9 rounded-lg border border-border bg-card px-3 text-[12.5px] text-muted-foreground hover:bg-muted"
+                          ? "h-9 rounded-lg border border-primary bg-accent px-3 text-[12px] font-semibold text-primary"
+                          : "h-9 rounded-lg border border-border bg-card px-3 text-[12px] text-muted-foreground hover:bg-muted"
                       }
                     >
                       {tab.label}
@@ -440,13 +433,13 @@ export function TeacherCareOverview() {
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="block text-sm font-semibold">{row.student.fullName}</span>
-                      <span className="block truncate text-xs text-muted-foreground">
+                      <span className="block truncate text-[12px] text-muted-foreground">
                         {row.student.roomName} เลขที่ {row.student.classNo} · {row.reason}
                       </span>
                     </span>
                     {row.risk && <RiskBadge group={row.risk} />}
                     <span
-                      className={`w-28 shrink-0 text-right text-[12.5px] ${
+                      className={`w-28 shrink-0 text-right text-[12px] ${
                         row.overdue || row.dueToday
                           ? "font-semibold text-risk-red"
                           : "text-muted-foreground"
@@ -482,10 +475,7 @@ export function TeacherCareOverview() {
           {/* ความคืบหน้างานประจำห้อง */}
           <Card>
             <CardContent className="p-6">
-              <h2 className="text-[15.5px] font-bold">ความคืบหน้างานประจำห้อง</h2>
-              <p className="mt-0.5 mb-3 text-xs text-muted-foreground">
-                กดเพื่อไปทำงานในหน้าที่เกี่ยวข้อง
-              </p>
+              <h2 className="mb-3 text-[15px] font-bold">ความคืบหน้างานประจำห้อง</h2>
               <div className="space-y-2">
                 {progress.map((task) => {
                   const pct = task.total === 0 ? 0 : Math.round((task.done / task.total) * 100);
@@ -497,8 +487,8 @@ export function TeacherCareOverview() {
                     >
                       <task.icon className="size-5 shrink-0 text-primary" />
                       <span className="min-w-0 flex-1">
-                        <span className="block text-[13.5px] font-semibold">{task.title}</span>
-                        <span className="block truncate text-[11.5px] text-muted-foreground">
+                        <span className="block text-[13px] font-semibold">{task.title}</span>
+                        <span className="block truncate text-[12px] text-muted-foreground">
                           {task.detail}
                         </span>
                       </span>
@@ -512,7 +502,7 @@ export function TeacherCareOverview() {
                           style={{ width: `${pct}%` }}
                         />
                       </span>
-                      <span className="w-16 shrink-0 text-right text-[12.5px] text-muted-foreground">
+                      <span className="w-16 shrink-0 text-right text-[12px] text-muted-foreground">
                         <b className="text-foreground">{task.done}</b> / {task.total}
                       </span>
                       <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
@@ -529,10 +519,10 @@ export function TeacherCareOverview() {
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
-                <h2 className="text-[15.5px] font-bold">กำหนดการวันนี้</h2>
+                <h2 className="text-[15px] font-bold">กำหนดการวันนี้</h2>
                 <CalendarDays className="size-5 text-muted-foreground" />
               </div>
-              <p className="mt-0.5 text-xs text-muted-foreground">{formatThaiDate(today)}</p>
+              <p className="mt-0.5 text-[12px] text-muted-foreground">{formatThaiDate(today)}</p>
 
               <div className="mt-3 space-y-2">
                 {todayAppointments.map((a) => {
@@ -548,7 +538,7 @@ export function TeacherCareOverview() {
                         <span className="block text-[13px] font-semibold">
                           {VISIT_TYPE_LABEL[a.visitType]}
                         </span>
-                        <span className="block truncate text-[11.5px] text-muted-foreground">
+                        <span className="block truncate text-[12px] text-muted-foreground">
                           {student?.fullName} · {APPOINTMENT_STATUS_LABEL[a.status]}
                         </span>
                       </span>
@@ -566,7 +556,7 @@ export function TeacherCareOverview() {
                     <Clock3 className="size-4 shrink-0 text-primary" />
                     <span className="min-w-0 flex-1">
                       <span className="block text-[13px] font-semibold">ถึงกำหนดติดตามผลตามแผน</span>
-                      <span className="block truncate text-[11.5px] text-muted-foreground">
+                      <span className="block truncate text-[12px] text-muted-foreground">
                         {row.student.fullName}
                       </span>
                     </span>
@@ -575,7 +565,7 @@ export function TeacherCareOverview() {
                 ))}
 
                 {todayAppointments.length === 0 && todayPlans.length === 0 && (
-                  <p className="rounded-xl border border-dashed border-border px-3 py-6 text-center text-[12.5px] text-muted-foreground">
+                  <p className="rounded-xl border border-dashed border-border px-3 py-6 text-center text-[12px] text-muted-foreground">
                     วันนี้ไม่มีนัดหมายหรือกำหนดติดตาม
                   </p>
                 )}
@@ -586,7 +576,7 @@ export function TeacherCareOverview() {
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
-                <h2 className="text-[15.5px] font-bold">รอดำเนินการ</h2>
+                <h2 className="text-[15px] font-bold">รอดำเนินการ</h2>
                 <span className="rounded-full bg-surface px-2 py-0.5 text-[12px] font-semibold text-muted-foreground">
                   {pending.length}
                 </span>
@@ -602,7 +592,7 @@ export function TeacherCareOverview() {
                     <item.icon className="size-4 shrink-0 text-primary" />
                     <span className="min-w-0 flex-1">
                       <span className="block text-[13px] font-semibold">{item.title}</span>
-                      <span className="block text-[11.5px] text-muted-foreground">
+                      <span className="block text-[12px] text-muted-foreground">
                         {item.count} {item.unit}
                       </span>
                     </span>
@@ -610,7 +600,7 @@ export function TeacherCareOverview() {
                   </Link>
                 ))}
                 {pending.length === 0 && (
-                  <p className="rounded-xl border border-dashed border-border px-3 py-6 text-center text-[12.5px] text-muted-foreground">
+                  <p className="rounded-xl border border-dashed border-border px-3 py-6 text-center text-[12px] text-muted-foreground">
                     ไม่มีงานค้างในขณะนี้
                   </p>
                 )}
