@@ -17,6 +17,7 @@ import { SdqCard } from "@/components/student/sdq-card";
 import { useSensitiveView, useStore } from "@/lib/store";
 import { CURRENT_TERM } from "@/lib/mock-data";
 import { formatThaiDate } from "@/lib/format";
+import { STUDENT_STATUS_LABEL } from "@/lib/types";
 
 export default function StudentDetailPage({
   params,
@@ -90,6 +91,7 @@ export default function StudentDetailPage({
               </div>
               <p className="mt-1 text-[13px] text-muted-foreground">
                 {student.roomName} เลขที่ {student.classNo}
+                {student.status !== "studying" ? ` · ${STUDENT_STATUS_LABEL[student.status]}` : ""}
                 {sensitive ? ` · เลขประจำตัว ${student.studentId}` : ""}
                 {sensitive && screening ? ` · คัดกรองล่าสุด ${formatThaiDate(screening.screenedAt)}` : ""}
               </p>

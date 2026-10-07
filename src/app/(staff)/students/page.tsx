@@ -9,7 +9,7 @@ import { RiskBadge } from "@/components/shared/risk-badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { useStore } from "@/lib/store";
 import { byClassNo, initialOf } from "@/lib/format";
-import { DIMENSION_LABEL } from "@/lib/types";
+import { DIMENSION_LABEL, STUDENT_STATUS_LABEL } from "@/lib/types";
 
 export default function StudentsPage() {
   const store = useStore();
@@ -56,6 +56,7 @@ export default function StudentsPage() {
                     <div className="text-[13px] font-semibold">{student.fullName}</div>
                     <div className="truncate text-[12px] text-muted-foreground">
                       {student.roomName} เลขที่ {student.classNo}
+                      {student.status !== "studying" ? ` · ${STUDENT_STATUS_LABEL[student.status]}` : ""}
                       {sensitive ? ` · เลขประจำตัว ${student.studentId}` : ""}
                       {flagged ? ` · ${flagged}` : ""}
                     </div>

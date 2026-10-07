@@ -1,5 +1,6 @@
 /** เมนูฝั่งบุคลากร และบทบาทที่เข้าแต่ละหน้าได้ */
 
+import { isStandalone } from "./deployment-mode";
 import type { UserRole } from "./types";
 
 export interface NavItem {
@@ -17,6 +18,8 @@ export interface NavEntry extends NavItem {
   group: NavGroupId;
   /** เส้นทางอื่นที่ทำให้เมนูนี้ active ด้วย */
   alsoActiveOn?: string[];
+  /** แสดงในเมนูเฉพาะโหมดเดี่ยว (ADR-0005) — เข้าตรง ๆ ในโหมดอื่นได้แต่เห็นคำอธิบาย */
+  standaloneOnly?: boolean;
 }
 
 export const NAV_GROUPS: { id: NavGroupId; label: string }[] = [
@@ -39,6 +42,7 @@ export const STAFF_NAV: NavEntry[] = [
   { group: "school", href: "/checkin", label: "บัตรและเช็กชื่อ", roles: ALL_STAFF, alsoActiveOn: ["/cards"] },
   { group: "school", href: "/exam-rooms", label: "จัดห้องสอบ", roles: ["admin_school"] },
   { group: "school", href: "/approvals", label: "อนุมัติเอกสารส่งต่อ", roles: ["admin_school"] },
+  { group: "school", href: "/imports", label: "นำเข้าข้อมูลโรงเรียน", roles: ["admin_school"], standaloneOnly: true },
 ];
 
 /** ตั้งค่าระบบ — ไอคอนเฟืองข้างการ์ดผู้ใช้ที่มุมล่างของ sidebar (ไม่อยู่ในรายการเมนู) */
@@ -49,7 +53,7 @@ const HIDDEN_ROUTES: NavItem[] = [{ href: "/cards", label: "ออกบัต�
 
 const matches = (pathname: string, href: string) => pathname === href || pathname.startsWith(`${href}/`);
 
-export const navForRole = (role: UserRole) => STAFF_NAV.filter((n) => n.roles.includes(role));
+export const navForRole = (role: UserRole) => STAFF_NAV.filter((n) => n.roles.includes(role) && (isStandalone || !n.standaloneOnly));
 
 /** เมนูของบทบาทนี้จัดเป็นกลุ่ม — ไม่คืนกลุ่มที่ไม่มีรายการ */
 export const navGroupsForRole = (role: UserRole) =>

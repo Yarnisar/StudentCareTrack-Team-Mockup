@@ -9,7 +9,6 @@ import { useMemo, useState } from "react";
 import {
   notificationSettings as seedSettings,
   seedNotifications,
-  studentGuardians,
 } from "../mock-data";
 import { buildNotificationContent } from "../notifications";
 import { nowThaiIso } from "../format";
@@ -87,7 +86,7 @@ export function useNotificationsSlice(core: CoreSlice, audit: AuditSlice): Notif
       const ids: string[] = [];
       if (groups.includes("homeroom")) ids.push(...core.homeroomTeachersOf(studentId).map((u) => u.userId));
       if (groups.includes("guardians"))
-        ids.push(...studentGuardians.filter((g) => g.studentId === studentId).map((g) => g.guardianUserId));
+        ids.push(...core.studentGuardians.filter((g) => g.studentId === studentId).map((g) => g.guardianUserId));
       return [...new Set(ids)];
     };
 

@@ -41,6 +41,10 @@ export interface User {
   /** เบอร์ติดต่อจากงานทะเบียน (ข้อมูลอ่อนไหว) */
   phone?: string | null;
   isActive: boolean;
+  /** เลขบัตรประชาชนของผู้ปกครองที่สร้างจากการนำเข้า (โหมดเดี่ยว) — ใช้เป็นคีย์นำเข้าซ้ำ ข้อมูลอ่อนไหว ไม่แสดงเต็ม */
+  citizenId?: string | null;
+  /** บัญชีที่สร้างจากการนำเข้ามีรหัสผ่านชั่วคราว ต้องเปลี่ยนเมื่อเข้าสู่ระบบครั้งแรก (ไม่เก็บรหัสผ่านใน state) */
+  mustChangePassword?: boolean;
 }
 
 /** staff (Team B) */
@@ -56,6 +60,8 @@ export interface Classroom {
   /** ระดับชั้น ป.1–ม.6 */
   gradeLevel: string;
   roomName: string;
+  /** ปีการศึกษาของห้อง (ห้องที่นำเข้าในโหมดเดี่ยว) — ไม่ระบุ = ปีการศึกษาปัจจุบัน */
+  academicYear?: number;
 }
 
 /**
@@ -99,7 +105,7 @@ export interface Student {
   status: StudentStatus;
   address: string;
   /** อ้างอิงจากงานทะเบียนนักเรียนของโรงเรียน — ระบบนี้อ่านอย่างเดียว */
-  sourceSystem: "team_b_registry";
+  sourceSystem: "team_b_registry" | "standalone_import";
 }
 
 /**

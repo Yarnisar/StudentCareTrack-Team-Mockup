@@ -17,6 +17,7 @@ import { OperatingWindowsSection } from "@/components/settings/operating-windows
 import { SchoolSettingsCard } from "@/components/settings/school-settings-card";
 import { TeachersSection } from "@/components/settings/teachers-panel";
 import { nowThaiIso, thaiDateOf } from "@/lib/format";
+import { DEPLOYMENT_MODE, DEPLOYMENT_MODE_LABEL } from "@/lib/deployment-mode";
 import { CURRENT_TERM, SCHOOL_NAME } from "@/lib/mock-data";
 import { useStore } from "@/lib/store";
 
@@ -47,6 +48,7 @@ export default function SettingsPage() {
       <PageHeader title="ตั้งค่าระบบ" subtitle={`${SCHOOL_NAME} · ${CURRENT_TERM.label}`} />
       <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="mx-auto max-w-4xl space-y-5 p-5 lg:p-8">
+          <p className="text-[12px] text-muted-foreground">โหมดข้อมูล: {DEPLOYMENT_MODE_LABEL[DEPLOYMENT_MODE]}</p>
           <SchoolSettingsCard impact={impact} />
           <OperatingWindowsSection impact={impact} />
           <BehaviorRulesSection ruleUsage={ruleUsage} />

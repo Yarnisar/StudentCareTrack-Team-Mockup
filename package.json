@@ -4,7 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:standalone": "NEXT_PUBLIC_DEPLOYMENT_MODE=standalone next dev",
     "build": "next build",
+    "build:standalone": "NEXT_PUBLIC_DEPLOYMENT_MODE=standalone next build",
     "start": "next start",
     "lint": "eslint"
   },

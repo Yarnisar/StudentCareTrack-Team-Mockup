@@ -11,7 +11,7 @@
  *
 
  * ลำดับ: core → audit → notifications → settings → consent  (รวมเป็น base: PlatformSlice)
- *        → assignments (เขตแดนเขียนตารางมอบหมายครู ADR-0003) → behavior → checkin → cards → care → assessment → screening → home-visit → dc → documents → exam
+ *        → assignments (เขตแดนเขียนตารางมอบหมายครู ADR-0003) → imports (เขตแดนเขียนตารางอ้างอิง ADR-0005 โหมดเดี่ยว) → behavior → checkin → cards → care → assessment → screening → home-visit → dc → documents → exam
  * (assessment ส่งเหตุเปิด case ผ่าน care; screening อ่านผล Red Flag/9S จาก assessment และมาสายจาก behavior)
  * slice ของโมดูลรับ base เป็นอาร์กิวเมนต์แรก (base.logAudit / base.notify / base.isWindowOpen /
  * base.schoolSettings / base.consentOf) slice ที่ต้องเรียก slice โมดูลอื่น (เช่น เปิด case อัตโนมัติ)
@@ -21,6 +21,7 @@
 import { createContext, useContext, useEffect, useMemo, type ReactNode } from "react";
 import { useAssignmentsSlice, type AssignmentsSlice } from "./assignments";
 import { useAuditSlice, type AuditSlice } from "./audit";
+import { useImportsSlice, type ImportsSlice } from "./imports";
 import { useConsentSlice, type ConsentSlice } from "./consent";
 import { useNotificationsSlice, type NotificationsSlice } from "./notifications";
 import type { PlatformSlice } from "./platform";
@@ -43,6 +44,7 @@ export type StoreValue = CoreSlice &
   SettingsSlice &
   ConsentSlice &
   AssignmentsSlice &
+  ImportsSlice &
   BehaviorSlice &
   CheckinSlice &
   CardsSlice &
@@ -67,6 +69,7 @@ export type { RecipientGroup } from "./notifications";
 export type { OperatingWindowInput, SaveWindowResult, SchoolSettingsPatch } from "./settings";
 export type { AssignmentChange, AssignmentResult, HomeroomOfRoom } from "./assignments";
 export { MAX_HOMEROOM_TEACHERS_PER_ROOM } from "./assignments";
+export type { ImportCommitResult, ImportCommitSummary } from "./imports";
 export type { ConsentStatus, RecordConsentResult } from "./consent";
 export type { CreateAppointmentInput, HomeVisitResult } from "./home-visit";
 export type { DcOverrides, DcResult, DcScoreEntry, DcSummaryReadiness } from "./dc";
@@ -97,6 +100,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   );
 
   const assignments = useAssignmentsSlice(base);
+  const imports = useImportsSlice(base);
   const behavior = useBehaviorSlice(base);
   const checkin = useCheckinSlice(base, behavior);
   const cards = useCardsSlice(base);
@@ -112,6 +116,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     () => ({
       ...base,
       ...assignments,
+      ...imports,
       ...behavior,
       ...checkin,
       ...cards,
@@ -123,7 +128,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       ...documents,
       ...exam,
     }),
-    [base, assignments, behavior, checkin, cards, care, screening, assessment, homeVisit, dc, documents, exam]
+    [base, assignments, imports, behavior, checkin, cards, care, screening, assessment, homeVisit, dc, documents, exam]
   );
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
