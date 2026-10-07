@@ -28,24 +28,24 @@ export function StudentSection({
 
   return (
     <>
-      <SectionCard no="1." title="ข้อมูลนักเรียนและผู้ปกครอง" description="หน้า 1 ของแบบฟอร์ม">
+      <SectionCard no="1." title="ข้อมูลนักเรียนและผู้ปกครอง" description="ข้อมูลจากทะเบียนนักเรียน">
         <div className="grid gap-4 md:grid-cols-2">
-          <Field label="โรงเรียน" source="registry">
+          <Field label="โรงเรียน">
             <ReadOnly value={SCHOOL_NAME} />
           </Field>
-          <Field label="ชื่อ-นามสกุลนักเรียน" source="registry">
+          <Field label="ชื่อ-นามสกุลนักเรียน">
             <ReadOnly value={student.fullName} />
           </Field>
-          <Field label="ชั้น / เลขที่" source="registry">
+          <Field label="ชั้น / เลขที่">
             <ReadOnly value={`${student.roomName} เลขที่ ${student.classNo}`} />
           </Field>
-          <Field label="เลขที่บัตรประชาชนนักเรียน" source="registry">
+          <Field label="เลขที่บัตรประชาชนนักเรียน">
             <ReadOnly value={sensitive ? student.citizenId : "—"} />
           </Field>
-          <Field label="ชื่อผู้ปกครอง" source="registry">
+          <Field label="ชื่อผู้ปกครอง">
             <ReadOnly value={guardians.map((g) => g.name).join(", ") || "-"} />
           </Field>
-          <Field label="ความสัมพันธ์กับนักเรียน" source="registry">
+          <Field label="ความสัมพันธ์กับนักเรียน">
             <ReadOnly value={guardians.map((g) => g.relation).join(", ") || "-"} />
           </Field>
           <Field label="เบอร์โทรศัพท์" source={api.sourceOf("guardianPhone")}>
@@ -53,7 +53,7 @@ export function StudentSection({
               value={sensitive ? (appointment.guardianPhone ?? guardians[0]?.phone ?? "-") : "—"}
             />
           </Field>
-          <Field label="ที่อยู่ตามทะเบียนบ้าน" source="registry" className="md:col-span-2">
+          <Field label="ที่อยู่ตามทะเบียนบ้าน" className="md:col-span-2">
             <ReadOnly value={sensitive ? student.address : "—"} />
           </Field>
           <Field
@@ -107,7 +107,7 @@ export function StudentSection({
       <SectionCard
         no="2."
         title="ประเภทความด้อยโอกาสและความพิการ"
-        description="ตอบได้มากกว่า 1 ข้อ · ไม่เลือกเลยหมายถึงไม่ด้อยโอกาส / ไม่พิการ"
+        description="เลือกได้หลายข้อ"
       >
         <div className="space-y-6">
           <ChipGroup

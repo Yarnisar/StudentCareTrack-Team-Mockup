@@ -48,9 +48,9 @@ export function CardTemplateForm() {
       <CardContent className="p-6">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h2 className="text-[15.5px] font-bold">แม่แบบบัตร</h2>
-            <p className="mt-0.5 text-[13px] text-muted-foreground">
-              ขนาด CR80 (85.60 × 53.98 มม.) · ปีการศึกษา {template.academicYear}
+            <h2 className="text-[15px] font-bold">แม่แบบบัตร</h2>
+            <p className="mt-0.5 text-[12px] text-muted-foreground">
+              ปีการศึกษา {template.academicYear}
             </p>
           </div>
           {canEdit && !editing && (
@@ -85,7 +85,7 @@ export function CardTemplateForm() {
                   id="card-qr-usage"
                   value={qrUsage}
                   onChange={(e) => setQrUsage(e.target.value as CardQrUsage)}
-                  className="h-9 w-full rounded-md border border-border bg-background px-3 text-[13.5px]"
+                  className="h-9 w-full rounded-md border border-border bg-background px-3 text-[13px]"
                 >
                   {Object.entries(CARD_QR_USAGE_LABEL).map(([value, label]) => (
                     <option key={value} value={value}>
@@ -105,7 +105,7 @@ export function CardTemplateForm() {
               />
             </div>
 
-            <label className="flex w-fit items-center gap-2 text-[13.5px]">
+            <label className="flex w-fit items-center gap-2 text-[13px]">
               <Checkbox checked={showClassNo} onCheckedChange={(v) => setShowClassNo(v === true)} />
               แสดงเลขที่ในห้องบนบัตร
             </label>
@@ -123,7 +123,7 @@ export function CardTemplateForm() {
           </div>
         )}
 
-        <p className="mt-4 rounded-lg bg-surface px-3 py-2 text-[12.5px] text-muted-foreground">
+        <p className="mt-4 text-[12px] text-muted-foreground">
           แก้ไขล่าสุดโดย {store.nameOf(template.updatedBy)} · {formatThaiDateTime(template.updatedAt)}
           {!canEdit && " · แก้ไขได้เฉพาะแอดมินโรงเรียน"}
         </p>
@@ -135,8 +135,8 @@ export function CardTemplateForm() {
 function Row({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <dt className="text-[12.5px] text-muted-foreground">{label}</dt>
-      <dd className="text-[13.5px] font-semibold">{value}</dd>
+      <dt className="text-[12px] text-muted-foreground">{label}</dt>
+      <dd className="text-[13px] font-medium">{value}</dd>
     </div>
   );
 }

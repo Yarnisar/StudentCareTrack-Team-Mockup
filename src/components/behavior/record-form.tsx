@@ -117,7 +117,7 @@ export function NewRecordFields({ form }: { form: BehaviorForm }) {
       </Button>
 
       {form.saved && (
-        <p className="rounded-lg bg-risk-green-bg px-3 py-2 text-center text-[12.5px] font-semibold text-risk-green">
+        <p className="rounded-lg bg-risk-green-bg px-3 py-2 text-center text-[12px] font-semibold text-risk-green">
           {form.notifiedGuardians > 0
             ? `บันทึกเรียบร้อย · แจ้งผู้ปกครองแล้ว ${form.notifiedGuardians} คน`
             : "บันทึกเรียบร้อย"}
@@ -136,8 +136,8 @@ export function RulesList() {
         .map((rule) => (
           <div key={rule.ruleId} className="flex items-center justify-between py-2.5">
             <div>
-              <div className="text-[13.5px] font-medium">{rule.name}</div>
-              <div className="text-[11.5px] text-muted-foreground">
+              <div className="text-[13px] font-medium">{rule.name}</div>
+              <div className="text-[11px] text-muted-foreground">
                 ระดับ: {SEVERITY_LABEL[rule.severity]}
               </div>
             </div>

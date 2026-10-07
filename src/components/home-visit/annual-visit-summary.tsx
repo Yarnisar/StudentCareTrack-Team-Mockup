@@ -34,14 +34,11 @@ export function AnnualVisitSummary() {
       </div>
       <div className="mt-3 flex flex-wrap gap-2">
         {ORDER.map((k) => (
-          <span key={k} className={`rounded-lg px-3 py-1.5 text-[12.5px] font-semibold ${STYLE[k]}`}>
+          <span key={k} className={`rounded-lg px-3 py-1.5 text-[12px] ${STYLE[k]}`}>
             {ANNUAL_VISIT_STATUS_LABEL[k]} · {counts[k]}
           </span>
         ))}
       </div>
-      <p className="mt-2 text-[11.5px] text-muted-foreground">
-        นับว่าเยี่ยมแล้วเมื่อครูรับรองผล · กลุ่มเข้าบ้านไม่ได้นับว่าเยี่ยมแล้วแต่รายงานแยกกลุ่ม
-      </p>
     </div>
   );
 }

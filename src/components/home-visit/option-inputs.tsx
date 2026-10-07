@@ -15,27 +15,20 @@ function GroupHeader({
   source,
   carry,
   hint,
-  selectedCount,
   actions,
 }: {
   label: string;
   source?: FillSource;
   carry?: CarryState;
   hint?: string;
-  selectedCount?: number;
   actions?: ReactNode;
 }) {
   return (
     <div className="mb-2.5">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-[13.5px] font-semibold">{label}</span>
+        <span className="text-[13px] font-semibold">{label}</span>
         {source && <AutoBadge source={source} />}
         {carry && <CarryBadge state={carry} />}
-        {selectedCount !== undefined && selectedCount > 0 && (
-          <span className="rounded-full bg-accent px-2 py-0.5 text-[11.5px] font-semibold text-primary">
-            เลือกแล้ว {selectedCount}
-          </span>
-        )}
         <span className="flex-1" />
         {actions}
       </div>
@@ -45,7 +38,7 @@ function GroupHeader({
 }
 
 const CHIP_BASE =
-  "flex min-h-12 w-full cursor-pointer items-center gap-2.5 rounded-xl border px-3.5 py-2.5 text-left text-[13.5px] leading-snug transition-colors";
+  "flex min-h-12 w-full cursor-pointer items-center gap-2.5 rounded-xl border px-3.5 py-2.5 text-left text-[13px] leading-snug transition-colors";
 
 /* ------------------------------------------------------------------ */
 /* เลือกได้หลายข้อ                                                     */
@@ -84,7 +77,6 @@ export function ChipGroup({
         source={source}
         carry={carry}
         hint={hint}
-        selectedCount={selected.length}
         actions={
           <div className="flex items-center gap-2">
             {noneLabel && (
@@ -243,7 +235,7 @@ export function SegmentedRows({
             key={row}
             className="flex flex-col gap-2 rounded-xl border border-border bg-card p-2.5 sm:flex-row sm:items-center"
           >
-            <span className="w-40 shrink-0 px-1 text-[13.5px] font-medium">{row}</span>
+            <span className="w-40 shrink-0 px-1 text-[13px] font-medium">{row}</span>
             <div className="flex flex-1 gap-1.5">
               {choices.map((choice) => {
                 const active = values[row] === choice;
@@ -302,7 +294,7 @@ export function YesNoRows({
               key={row.id}
               className="flex flex-col gap-2 rounded-xl border border-border bg-card p-2.5 sm:flex-row sm:items-center"
             >
-              <span className="flex-1 px-1 text-[13.5px]">{row.label}</span>
+              <span className="flex-1 px-1 text-[13px]">{row.label}</span>
               <div className="flex gap-1.5">
                 {[
                   { v: true, label: "มี" },

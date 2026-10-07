@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, History, Lock, Sparkles } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
-import { FillSource, SOURCE_LABEL, SOURCE_STYLE } from "@/components/home-visit/field-shell";
+import type { FillSource } from "@/components/home-visit/field-shell";
 import { pickInput, useRecordForm } from "@/components/home-visit/record/form-state";
 import { StudentSection } from "@/components/home-visit/record/student-section";
 import { HouseholdSection } from "@/components/home-visit/record/household-section";
@@ -178,8 +178,6 @@ export default function HomeVisitRecordPage({
   const autoCount = autoFilled.size;
   // กลุ่มข้อมูลทั้งหมด = ทุกข้อในแบบฟอร์ม + ข้อมูลหัวกระดาษที่มาจากทะเบียนนักเรียน
   const totalFields = Object.keys(api.form).length + 9;
-  const percent = Math.min(100, Math.round((autoCount / totalFields) * 100));
-  const bySource = (source: FillSource) => [...autoFilled.values()].filter((v) => v === source).length;
 
   const guardianRows = guardians.map((g) => ({
     name: g.user.name,
@@ -226,14 +224,14 @@ export default function HomeVisitRecordPage({
     <>
       <PageHeader
         title="แบบบันทึกการเยี่ยมบ้านนักเรียน"
-        subtitle="แบบฟอร์มรวมการคัดกรองนักเรียนยากจน (4 หน้า) ตามแบบของ สพฐ."
+        subtitle="ตามแบบคัดกรองนักเรียนยากจนของ สพฐ."
       />
 
       <div className="flex-1 overflow-y-auto p-8">
         <div className="mx-auto max-w-5xl space-y-5">
           <Link
             href="/home-visits"
-            className="inline-flex items-center gap-1.5 text-[13.5px] font-semibold text-muted-foreground hover:text-foreground"
+            className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-muted-foreground hover:text-foreground"
           >
             <ChevronLeft className="size-4" /> กลับไปรายการนัดหมาย
           </Link>
@@ -246,64 +244,29 @@ export default function HomeVisitRecordPage({
           )}
 
           {/* สรุปการกรอกอัตโนมัติ */}
-          <div className="rounded-xl border border-blue-200 bg-accent p-5">
-            <div className="flex flex-wrap items-center gap-3">
-              <Sparkles className="size-5 text-primary" />
-              <div className="flex-1">
-                <h2 className="text-[15px] font-bold text-accent-foreground">
-                  ระบบกรอกข้อมูลให้อัตโนมัติแล้ว {autoCount} จาก {totalFields} กลุ่มข้อมูล ({percent}%)
-                </h2>
-                <p className="mt-1 text-[13px] text-accent-foreground">
-                  ครูกรอกเพิ่มเฉพาะข้อมูลที่ต้องสอบถามจริงในวันลงพื้นที่
-                </p>
-              </div>
-              <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-blue-200 bg-card px-3 py-2 text-[12.5px] font-medium">
-                <Checkbox checked={onlyEmpty} onCheckedChange={() => setOnlyEmpty((v) => !v)} />
-                แสดงเฉพาะส่วนที่ต้องกรอกเพิ่ม
-              </label>
-            </div>
-
-            <div className="mt-3 flex flex-wrap gap-2">
-              {(["registry", "guardian", "previous", "screening"] as FillSource[]).map((s) => {
-                const count = bySource(s);
-                if (count === 0) return null;
-                return (
-                  <span
-                    key={s}
-                    className={`rounded-md px-2.5 py-1 text-[11.5px] font-semibold ${SOURCE_STYLE[s]}`}
-                  >
-                    {SOURCE_LABEL[s]} · {count} กลุ่ม
-                  </span>
-                );
-              })}
-            </div>
+          <div className="flex flex-wrap items-center gap-3 rounded-xl border border-blue-200 bg-accent px-5 py-4">
+            <Sparkles className="size-4 text-primary" />
+            <h2 className="flex-1 text-[13px] font-semibold text-accent-foreground">
+              กรอกให้อัตโนมัติแล้ว {autoCount} จาก {totalFields} กลุ่ม
+            </h2>
+            <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-blue-200 bg-card px-3 py-2 text-[12px]">
+              <Checkbox checked={onlyEmpty} onCheckedChange={() => setOnlyEmpty((v) => !v)} />
+              แสดงเฉพาะส่วนที่ต้องกรอกเพิ่ม
+            </label>
           </div>
 
           {/* ข้อมูลที่ยกมาจากการเยี่ยมครั้งก่อน */}
           {previous && (
-            <div className="flex flex-wrap items-center gap-2.5 rounded-xl border border-border bg-surface px-4 py-3 text-[12.5px]">
-              <History className="size-4 shrink-0 text-muted-foreground" />
-              <span className="text-muted-foreground">
-                เติมข้อมูลเดิมจากการเยี่ยมบ้านที่รับรองเมื่อ{" "}
-                {formatThaiDate(previous.signedAt ?? previous.updatedAt)} ให้แล้ว —
-                ช่องที่มีป้าย “ข้อมูลจากภาคเรียนก่อน” คือข้อมูลเดิมที่ยังไม่ได้แก้
-              </span>
-              <span className="flex-1" />
-              <span
-                className={
-                  changedFromPrevious > 0
-                    ? "rounded-md bg-risk-amber-bg px-2.5 py-1 font-semibold text-risk-amber"
-                    : "rounded-md bg-card px-2.5 py-1 font-semibold text-muted-foreground"
-                }
-              >
-                แก้จากภาคเรียนก่อนแล้ว {changedFromPrevious} กลุ่ม
-              </span>
-            </div>
+            <p className="flex flex-wrap items-center gap-2 text-[12px] text-muted-foreground">
+              <History className="size-3.5 shrink-0" />
+              เติมจากการเยี่ยมที่รับรองเมื่อ {formatThaiDate(previous.signedAt ?? previous.updatedAt)}
+              {changedFromPrevious > 0 && ` · แก้แล้ว ${changedFromPrevious} กลุ่ม`}
+            </p>
           )}
 
           {/* ประเภทการเยี่ยม / สถานะการแก้ไข */}
-          <div className="flex flex-wrap items-center gap-2 text-[12.5px]">
-            <span className="rounded-md bg-surface px-2.5 py-1 font-semibold">
+          <div className="flex flex-wrap items-center gap-2 text-[12px]">
+            <span className="rounded-md bg-surface px-2.5 py-1 font-medium">
               {VISIT_TYPE_LABEL[appointment.visitType]} · ปีการศึกษา {appointment.academicYear}
             </span>
             {appointment.caseId && (
@@ -336,11 +299,10 @@ export default function HomeVisitRecordPage({
                 </p>
               )}
               {!readOnly && (
-                <p className="text-[12.5px] text-muted-foreground">
-                  ระบบบันทึกร่างให้อัตโนมัติเมื่อหยุดกรอก —{" "}
+                <p className="text-[12px] text-muted-foreground">
                   {lastSavedAt
-                    ? `บันทึกร่างล่าสุดเมื่อ ${formatThaiDateTime(lastSavedAt)}`
-                    : "ยังไม่มีการบันทึกร่างในครั้งนี้"}
+                    ? `บันทึกร่างอัตโนมัติล่าสุด ${formatThaiDateTime(lastSavedAt)}`
+                    : "บันทึกร่างอัตโนมัติเมื่อหยุดกรอก"}
                 </p>
               )}
             </>
@@ -390,7 +352,7 @@ export default function HomeVisitRecordPage({
           ) : (
             <div className="space-y-3 pb-6">
               {blockers.length > 0 && (
-                <p className="text-[12.5px] text-muted-foreground">ก่อนรับรอง: {blockers.join(" · ")}</p>
+                <p className="text-[12px] text-muted-foreground">ก่อนรับรอง: {blockers.join(" · ")}</p>
               )}
               {confirmSign ? (
                 <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-risk-amber-bg p-4">

@@ -12,11 +12,11 @@ export function FriendsSection({ api }: { api: RecordFormApi }) {
     <SectionCard
       no="7."
       title="เพื่อนสนิทของนักเรียน"
-      description="ไม่บังคับกรอก · ใช้เป็นช่องทางติดต่อเมื่อจำเป็น ไม่เปิดเผยในรายงานหรือการแจ้งเตือน"
+      description="ไม่บังคับ · ใช้ติดต่อเมื่อจำเป็น ไม่เปิดเผยในรายงาน"
     >
       <div className="space-y-5">
         <div>
-          <h3 className="mb-2.5 text-[13.5px] font-semibold">7.1 เพื่อนสนิทในโรงเรียน</h3>
+          <h3 className="mb-2.5 text-[13px] font-semibold">7.1 เพื่อนสนิทในโรงเรียน</h3>
           <div className="grid gap-4 md:grid-cols-3">
             <Field
               label="ชื่อ-นามสกุล"
@@ -52,7 +52,7 @@ export function FriendsSection({ api }: { api: RecordFormApi }) {
         </div>
 
         <div>
-          <h3 className="mb-2.5 text-[13.5px] font-semibold">7.2 เพื่อนสนิทนอกโรงเรียน</h3>
+          <h3 className="mb-2.5 text-[13px] font-semibold">7.2 เพื่อนสนิทนอกโรงเรียน</h3>
           <div className="grid gap-4 md:grid-cols-2">
             <Field
               label="ชื่อ-นามสกุล"

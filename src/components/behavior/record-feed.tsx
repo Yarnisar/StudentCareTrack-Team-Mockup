@@ -61,10 +61,7 @@ export function BehaviorRecordFeed({ records }: { records: BehaviorRecord[] }) {
       {groups.map((group) => (
         <section key={group.day}>
           <div className="mb-2 flex items-baseline gap-2">
-            <h3 className="text-[13.5px] font-bold">{formatThaiDate(group.day)}</h3>
-            <span className="text-[12px] text-muted-foreground">
-              {group.records.length} รายการ
-            </span>
+            <h3 className="text-[13px] font-bold">{formatThaiDate(group.day)}</h3>
           </div>
 
           <div className="space-y-2.5">
@@ -77,17 +74,17 @@ export function BehaviorRecordFeed({ records }: { records: BehaviorRecord[] }) {
                   className="rounded-xl border border-border bg-card p-4 transition-colors hover:border-primary/40"
                 >
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-[14px] font-bold">{student?.fullName}</span>
+                    <span className="text-[13px] font-bold">{student?.fullName}</span>
                     <span className="text-[12px] text-muted-foreground">
                       {student?.roomName} เลขที่ {student?.classNo}
                     </span>
                     <span className="flex-1" />
-                    <SourceBadge source={rec.source} />
+                    {rec.source === "qr_checkin" && <SourceBadge source={rec.source} />}
                     <ScoreChip delta={rule?.scoreDelta ?? 0} />
                   </div>
 
                   <div className="mt-2.5 flex flex-wrap items-baseline gap-x-2 gap-y-1">
-                    <span className="text-[13.5px] font-semibold text-foreground">{rule?.name}</span>
+                    <span className="text-[13px] font-semibold text-foreground">{rule?.name}</span>
                     {rule && (
                       <span className="rounded bg-surface px-1.5 py-0.5 text-[11px] text-muted-foreground">
                         {BEHAVIOR_SEVERITY_LABEL[rule.severity]}
@@ -99,9 +96,8 @@ export function BehaviorRecordFeed({ records }: { records: BehaviorRecord[] }) {
                     {rec.description}
                   </p>
 
-                  <div className="mt-2.5 flex flex-wrap gap-x-3 border-t border-border pt-2 text-[11.5px] text-muted-foreground">
-                    <span>{formatThaiTime(rec.occurredAt)} น.</span>
-                    <span>บันทึกโดย {store.nameOf(rec.recordedBy)}</span>
+                  <div className="mt-2 text-[12px] text-muted-foreground">
+                    {formatThaiTime(rec.occurredAt)} น. · {store.nameOf(rec.recordedBy)}
                   </div>
                 </div>
               );
@@ -117,7 +113,7 @@ function Stat({ label, value, accent }: { label: string; value: string; accent?:
   return (
     <Card>
       <CardContent className="p-5">
-        <div className="text-[13px] font-semibold text-muted-foreground">{label}</div>
+        <div className="text-[12px] text-muted-foreground">{label}</div>
         <div className={accent ? "mt-2 text-2xl font-bold text-primary" : "mt-2 text-2xl font-bold"}>
           {value}
         </div>
@@ -131,8 +127,8 @@ function SourceBadge({ source }: { source: BehaviorRecord["source"] }) {
     <span
       className={
         source === "qr_checkin"
-          ? "shrink-0 rounded-md bg-accent px-2 py-1 text-[11px] font-semibold text-primary"
-          : "shrink-0 rounded-md bg-muted px-2 py-1 text-[11px] font-semibold text-muted-foreground"
+          ? "shrink-0 rounded-md bg-accent px-2 py-1 text-[11px] text-primary"
+          : "shrink-0 rounded-md bg-muted px-2 py-1 text-[11px] text-muted-foreground"
       }
     >
       {source === "qr_checkin" ? "QR อัตโนมัติ" : "บันทึกโดยครู"}

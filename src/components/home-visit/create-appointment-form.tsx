@@ -12,7 +12,7 @@ import { ANNUAL_VISIT_STATUS_LABEL, VISIT_TYPE_LABEL, type VisitType } from "@/l
 import { AppointmentDateFields } from "./appointment-date-fields";
 
 const CHOICE =
-  "flex min-h-12 flex-1 items-center justify-center rounded-xl border px-3 py-2.5 text-[13.5px] font-semibold transition-colors";
+  "flex min-h-12 flex-1 items-center justify-center rounded-xl border px-3 py-2.5 text-[13px] font-semibold transition-colors";
 const CHOICE_ON = "border-primary bg-accent text-primary";
 const CHOICE_OFF = "border-border text-muted-foreground hover:bg-muted";
 
@@ -75,10 +75,8 @@ export function CreateAppointmentForm({
       <CardContent className="space-y-5 p-6">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h2 className="text-[15.5px] font-bold">สร้างนัดหมายเยี่ยมบ้าน</h2>
-            <p className="mt-1 text-[12.5px] text-muted-foreground">
-              ระบบแจ้งผู้ปกครองทุกคนของนักเรียนให้ยืนยันนัดหมาย
-            </p>
+            <h2 className="text-[15px] font-bold">สร้างนัดหมายเยี่ยมบ้าน</h2>
+            <p className="mt-1 text-[12px] text-muted-foreground">แจ้งผู้ปกครองให้ยืนยันนัดหมาย</p>
           </div>
           <button
             type="button"
@@ -91,14 +89,14 @@ export function CreateAppointmentForm({
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="hv-student" className="text-[12.5px] text-muted-foreground">
+          <Label htmlFor="hv-student" className="text-[12px] text-muted-foreground">
             นักเรียน
           </Label>
           <select
             id="hv-student"
             value={studentId}
             onChange={(e) => chooseStudent(e.target.value)}
-            className="h-11 w-full rounded-lg border border-input bg-transparent px-3 text-[13.5px]"
+            className="h-11 w-full rounded-lg border border-input bg-transparent px-3 text-[13px]"
           >
             {students.map((s) => (
               <option key={s.studentId} value={s.studentId}>
@@ -110,7 +108,7 @@ export function CreateAppointmentForm({
         </div>
 
         <div>
-          <Label className="text-[12.5px] text-muted-foreground">ประเภทการเยี่ยม</Label>
+          <Label className="text-[12px] text-muted-foreground">ประเภทการเยี่ยม</Label>
           <div className="mt-1.5 flex gap-2">
             {(["annual", "follow_up"] as VisitType[]).map((t) => {
               const disabled = t === "annual" && annualTaken;
@@ -129,17 +127,17 @@ export function CreateAppointmentForm({
           </div>
           <p className="mt-1.5 text-[12px] text-muted-foreground">
             {annualTaken
-              ? "นักเรียนคนนี้มีนัดเยี่ยมบ้านประจำปีของปีการศึกษานี้แล้ว (ปีละ 1 ครั้ง) — สร้างได้เฉพาะการเยี่ยมเพิ่ม"
+              ? "มีนัดเยี่ยมบ้านประจำปีของปีนี้แล้ว — สร้างได้เฉพาะการเยี่ยมเพิ่ม"
               : visitType === "annual"
-                ? "นักเรียนทุกคนต้องได้รับการเยี่ยมบ้านประจำปี ปีการศึกษาละ 1 ครั้ง"
-                : "เยี่ยมเพิ่มไม่บังคับ สำหรับนักเรียนที่มี case เปิดอยู่ หรือที่ครูประจำชั้นเลือกเอง"}
+                ? "เยี่ยมบ้านประจำปี ปีการศึกษาละ 1 ครั้ง"
+                : "เยี่ยมเพิ่ม (ไม่บังคับ) สำหรับนักเรียนที่มี case เปิดอยู่"}
           </p>
         </div>
 
         {visitType === "follow_up" && (
           <div className="rounded-xl border border-border bg-surface p-4">
             {activeCase ? (
-              <label className="flex min-h-11 cursor-pointer items-center gap-3 text-[13.5px]">
+              <label className="flex min-h-11 cursor-pointer items-center gap-3 text-[13px]">
                 <input
                   type="checkbox"
                   checked={linkCase}
@@ -153,7 +151,7 @@ export function CreateAppointmentForm({
               </label>
             ) : (
               <p className="text-[13px] text-muted-foreground">
-                นักเรียนคนนี้ไม่มี care case ที่เปิดอยู่ — บันทึกเป็นการเยี่ยมเพิ่มที่ครูประจำชั้นเลือกเอง
+                ไม่มี care case ที่เปิดอยู่ — บันทึกเป็นการเยี่ยมเพิ่ม
               </p>
             )}
           </div>

@@ -40,9 +40,9 @@ export function BehaviorRecordManager() {
       <CardContent className="p-6">
         <div className="mb-4 flex flex-wrap items-end gap-3">
           <div className="min-w-0 flex-1">
-            <h2 className="text-[15.5px] font-bold">แก้ไข / ยกเลิกบันทึก</h2>
-            <p className="text-xs text-muted-foreground">
-              ผู้บันทึกแก้ไขได้ภายใน 24 ชั่วโมง หลังจากนั้นทำได้แค่ยกเลิกพร้อมเหตุผล · ไม่มีบันทึกใดถูกลบ
+            <h2 className="text-[15px] font-bold">แก้ไข / ยกเลิกบันทึก</h2>
+            <p className="text-[12px] text-muted-foreground">
+              แก้ไขได้ภายใน 24 ชั่วโมง หลังจากนั้นยกเลิกพร้อมเหตุผลได้เท่านั้น
             </p>
           </div>
           <div className="space-y-1">
@@ -76,10 +76,9 @@ export function BehaviorRecordManager() {
             <span className="font-semibold">
               คะแนนความประพฤติ {score}/{BEHAVIOR_SCORE_BASE}
             </span>
-            <span className="text-muted-foreground">· ปีการศึกษา {store.currentTerm.academicYear}</span>
             {score < alertScore && (
               <span className="flex items-center gap-1 font-semibold">
-                <AlertTriangle className="size-4" /> ต่ำกว่าเกณฑ์ {alertScore} — ระบบแนะนำให้พิจารณาเปิด care case
+                <AlertTriangle className="size-4" /> ต่ำกว่าเกณฑ์ {alertScore} — พิจารณาเปิด care case
               </span>
             )}
           </div>
@@ -164,7 +163,7 @@ function RecordRow({ rec, showStudent }: { rec: BehaviorRecord; showStudent: boo
             </span>
           </div>
           <p className="text-[13px] break-words">{rec.description}</p>
-          <div className="text-[11.5px] text-muted-foreground">
+          <div className="text-[11px] text-muted-foreground">
             {showStudent && student ? `${student.fullName} · ` : ""}
             {formatThaiDateTime(rec.occurredAt)} · ผู้บันทึก {store.nameOf(rec.recordedBy)}
             {rec.decidedBy && rec.source === "qr_checkin" ? ` · ตัดสินโดย ${store.nameOf(rec.decidedBy)}` : ""}
@@ -176,12 +175,12 @@ function RecordRow({ rec, showStudent }: { rec: BehaviorRecord; showStudent: boo
             <p className="mt-1 text-[12px] text-muted-foreground">เหตุผลการยกเลิก: {rec.voidReason}</p>
           )}
           {canEdit && mode === "view" && (
-            <p className="mt-1 text-[11.5px] text-muted-foreground">
+            <p className="mt-1 text-[11px] text-muted-foreground">
               แก้ไขได้ถึง {formatThaiDateTime(store.editableUntilOf(rec))}
             </p>
           )}
           {rec.status === "pending" && (
-            <p className="mt-1 text-[11.5px] text-risk-amber">
+            <p className="mt-1 text-[11px] text-risk-amber">
               รอครูประจำชั้นยืนยัน · ยืนยันอัตโนมัติ {formatThaiDate(store.autoConfirmAtOf(rec) ?? rec.createdAt)}
             </p>
           )}
@@ -241,7 +240,7 @@ function RecordRow({ rec, showStudent }: { rec: BehaviorRecord; showStudent: boo
             aria-label="เหตุผลการยกเลิก"
             value={reason}
             onChange={(e) => setReason(e.target.value)}
-            placeholder="เหตุผลการยกเลิก (จำเป็น) — บันทึกยังอยู่ในระบบแต่ไม่มีผลกับคะแนน"
+            placeholder="เหตุผลการยกเลิก (จำเป็น)"
             rows={2}
           />
           <div className="flex gap-2">

@@ -83,13 +83,11 @@ export function CardRoster({
       <CardContent className="p-6">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
           <div>
-            <h2 className="text-[15.5px] font-bold">รายชื่อและสถานะบัตร</h2>
-            <p className="mt-0.5 text-[13px] text-muted-foreground">
-              เลือกบัตรที่ต้องการพิมพ์ได้จากช่องด้านซ้าย · บัตรที่เลิกใช้จะถูกเพิกถอน ไม่ถูกลบ
-            </p>
+            <h2 className="text-[15px] font-bold">รายชื่อและสถานะบัตร</h2>
+            <p className="mt-0.5 text-[12px] text-muted-foreground">เลือกบัตรที่ต้องการพิมพ์จากช่องด้านซ้าย</p>
           </div>
           {!isAdmin && (
-            <span className="rounded-full bg-muted px-3 py-1 text-[12.5px] text-muted-foreground">
+            <span className="rounded-full bg-muted px-3 py-1 text-[12px] text-muted-foreground">
               ออกบัตรได้เฉพาะแอดมินโรงเรียน
             </span>
           )}
@@ -138,7 +136,7 @@ export function CardRoster({
                   </TableCell>
                   <TableCell>
                     <div className="font-semibold">{student.fullName}</div>
-                    <div className="text-[12.5px] text-muted-foreground">
+                    <div className="text-[12px] text-muted-foreground">
                       {student.roomName} เลขที่ {student.classNo}
                     </div>
                   </TableCell>
@@ -165,14 +163,14 @@ export function CardRoster({
                       <button
                         type="button"
                         onClick={() => setExpanded(open ? null : student.studentId)}
-                        className="mt-1 block text-[12px] font-semibold text-primary hover:underline"
+                        className="mt-1 block text-[12px] text-primary hover:underline"
                       >
                         {open ? "ซ่อนประวัติบัตร" : `ประวัติบัตร ${history.length} ใบ`}
                       </button>
                     )}
                     {open && <CardHistory history={history} />}
                   </TableCell>
-                  <TableCell className="font-mono text-[12.5px] text-muted-foreground">
+                  <TableCell className="font-mono text-[12px] text-muted-foreground">
                     {active ? maskToken(active.qrCode) : "—"}
                   </TableCell>
                   <TableCell className="text-[13px]">
@@ -239,13 +237,13 @@ export function CardRoster({
 
         {pending && (
           <div className="mt-4 rounded-xl border border-border bg-surface p-4">
-            <h3 className="text-[14px] font-bold">
+            <h3 className="text-[13px] font-bold">
               {pending.mode === "revoke" ? "ยืนยันการเพิกถอนบัตร" : "ยืนยันการออกบัตรใบใหม่"}
             </h3>
             <p className="mt-1 text-[13px] text-muted-foreground">
               {pending.mode === "revoke"
-                ? "บัตรจะใช้สแกนไม่ได้ทันที แต่ยังเก็บไว้ในประวัติพร้อมเหตุผล"
-                : "ระบบจะเพิกถอนใบเดิมพร้อมเหตุผล แล้วออกรหัส QR ใหม่ให้นักเรียน"}{" "}
+                ? "บัตรจะสแกนไม่ได้ทันที แต่ยังอยู่ในประวัติ"
+                : "เพิกถอนใบเดิม แล้วออกรหัส QR ใหม่"}{" "}
               — {store.getStudent(pending.studentId)?.fullName}
             </p>
             <div className="mt-3 space-y-1.5">
@@ -258,8 +256,8 @@ export function CardRoster({
                     onClick={() => setReason(r)}
                     className={
                       reason === r
-                        ? "rounded-full bg-primary px-3 py-1 text-[12.5px] font-semibold text-primary-foreground"
-                        : "rounded-full bg-muted px-3 py-1 text-[12.5px] text-muted-foreground hover:bg-border"
+                        ? "rounded-full bg-primary px-3 py-1 text-[12px] font-semibold text-primary-foreground"
+                        : "rounded-full bg-muted px-3 py-1 text-[12px] text-muted-foreground hover:bg-border"
                     }
                   >
                     {r}

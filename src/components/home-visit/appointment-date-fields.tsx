@@ -20,7 +20,7 @@ export function AppointmentDateFields({
   return (
     <div className="grid gap-3 sm:grid-cols-2">
       <div className="space-y-1.5">
-        <Label htmlFor={`${idPrefix}-date`} className="text-[12.5px] text-muted-foreground">
+        <Label htmlFor={`${idPrefix}-date`} className="text-[12px] text-muted-foreground">
           วันที่นัด
         </Label>
         <Input
@@ -32,7 +32,7 @@ export function AppointmentDateFields({
         />
       </div>
       <div className="space-y-1.5">
-        <Label htmlFor={`${idPrefix}-time`} className="text-[12.5px] text-muted-foreground">
+        <Label htmlFor={`${idPrefix}-time`} className="text-[12px] text-muted-foreground">
           เวลา
         </Label>
         <Input
