@@ -38,11 +38,13 @@ export const STAFF_NAV: NavEntry[] = [
   { group: "school", href: "/documents", label: "เอกสาร ปพ.", roles: ALL_STAFF },
   { group: "school", href: "/checkin", label: "บัตรและเช็กชื่อ", roles: ALL_STAFF, alsoActiveOn: ["/cards"] },
   { group: "school", href: "/approvals", label: "อนุมัติเอกสารส่งต่อ", roles: ["admin_school"] },
-  { group: "school", href: "/settings", label: "ตั้งค่าระบบ", roles: ["admin_school"] },
 ];
 
-/** หน้าที่ไม่มีในเมนูแต่ต้องกันสิทธิ์ (เข้าผ่านแท็บในหน้าบัตรและเช็กชื่อ) */
-const HIDDEN_ROUTES: NavItem[] = [{ href: "/cards", label: "ออกบัตรนักเรียน", roles: ["admin_school"] }];
+/** ตั้งค่าระบบ — ไอคอนเฟืองข้างการ์ดผู้ใช้ที่มุมล่างของ sidebar (ไม่อยู่ในรายการเมนู) */
+export const SETTINGS_NAV: NavItem = { href: "/settings", label: "ตั้งค่าระบบ", roles: ["admin_school"] };
+
+/** หน้าที่ไม่มีในเมนูแต่ต้องกันสิทธิ์ (เข้าผ่านแท็บในหน้าบัตรและเช็กชื่อ และเฟืองตั้งค่า) */
+const HIDDEN_ROUTES: NavItem[] = [{ href: "/cards", label: "ออกบัตรนักเรียน", roles: ["admin_school"] }, SETTINGS_NAV];
 
 const matches = (pathname: string, href: string) => pathname === href || pathname.startsWith(`${href}/`);
 

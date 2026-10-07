@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { SCHOOL_NAME } from "@/lib/mock-data";
-import { isActivePath, isNavEntryActive, navGroupsForRole } from "@/lib/navigation";
+import { SETTINGS_NAV, isActivePath, isNavEntryActive, navGroupsForRole } from "@/lib/navigation";
 import { useStore } from "@/lib/store";
 import { initialOf } from "@/lib/format";
 import { useNavBadges } from "./use-nav-badges";
@@ -50,6 +50,8 @@ export function Sidebar() {
   const groups = navGroupsForRole(currentUser.role);
   const { counts, urgent } = useNavBadges();
   const notifActive = isActivePath(pathname, "/notifications");
+  const canOpenSettings = SETTINGS_NAV.roles.includes(currentUser.role);
+  const settingsActive = isActivePath(pathname, SETTINGS_NAV.href);
 
   return (
     <aside className="flex w-[264px] shrink-0 flex-col border-r border-border bg-card max-md:w-[68px]">
@@ -153,7 +155,39 @@ export function Sidebar() {
             <div className="truncate text-[12.5px] font-semibold text-foreground">{currentUser.name}</div>
             <div className="truncate text-[11px] text-muted-foreground">{currentUser.title}</div>
           </div>
+          {canOpenSettings && (
+            <Link
+              href={SETTINGS_NAV.href}
+              title={SETTINGS_NAV.label}
+              aria-label={SETTINGS_NAV.label}
+              aria-current={settingsActive ? "page" : undefined}
+              className={cn(
+                "flex size-8 shrink-0 items-center justify-center rounded-lg transition-colors max-md:hidden",
+                settingsActive
+                  ? "bg-accent text-accent-foreground"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              )}
+            >
+              <Settings className="size-[18px]" strokeWidth={1.7} />
+            </Link>
+          )}
         </div>
+        {canOpenSettings && (
+          <Link
+            href={SETTINGS_NAV.href}
+            title={SETTINGS_NAV.label}
+            aria-label={SETTINGS_NAV.label}
+            aria-current={settingsActive ? "page" : undefined}
+            className={cn(
+              "mx-auto mt-1 hidden size-9 items-center justify-center rounded-lg transition-colors max-md:flex",
+              settingsActive
+                ? "bg-accent text-accent-foreground"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            )}
+          >
+            <Settings className="size-[18px]" strokeWidth={1.7} />
+          </Link>
+        )}
       </div>
     </aside>
   );
