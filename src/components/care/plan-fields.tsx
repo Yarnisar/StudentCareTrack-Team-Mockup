@@ -59,8 +59,7 @@ export function PlanFields({
   return (
     <div className="space-y-4">
       <div>
-        <div className="text-[13px] font-semibold">ประเภทการช่วยเหลือ</div>
-        <p className="mb-2 text-[11.5px] text-muted-foreground">อ้างอิงแนวทาง HERO OBEC CARE</p>
+        <div className="mb-2 text-[13px] font-semibold">ประเภทการช่วยเหลือ</div>
         <div className="flex flex-wrap gap-2">
           {SUPPORT_TYPES.map((t) => (
             <button
@@ -91,7 +90,7 @@ export function PlanFields({
               checked={value.careMethods.includes(m)}
               onCheckedChange={(checked) => toggleMethod(m, checked === true)}
             />
-            <span className="text-[13.5px]">{CARE_METHOD_LABEL[m]}</span>
+            <span className="text-[13px]">{CARE_METHOD_LABEL[m]}</span>
           </label>
         ))}
       </div>
@@ -121,7 +120,7 @@ export function PlanFields({
           className="h-10 max-w-56"
         />
         {value.targetDate && (
-          <p className="text-[11.5px] text-muted-foreground">{formatThaiDate(value.targetDate)}</p>
+          <p className="text-[12px] text-muted-foreground">{formatThaiDate(value.targetDate)}</p>
         )}
       </div>
     </div>

@@ -67,7 +67,7 @@ export function SdqAgreementChip({ forms, className }: { forms: SdqAssessment[];
   return (
     <span
       title={a.note}
-      className={cn("inline-flex rounded-full px-2.5 py-1 text-[11.5px] font-semibold", AGREEMENT_STYLE[a.tone], className)}
+      className={cn("inline-flex rounded-full px-2.5 py-1 text-[12px] font-semibold", AGREEMENT_STYLE[a.tone], className)}
     >
       {a.label}
     </span>
@@ -95,7 +95,6 @@ export function SdqRaterComparison({
   if (shown.length === 0) return null;
 
   const submitted = shown.filter((f) => f.status === "submitted");
-  const agreement = sdqAgreement(shown);
 
   const rangeOf = (pick: (f: SdqAssessment) => number | null | undefined) => {
     const values = submitted.map(pick).filter((v): v is number => typeof v === "number");
@@ -109,16 +108,18 @@ export function SdqRaterComparison({
     <div className={cn("space-y-2", className)}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h3 className="text-[13.5px] font-bold">เทียบผลรายผู้ประเมิน</h3>
-          <p className="text-[11.5px] text-muted-foreground">
-            แสดงคะแนนแยกรายฉบับ ไม่เฉลี่ยคะแนนระหว่างผู้ประเมิน · ผลที่เป็นทางการคือผลรวม
-          </p>
+          <h3
+            className="text-[13px] font-bold"
+            title="แสดงคะแนนแยกรายฉบับ ไม่เฉลี่ยคะแนนระหว่างผู้ประเมิน · ผลที่เป็นทางการคือผลรวม"
+          >
+            เทียบผลรายผู้ประเมิน
+          </h3>
         </div>
         <SdqAgreementChip forms={shown} />
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[320px] border-collapse text-[11.5px]">
+        <table className="w-full min-w-[320px] border-collapse text-[12px]">
           <caption className="sr-only">
             คะแนน SDQ รายด้านของแต่ละผู้ประเมิน พร้อมผลตามเกณฑ์ของฉบับนั้น
           </caption>
@@ -130,7 +131,7 @@ export function SdqRaterComparison({
               {shown.map((f) => (
                 <th key={f.id} scope="col" className="px-1.5 py-1.5 text-center font-semibold">
                   {SHORT_RATER[f.rater]}
-                  <div className="font-normal text-[10.5px] text-muted-foreground">
+                  <div className="font-normal text-[11px] text-muted-foreground">
                     {f.status === "submitted"
                       ? `ส่ง ${f.submittedAt ? formatThaiDate(f.submittedAt) : "-"}`
                       : SDQ_STATUS_LABEL[f.status]}
@@ -148,7 +149,7 @@ export function SdqRaterComparison({
                 <th scope="row" className="py-1.5 pr-2 text-left font-medium">
                   {SHORT_SCALE[scale]}
                   {!DIFFICULTY_SCALES.includes(scale) && (
-                    <span className="ml-1 text-[10px] font-normal text-muted-foreground">(ไม่รวมในคะแนนรวม)</span>
+                    <span className="ml-1 text-[11px] font-normal text-muted-foreground">(ไม่รวมในคะแนนรวม)</span>
                   )}
                 </th>
                 {shown.map((f) => (
@@ -181,11 +182,11 @@ export function SdqRaterComparison({
               {shown.map((f) => (
                 <td key={f.id} className="px-1.5 py-2 text-center">
                   {f.level ? (
-                    <SdqLevelBadge level={f.level} className="px-2 py-0.5 text-[10.5px]" />
+                    <SdqLevelBadge level={f.level} className="px-2 py-0.5 text-[11px]" />
                   ) : (
                     <span className="text-[11px] text-muted-foreground">{SDQ_STATUS_LABEL[f.status]}</span>
                   )}
-                  <div className="mt-0.5 text-[10px] text-muted-foreground">
+                  <div className="mt-0.5 text-[11px] text-muted-foreground">
                     เกณฑ์ {SDQ_CUTOFFS[f.rater].risk}/{SDQ_CUTOFFS[f.rater].problem}
                   </div>
                 </td>
@@ -196,10 +197,7 @@ export function SdqRaterComparison({
         </table>
       </div>
 
-      <p className="text-[11px] text-muted-foreground">{agreement.note}</p>
-      <p className="text-[11px] text-muted-foreground">
-        เกณฑ์แปลผล (เสี่ยง/มีปัญหา) ยังรอยืนยันจากคู่มือกรมสุขภาพจิต — ตอนนี้ใช้ค่าเดียวกันทั้ง 3 ฉบับ
-      </p>
+      <p className="text-[11px] text-muted-foreground">เกณฑ์แปลผลรอยืนยันจากคู่มือกรมสุขภาพจิต — ใช้ค่าเดียวกันทั้ง 3 ฉบับ</p>
     </div>
   );
 }

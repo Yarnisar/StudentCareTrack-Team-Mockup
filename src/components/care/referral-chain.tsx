@@ -44,7 +44,7 @@ export function ReferralStatusChip({ referral }: { referral: ReferralDocument })
           ? "bg-accent text-primary"
           : "bg-risk-amber-bg text-risk-amber";
   return (
-    <span className={`rounded-full px-2.5 py-1 text-[11.5px] font-semibold ${tone}`}>
+    <span className={`rounded-full px-2.5 py-1 text-[12px] font-semibold ${tone}`}>
       {REFERRAL_STATUS_LABEL[referral.status]}
     </span>
   );
@@ -96,7 +96,7 @@ export function ReferralChain({ referral }: { referral: ReferralDocument }) {
       </ol>
       {declinedStep && (
         <p className="mt-1.5 text-[12px] font-semibold text-risk-red">
-          เอกสารถูกตีกลับเป็นร่าง — แก้ไขแล้วส่งขอลงนามใหม่ได้ (ดูเหตุผลในประวัติการลงนาม)
+          ตีกลับเป็นร่าง — แก้ไขแล้วส่งขอลงนามใหม่ (เหตุผลอยู่ในประวัติ)
         </p>
       )}
     </div>

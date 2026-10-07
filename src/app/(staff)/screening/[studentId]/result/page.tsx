@@ -40,7 +40,7 @@ export default function ScreeningResultPage({ params }: { params: Promise<{ stud
   const back = (
     <Link
       href="/screening"
-      className="mb-4 inline-flex items-center gap-1.5 text-[13.5px] font-semibold text-muted-foreground hover:text-foreground"
+      className="mb-4 inline-flex items-center gap-1.5 text-[13px] font-semibold text-muted-foreground hover:text-foreground"
     >
       <ChevronLeft className="size-4" /> กลับไปรายชื่อนักเรียน
     </Link>
@@ -111,7 +111,7 @@ export default function ScreeningResultPage({ params }: { params: Promise<{ stud
                 {student.fullName} · {student.roomName} เลขที่ {student.classNo}
               </div>
               <div className="mt-0.5 text-[13px] text-muted-foreground">
-                บันทึกล่าสุดโดย {store.nameOf(screening.screenedBy)} · {formatThaiDateTime(screening.screenedAt)}
+                บันทึกโดย {store.nameOf(screening.screenedBy)} · {formatThaiDateTime(screening.screenedAt)}
                 {screening.certifiedBy && screening.certifiedAt
                   ? ` · รับรองโดย ${store.nameOf(screening.certifiedBy)} ${formatThaiDateTime(screening.certifiedAt)}`
                   : ""}
@@ -132,11 +132,11 @@ export default function ScreeningResultPage({ params }: { params: Promise<{ stud
                     ปลดล็อกโดย {store.nameOf(screening.unlock.by)}: {screening.unlock.reason}
                   </span>
                 )}
-                <span className="rounded-full bg-surface px-2.5 py-1 text-muted-foreground">{CONSENT_LABEL[consent]}</span>
+                <span className="py-1 text-muted-foreground">{CONSENT_LABEL[consent]}</span>
               </div>
             </div>
             <div className="text-right">
-              <div className="mb-1.5 text-[12.5px] text-muted-foreground">ผลรวม</div>
+              <div className="mb-1.5 text-[12px] text-muted-foreground">ผลรวม</div>
               <RiskBadge group={overallRisk(screening.results.map((r) => r.group))} />
             </div>
           </CardContent>
@@ -155,7 +155,7 @@ export default function ScreeningResultPage({ params }: { params: Promise<{ stud
                     <RiskBadge group={r.group} />
                   </div>
                   {r.teacherGroup && (
-                    <p className="mb-2 rounded-lg bg-surface px-3 py-2 text-[12.5px] text-muted-foreground">
+                    <p className="mb-2 rounded-lg bg-surface px-3 py-2 text-[12px] text-muted-foreground">
                       ครูปรับผลจาก <b>{r.computedGroup === "pending" ? "รอผลประเมิน" : RISK_LABEL[r.computedGroup]}</b> เป็น{" "}
                       <b>{RISK_LABEL[r.teacherGroup]}</b> · เหตุผล: {r.adjustReason}
                     </p>
@@ -192,7 +192,7 @@ export default function ScreeningResultPage({ params }: { params: Promise<{ stud
                 {nextStep ? (
                   <div className="flex flex-wrap items-center gap-3 rounded-xl border border-blue-200 bg-accent px-4 py-3 text-[13px] text-accent-foreground">
                     <span className="flex-1">
-                      <b>ขั้นถัดไปด้านสุขภาพจิต:</b> {nextStep.text}
+                      <b>ขั้นถัดไป:</b> {nextStep.text}
                     </span>
                     <LinkButton size="sm" href={nextStep.href}>
                       {nextStep.label}
@@ -200,7 +200,7 @@ export default function ScreeningResultPage({ params }: { params: Promise<{ stud
                   </div>
                 ) : (
                   <p className="rounded-xl bg-surface px-4 py-3 text-[13px] text-muted-foreground">
-                    ไม่มีขั้นถัดไปด้านสุขภาพจิตในรอบนี้ — {ASSESSMENT_NEXT_STEP_LABEL[plan.next]}
+                    {ASSESSMENT_NEXT_STEP_LABEL[plan.next]}
                   </p>
                 )}
               </div>
@@ -215,7 +215,7 @@ export default function ScreeningResultPage({ params }: { params: Promise<{ stud
             <CardContent className="p-5">
               {unlocking ? (
                 <div className="space-y-2">
-                  <div className="text-[13.5px] font-semibold">ปลดล็อกการคัดกรองฉบับนี้</div>
+                  <div className="text-[13px] font-semibold">ปลดล็อกการคัดกรองฉบับนี้</div>
                   <Textarea
                     value={unlockReason}
                     onChange={(e) => setUnlockReason(e.target.value)}
@@ -234,7 +234,7 @@ export default function ScreeningResultPage({ params }: { params: Promise<{ stud
                 <div className="flex flex-wrap items-center gap-3">
                   <LockOpen className="size-4 text-muted-foreground" />
                   <span className="flex-1 text-[13px] text-muted-foreground">
-                    ปิดช่วงดำเนินงานคัดกรองแล้ว — แอดมินปลดล็อกให้ครูประจำชั้นแก้ไขฉบับนี้ได้จนกว่าจะรับรองข้อมูลอีกครั้ง
+                    ปิดช่วงคัดกรองแล้ว — ปลดล็อกให้ครูแก้ไขฉบับนี้ได้
                   </span>
                   <Button size="sm" variant="outline" onClick={() => setUnlocking(true)}>
                     ปลดล็อก
@@ -260,7 +260,7 @@ export default function ScreeningResultPage({ params }: { params: Promise<{ stud
             </Button>
           ) : (
             <span className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-primary">
-              <BadgeCheck className="size-4" /> ส่งแล้ว (รับรองข้อมูลแล้ว)
+              <BadgeCheck className="size-4" /> ส่งแล้ว
             </span>
           )}
         </div>

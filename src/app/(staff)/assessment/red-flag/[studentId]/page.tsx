@@ -75,7 +75,7 @@ export default function RedFlagPage({ params }: { params: Promise<{ studentId: s
     <>
       <PageHeader
         title="แบบคัดกรอง Red Flag"
-        subtitle={`ขั้นที่ 1 ของการประเมินด้านสุขภาพจิต · ${store.currentTerm.label}`}
+        subtitle={`ขั้นที่ 1 · ${store.currentTerm.label}`}
       />
 
       <div className="flex-1 overflow-y-auto p-8">
@@ -103,9 +103,9 @@ export default function RedFlagPage({ params }: { params: Promise<{ studentId: s
                     {saved.record.result === "needs_care"
                       ? `ข้าม 9S · ${
                           saved.sdqOpened > 0
-                            ? `ระบบเปิดแบบ SDQ ครั้งที่ ${plan.round} ให้ ${saved.sdqOpened} ฉบับ และแจ้งผู้ปกครอง/นักเรียนแล้ว`
+                            ? `เปิดแบบ SDQ ครั้งที่ ${plan.round} ให้ ${saved.sdqOpened} ฉบับ และแจ้งผู้ปกครอง/นักเรียนแล้ว`
                             : plan.next === "wait_sdq_window"
-                              ? `ต้องทำ SDQ ครั้งที่ ${plan.round} — รอเปิดช่วงทำ SDQ แล้วจึงเปิดแบบประเมินจากหน้าการประเมิน`
+                              ? `รอเปิดช่วงทำ SDQ ครั้งที่ ${plan.round}`
                               : `แบบ SDQ ครั้งที่ ${plan.round} เปิดไว้แล้ว`
                         }`
                       : saved.sdqVoided > 0
@@ -131,10 +131,10 @@ export default function RedFlagPage({ params }: { params: Promise<{ studentId: s
               </CardContent>
             </Card>
           ) : carried ? (
-            <div className="flex items-center gap-3 rounded-xl border border-green-200 bg-risk-green-bg px-4 py-3 text-[13.5px] text-risk-green">
+            <div className="flex items-center gap-3 rounded-xl border border-green-200 bg-risk-green-bg px-4 py-3 text-[13px] text-risk-green">
               <CheckCircle2 className="size-5 shrink-0" />
               <span className="flex-1">
-                ประเมิน Red Flag แล้วในภาคเรียนที่ 1 — ผล{carried.result === "needs_care" ? "ควรดูแล" : "ปกติ"} · ภาคเรียนที่ 2 ไม่ต้องทำซ้ำ
+                ประเมินแล้วในภาคเรียนที่ 1: {carried.result === "needs_care" ? "ควรดูแล" : "ปกติ"} — ไม่ต้องทำซ้ำ
               </span>
               <LinkButton size="sm" variant="outline" href={`/assessment/sdq/${studentId}`}>
                 ไปที่ SDQ ครั้งที่ {plan.round}
@@ -149,8 +149,8 @@ export default function RedFlagPage({ params }: { params: Promise<{ studentId: s
             </div>
           )}
           {existing && !blocked && (
-            <p className="mb-4 text-[12.5px] text-muted-foreground">
-              บันทึกไว้แล้วเมื่อ {existing.assessedAt.split("T")[0]} — แก้ไขได้จนปิดช่วงดำเนินงานคัดกรอง
+            <p className="mb-4 text-[12px] text-muted-foreground">
+              บันทึกเมื่อ {existing.assessedAt.split("T")[0]}
             </p>
           )}
           {!blocked && (
@@ -161,9 +161,8 @@ export default function RedFlagPage({ params }: { params: Promise<{ studentId: s
           )}
           <div className="mb-4 flex items-center gap-3 rounded-xl border border-amber-200 bg-risk-amber-bg px-4 py-3">
             <AlertTriangle className="size-5 shrink-0 text-risk-amber" />
-            <p className="text-[13.5px] text-risk-amber">
-              หากตอบ &quot;ใช่&quot; แม้เพียงข้อเดียว ระบบจะเปิด care case และเปิดแบบประเมิน SDQ
-              ทั้งฉบับครู นักเรียน และผู้ปกครองโดยอัตโนมัติ
+            <p className="text-[13px] text-risk-amber">
+              ตอบ &quot;ใช่&quot; แม้ข้อเดียว = เปิด care case และ SDQ ทั้ง 3 ฉบับอัตโนมัติ
             </p>
           </div>
 
@@ -226,7 +225,7 @@ export default function RedFlagPage({ params }: { params: Promise<{ studentId: s
             <Button variant="outline" onClick={() => router.push(`/assessment`)}>
               กลับ
             </Button>
-            {!blocked && <Button onClick={handleSubmit}>บันทึกและประมวลผล Red Flag</Button>}
+            {!blocked && <Button onClick={handleSubmit}>บันทึกผล Red Flag</Button>}
           </div>
           </>
           )}

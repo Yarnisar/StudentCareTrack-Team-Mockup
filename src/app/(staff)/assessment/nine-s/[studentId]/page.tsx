@@ -3,7 +3,7 @@
 import { use, useMemo, useState } from "react";
 import { nineSAnswersFor } from "@/lib/demo/assessment-autofill";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, Lock } from "lucide-react";
+import { Lock } from "lucide-react";
 import { NineSDemoTools } from "@/components/assessment/demo-tools";
 import { InlineAutofill } from "@/components/demo/inline-autofill";
 import { CaseTriggerOutcome } from "@/components/assessment/trigger-outcome";
@@ -35,7 +35,6 @@ export default function NineSPage({ params }: { params: Promise<{ studentId: str
   const existing = store.nineSOf(studentId);
   const plan = store.assessmentPlanOf(studentId);
   const blocked = store.nineSBlockReason(studentId);
-  const redFlag = store.redFlagOf(studentId);
   // nine_s_assessments เก็บเฉพาะคะแนนรายกลุ่ม (ไม่เก็บคำตอบรายข้อ) — แก้ไขต้องตอบใหม่ทั้งชุด
   const [answers, setAnswers] = useState<Record<string, 0 | 1 | 2>>({});
   const [saved, setSaved] = useState<Extract<SaveNineSResult, { ok: true }> | null>(null);
@@ -80,22 +79,13 @@ export default function NineSPage({ params }: { params: Promise<{ studentId: str
     <>
       <PageHeader
         title="แบบประเมิน 9S"
-        subtitle={`ขั้นที่ 2 — ทำต่อเมื่อผล Red Flag เป็นปกติ · ${store.currentTerm.label}`}
+        subtitle={`ขั้นที่ 2 · ${store.currentTerm.label}`}
       />
 
       <div className="flex-1 overflow-y-auto p-8">
         <div className="mx-auto max-w-3xl">
           <StepIndicator current={2} round={plan.round} />
           <WindowNotice activity="screening" className="mb-4" />
-
-          {redFlag?.result === "normal" && (
-            <div className="mb-4 flex items-center gap-3 rounded-xl border border-green-200 bg-risk-green-bg px-4 py-3">
-              <CheckCircle2 className="size-5 shrink-0 text-risk-green" />
-              <p className="text-[13.5px] text-risk-green">
-                ผลแบบคัดกรอง Red Flag ของ {student.fullName} อยู่ในเกณฑ์ปกติ — ดำเนินการประเมิน 9S ต่อ
-              </p>
-            </div>
-          )}
 
           {saved ? (
             <Card>
@@ -107,14 +97,14 @@ export default function NineSPage({ params }: { params: Promise<{ studentId: str
                   <p className="mt-1 text-sm text-muted-foreground">
                     {saved.record.result === "needs_care"
                       ? saved.sdqOpened > 0
-                        ? `ระบบเปิดแบบ SDQ ครั้งที่ ${plan.round} ให้ ${saved.sdqOpened} ฉบับ และแจ้งผู้ปกครอง/นักเรียนแล้ว`
+                        ? `เปิดแบบ SDQ ครั้งที่ ${plan.round} ให้ ${saved.sdqOpened} ฉบับ และแจ้งผู้ปกครอง/นักเรียนแล้ว`
                         : plan.next === "wait_sdq_window"
-                          ? `ต้องทำ SDQ ครั้งที่ ${plan.round} — รอเปิดช่วงทำ SDQ แล้วจึงเปิดแบบประเมินจากหน้าการประเมิน`
+                          ? `รอเปิดช่วงทำ SDQ ครั้งที่ ${plan.round}`
                           : `แบบ SDQ ครั้งที่ ${plan.round} เปิดไว้แล้ว`
                       : saved.sdqVoided > 0
                         ? `ผลปกติ — ยกเลิกแบบ SDQ ที่ยังไม่มีผู้ตอบ ${saved.sdqVoided} ฉบับ`
                         : plan.sdqRequired
-                        ? `ผลปกติ — โรงเรียนกำหนดให้ทำ SDQ ครั้งที่ ${plan.round} ด้วย`
+                        ? `ผลปกติ — ต้องทำ SDQ ครั้งที่ ${plan.round} ตามที่โรงเรียนกำหนด`
                         : "ผลปกติ — ไม่ต้องทำ SDQ รอบนี้"}
                   </p>
                 </div>
@@ -140,10 +130,10 @@ export default function NineSPage({ params }: { params: Promise<{ studentId: str
             </div>
           )}
           {existing && (
-            <p className="mb-4 rounded-lg bg-surface px-3 py-2 text-[12.5px] text-muted-foreground">
+            <p className="mb-4 rounded-lg bg-surface px-3 py-2 text-[12px] text-muted-foreground">
               ผลที่บันทึกไว้: {existing.result === "needs_care" ? "ควรดูแล" : "ปกติ"} (
               {clusters.map((c) => `${NINE_S_CLUSTER_LABEL[c]} ${existing.clusterScores[c]}`).join(" · ")})
-              {!blocked && " — ตอบใหม่ทั้งชุดเพื่อแก้ไข ได้จนปิดช่วงดำเนินงานคัดกรอง"}
+              {!blocked && " — ตอบใหม่ทั้งชุดเพื่อแก้ไข"}
             </p>
           )}
 
@@ -157,7 +147,7 @@ export default function NineSPage({ params }: { params: Promise<{ studentId: str
           <Card className="mb-4">
             <CardContent className="p-5">
               <div className="mb-3 flex items-center justify-between">
-                <span className="text-[13px] text-muted-foreground">คะแนนรายกลุ่ม (อัปเดตอัตโนมัติ)</span>
+                <span className="text-[13px] text-muted-foreground">คะแนนรายกลุ่ม</span>
                 <span className="text-[13px] font-semibold text-primary">
                   ตอบแล้ว {answeredCount} / {NINE_S_QUESTIONS.length} ข้อ
                 </span>
@@ -186,9 +176,8 @@ export default function NineSPage({ params }: { params: Promise<{ studentId: str
                   );
                 })}
               </div>
-              <p className="mt-3 text-[11.5px] text-muted-foreground">
-                เกณฑ์: คะแนนรวมในกลุ่มใดตั้งแต่ 3 คะแนนขึ้นไป ถือว่าควรดูแล
-                และระบบจะเปิดแบบประเมิน SDQ ให้โดยอัตโนมัติ
+              <p className="mt-3 text-[12px] text-muted-foreground">
+                กลุ่มใดได้ตั้งแต่ 3 คะแนน = ควรดูแล และเปิด SDQ อัตโนมัติ
               </p>
             </CardContent>
           </Card>
@@ -212,7 +201,7 @@ export default function NineSPage({ params }: { params: Promise<{ studentId: str
                       <QuestionNumber no={index + 1} answered={answered} missing={flagged} />
                       <div className="min-w-0 flex-1">
                         <p className="text-[15px] leading-relaxed">{q.text}</p>
-                        <span className="text-[11.5px] text-muted-foreground">
+                        <span className="text-[12px] text-muted-foreground">
                           {NINE_S_CLUSTER_LABEL[q.cluster]}
                         </span>
                         <MissingNote show={flagged} />
@@ -255,7 +244,7 @@ export default function NineSPage({ params }: { params: Promise<{ studentId: str
             <Button variant="outline" onClick={() => router.push(`/assessment`)}>
               กลับ
             </Button>
-            {!blocked && <Button onClick={handleSubmit}>บันทึกและประมวลผล 9S</Button>}
+            {!blocked && <Button onClick={handleSubmit}>บันทึกผล 9S</Button>}
           </div>
           </>
           )}

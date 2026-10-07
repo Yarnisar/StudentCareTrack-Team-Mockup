@@ -219,10 +219,7 @@ export function AssessmentRouteDiagram({
           markerEnd={`url(#${uid}-${route.sdq2ForNormal ? "on" : "off"})`}
         />
         <EdgeLabel x={10} y={236} anchor="start" on={false}>
-          {route.sdq2ForNormal ? "ครั้งที่ 2: โรงเรียนกำหนดให้" : "ครั้งที่ 2: โรงเรียนไม่กำหนดให้"}
-        </EdgeLabel>
-        <EdgeLabel x={10} y={246} anchor="start" on={false}>
-          คนที่ผลปกติทำ SDQ ด้วย
+          {route.sdq2ForNormal ? "ครั้งที่ 2: ผลปกติทำ SDQ ด้วย" : "ครั้งที่ 2: ผลปกติไม่ต้องทำ"}
         </EdgeLabel>
 
         {/* ---- กล่องที่ 3ข: SDQ ---- */}
@@ -232,9 +229,6 @@ export function AssessmentRouteDiagram({
           </NodeTitle>
           <NodeSub x={252} y={210}>
             {route.raters.map(shortRater).join(" / ")}
-          </NodeSub>
-          <NodeSub x={252} y={223}>
-            แต่ละฉบับใช้เกณฑ์ของตัวเอง
           </NodeSub>
         </Node>
 
@@ -249,21 +243,15 @@ export function AssessmentRouteDiagram({
           <NodeTitle x={234} y={292} state={route.result}>
             ผลรวม = ระดับสูงสุดของฉบับที่ส่งแล้ว
           </NodeTitle>
-          <NodeSub x={234} y={305}>
-            ไม่เฉลี่ยคะแนนระหว่างผู้ประเมิน
-          </NodeSub>
-          <NodeSub x={234} y={320}>
+          <NodeSub x={234} y={308}>
             เสี่ยง → เสนอเปิด case · มีปัญหา → เปิด case
           </NodeSub>
         </Node>
       </svg>
 
       <figcaption className="mt-2 space-y-1 text-[12px] text-muted-foreground">
-        <p>
-          เส้นทางตามคู่มือ HERO OBEC CARE — Red Flag/9S อยู่ในช่วงดำเนินงานคัดกรอง ส่วน SDQ อยู่ในช่วงดำเนินงาน SDQ
-        </p>
         {route.here && (
-          <p className="font-semibold text-primary">ขั้นที่นักเรียนคนนี้อยู่: {route.here}</p>
+          <p className="font-semibold text-primary">ขั้นปัจจุบัน: {route.here}</p>
         )}
         {carriedNote && <p>{carriedNote}</p>}
       </figcaption>
@@ -278,7 +266,7 @@ const HERE_TEXT: Record<string, string> = {
   wait_sdq_window: "รอเปิดช่วงดำเนินงาน SDQ",
   sdq: "รอฉบับ SDQ ที่ยังไม่ส่ง",
   done: "ได้ผล SDQ รวมแล้ว",
-  not_required: "จบการประเมินรอบนี้ — ไม่ต้องทำ SDQ รอบนี้",
+  not_required: "จบการประเมินรอบนี้",
 };
 
 function Node({

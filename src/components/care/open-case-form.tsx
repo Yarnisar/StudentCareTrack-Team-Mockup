@@ -60,16 +60,11 @@ export function OpenCaseForm({
 
   return (
     <div className="space-y-4">
-      <div>
-        <h3 className="text-[15.5px] font-bold">เปิด care case · {student.fullName}</h3>
-        <p className="mt-0.5 text-[12.5px] text-muted-foreground">
-          case ผูกกับนักเรียน ครูประจำชั้นทั้ง 2 คนของห้องดำเนินการได้เท่ากัน
-        </p>
-      </div>
+      <h3 className="text-[15px] font-bold">เปิด care case · {student.fullName}</h3>
 
       {suggestion ? (
-        <div className="rounded-lg bg-surface p-3.5 text-[13.5px]">
-          <div className="text-[12px] text-muted-foreground">เหตุเปิด case (ระบบแนะนำ)</div>
+        <div className="rounded-lg bg-surface p-3.5 text-[13px]">
+          <div className="text-[12px] text-muted-foreground">เหตุเปิด case</div>
           <div className="font-semibold">{CASE_TRIGGER_SOURCE_LABEL[suggestion.source]}</div>
           {suggestion.summary && <div className="text-muted-foreground">{suggestion.summary}</div>}
         </div>
@@ -90,7 +85,7 @@ export function OpenCaseForm({
 
       <label htmlFor="open-with-plan" className="flex cursor-pointer items-center gap-3">
         <Checkbox id="open-with-plan" checked={withPlan} onCheckedChange={(c) => setWithPlan(c === true)} />
-        <span className="text-[13.5px]">จัดทำแผนช่วยเหลือแผนแรกพร้อมกัน</span>
+        <span className="text-[13px]">จัดทำแผนช่วยเหลือแผนแรกพร้อมกัน</span>
       </label>
       {withPlan && (
         <div className="rounded-xl border border-border p-4">

@@ -41,7 +41,7 @@ export function StepIndicator({
               )}
             >
               {step}. {s.label}
-              {s.note && <span className="ml-1 text-[11.5px] font-normal opacity-80">({s.note})</span>}
+              {s.note && <span className="ml-1 text-[12px] font-normal opacity-80">({s.note})</span>}
             </span>
             {i < steps.length - 1 && <span className="h-px w-6 bg-border" />}
           </div>

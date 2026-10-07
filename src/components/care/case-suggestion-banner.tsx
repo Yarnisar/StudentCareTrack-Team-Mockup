@@ -31,9 +31,9 @@ export function CaseSuggestionBanner({ studentId, className }: { studentId: stri
           <Lightbulb className="size-4 shrink-0" />
           <div className="min-w-0 flex-1">
             <div className="font-semibold">
-              {active ? "ระบบแนะนำให้เพิ่มเหตุใน care case ที่เปิดอยู่" : "ระบบแนะนำให้พิจารณาเปิด care case"}
+              {active ? "แนะนำเพิ่มเหตุใน care case ที่เปิดอยู่" : "แนะนำเปิด care case"}
             </div>
-            <div className="text-[12.5px]">
+            <div className="text-[12px]">
               {CASE_TRIGGER_SOURCE_LABEL[s.source]}
               {s.summary ? ` · ${s.summary}` : ""} · {formatThaiDate(s.detectedAt)}
             </div>
