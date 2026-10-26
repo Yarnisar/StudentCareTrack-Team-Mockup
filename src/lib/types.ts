@@ -138,10 +138,21 @@ export const SDQ_SCALE_LABEL: Record<SdqScale, string> = {
 
 export type SdqLevel = "normal" | "risk" | "problem";
 
+/** คำทางการ ใช้เฉพาะฝั่งครูและแอดมิน */
 export const SDQ_LEVEL_LABEL: Record<SdqLevel, string> = {
   normal: "ปกติ",
   risk: "เสี่ยง",
   problem: "มีปัญหา",
+};
+
+/**
+ * คำที่แสดงใน portal ผู้ปกครอง — ไม่แสดงคะแนนดิบและไม่แยกระดับเสี่ยง/มีปัญหา
+ * การคัดกรองเป็นสัญญาณให้ติดตาม ไม่ใช่การตัดสินนักเรียน (รายงาน 2.1.1, 2.1.3)
+ */
+export const SDQ_PORTAL_LABEL: Record<SdqLevel, string> = {
+  normal: "อยู่ในเกณฑ์ปกติ",
+  risk: "ครูจะติดตามดูแลเพิ่มเติม",
+  problem: "ครูจะติดตามดูแลเพิ่มเติม",
 };
 
 export interface SdqAssessment {

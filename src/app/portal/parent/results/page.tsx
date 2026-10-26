@@ -8,19 +8,22 @@ import { Card, CardContent } from "@/components/ui/card";
 import { dcSummaries, behaviorRules, useStore } from "@/lib/store";
 import { dcCriteria, CURRENT_TERM } from "@/lib/mock-data";
 import { formatThaiDate } from "@/lib/format";
-import { DC_LEVEL_LABEL, SDQ_LEVEL_LABEL, SdqRater } from "@/lib/types";
+import { sdqSummaryForParent } from "@/lib/portal";
+import { DC_LEVEL_LABEL, SDQ_PORTAL_LABEL, SdqRater } from "@/lib/types";
 
 const DEMO_STUDENT_ID = "30125";
 
 export default function ParentResultsPage() {
   const store = useStore();
   const [takingSdq, setTakingSdq] = useState(false);
+  const [justSubmitted, setJustSubmitted] = useState(false);
 
   const student = store.getStudent(DEMO_STUDENT_ID);
   const sdqSet = store.sdqOf(DEMO_STUDENT_ID).filter((s) => s.round === 1);
   const parentSdq = sdqSet.find((s) => s.rater === "parent");
   const dc = dcSummaries.find((d) => d.studentId === DEMO_STUDENT_ID);
   const behaviors = store.behaviorOf(DEMO_STUDENT_ID).slice(0, 4);
+  const summary = sdqSummaryForParent(sdqSet);
 
   if (!student) return null;
 
@@ -40,6 +43,7 @@ export default function ParentResultsPage() {
             onSubmit={(answers) => {
               store.saveSdq(DEMO_STUDENT_ID, "parent", answers);
               setTakingSdq(false);
+              setJustSubmitted(true);
             }}
           />
         </div>
@@ -58,8 +62,16 @@ export default function ParentResultsPage() {
         <Card>
           <CardContent className="p-5">
             <h2 className="mb-3 text-[14.5px] font-bold">
-              ผลการประเมิน SDQ · {CURRENT_TERM.label}
+              แบบประเมิน SDQ · {CURRENT_TERM.label}
             </h2>
+
+            {justSubmitted && (
+              <p className="mb-3 rounded-xl bg-risk-green-bg px-3.5 py-2.5 text-[13px] font-semibold text-risk-green">
+                ส่งแบบประเมินฉบับผู้ปกครองเรียบร้อย ขอบคุณค่ะ
+              </p>
+            )}
+
+            {/* แสดงเฉพาะสถานะของแต่ละฉบับ ไม่แสดงคะแนน — คำตอบของนักเรียนเป็นความลับ (2.1.10) */}
             <div className="flex gap-2.5">
               {(["teacher", "student", "parent"] as SdqRater[]).map((rater) => {
                 const rec = sdqSet.find((s) => s.rater === rater);
@@ -67,33 +79,33 @@ export default function ParentResultsPage() {
                 const label =
                   rater === "teacher" ? "ครูประเมิน" : rater === "student" ? "นักเรียน" : "ผู้ปกครอง";
                 return (
-                  <div
-                    key={rater}
-                    className={
-                      done ? "flex-1 rounded-xl bg-surface p-3 text-center" : "flex-1 rounded-xl bg-risk-amber-bg p-3 text-center"
-                    }
-                  >
+                  <div key={rater} className="flex-1 rounded-xl bg-surface p-3 text-center">
                     <div className="text-[11.5px] text-muted-foreground">{label}</div>
-                    {done ? (
-                      <>
-                        <div className="my-1 text-lg font-bold">{rec.totalDifficulties}</div>
-                        <span
-                          className={
-                            rec.level === "normal"
-                              ? "rounded-full bg-risk-green-bg px-2 py-0.5 text-[11px] font-semibold text-risk-green"
-                              : "rounded-full bg-white px-2 py-0.5 text-[11px] font-semibold text-risk-amber"
-                          }
-                        >
-                          {rec.level ? SDQ_LEVEL_LABEL[rec.level] : ""}
-                        </span>
-                      </>
-                    ) : (
-                      <div className="mt-2 text-[13px] font-semibold text-risk-amber">รอทำ</div>
-                    )}
+                    <div
+                      className={
+                        done
+                          ? "mt-1.5 text-[13px] font-semibold text-foreground"
+                          : "mt-1.5 text-[13px] font-semibold text-muted-foreground"
+                      }
+                    >
+                      {done ? "ส่งแล้ว" : rec ? "รอทำ" : "-"}
+                    </div>
                   </div>
                 );
               })}
             </div>
+
+            {summary && (
+              <p className="mt-3 rounded-xl bg-surface px-3.5 py-2.5 text-[13px] leading-relaxed">
+                <span className="font-semibold">{SDQ_PORTAL_LABEL[summary]}</span>
+                {summary !== "normal" && (
+                  <span className="text-muted-foreground">
+                    {" "}
+                    · ครูประจำชั้นอาจติดต่อเพื่อพูดคุยและวางแนวทางดูแลร่วมกัน
+                  </span>
+                )}
+              </p>
+            )}
 
             {parentSdq?.status === "pending" && (
               <Button className="mt-4 h-12 w-full" onClick={() => setTakingSdq(true)}>

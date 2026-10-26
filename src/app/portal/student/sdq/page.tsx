@@ -7,13 +7,18 @@ import { SdqForm } from "@/components/assessment/sdq-form";
 import { LinkButton } from "@/components/ui/link-button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useStore } from "@/lib/store";
-import { SDQ_LEVEL_LABEL, SdqAssessment } from "@/lib/types";
 
 const DEMO_STUDENT_ID = "30125";
 
 export default function StudentSdqPage() {
   const store = useStore();
-  const [saved, setSaved] = useState<SdqAssessment | null>(null);
+  const [justSubmitted, setJustSubmitted] = useState(false);
+
+  // ส่งแล้วทำซ้ำไม่ได้ (เดิมส่งซ้ำจะเขียนทับผลเดิม)
+  const alreadyDone =
+    store
+      .sdqOf(DEMO_STUDENT_ID)
+      .find((s) => s.rater === "student" && s.round === 1)?.status === "completed";
 
   return (
     <MobileShell
@@ -30,16 +35,15 @@ export default function StudentSdqPage() {
           </p>
         </div>
 
-        {saved ? (
+        {justSubmitted || alreadyDone ? (
+          // ไม่แสดงคะแนนหรือผลแปลให้นักเรียน — ผลใช้เพื่อให้ครูดูแล ไม่ใช่ป้ายที่เด็กต้องรับรู้
           <Card>
             <CardContent className="p-6 text-center">
-              <h2 className="text-base font-bold">ส่งแบบประเมินเรียบร้อย</h2>
-              <p className="mt-2 text-[13.5px] text-muted-foreground">
-                คะแนนรวม {saved.totalDifficulties} คะแนน · แปลผล:{" "}
-                {saved.level ? SDQ_LEVEL_LABEL[saved.level] : "-"}
-              </p>
-              <p className="mt-3 text-[12.5px] leading-relaxed text-muted-foreground">
-                ขอบคุณที่ตอบแบบประเมิน หากนักเรียนต้องการพูดคุยกับครู
+              <h2 className="text-base font-bold">
+                {justSubmitted ? "ส่งแบบประเมินเรียบร้อย" : "ทำแบบประเมินนี้แล้ว"}
+              </h2>
+              <p className="mt-3 text-[13.5px] leading-relaxed text-muted-foreground">
+                ขอบคุณที่ตอบแบบประเมินนะ หากอยากพูดคุยหรือมีเรื่องไม่สบายใจ
                 สามารถติดต่อครูประจำชั้นได้ตลอดเวลา
               </p>
               <LinkButton className="mt-5 w-full" href="/portal/student/card">
@@ -52,7 +56,10 @@ export default function StudentSdqPage() {
             studentId={DEMO_STUDENT_ID}
             rater="student"
             layout="mobile"
-            onSubmit={(answers) => setSaved(store.saveSdq(DEMO_STUDENT_ID, "student", answers))}
+            onSubmit={(answers) => {
+              store.saveSdq(DEMO_STUDENT_ID, "student", answers);
+              setJustSubmitted(true);
+            }}
           />
         )}
       </div>

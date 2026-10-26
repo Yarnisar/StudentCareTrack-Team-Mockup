@@ -7,7 +7,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useStore } from "@/lib/store";
 import { dcSummaries } from "@/lib/store";
 import { formatThaiDate, formatThaiTime } from "@/lib/format";
-import { SDQ_LEVEL_LABEL } from "@/lib/types";
+import { dcCriteria } from "@/lib/mock-data";
+import { dcSummaryForParent, sdqSummaryForParent } from "@/lib/portal";
+import { SDQ_PORTAL_LABEL } from "@/lib/types";
 
 const DEMO_STUDENT_ID = "30125";
 
@@ -20,19 +22,13 @@ export default function ParentHomePage() {
   const parentSdq = store
     .sdqOf(DEMO_STUDENT_ID)
     .find((s) => s.rater === "parent" && s.round === 1);
-  const teacherSdq = store
-    .sdqOf(DEMO_STUDENT_ID)
-    .find((s) => s.rater === "teacher" && s.round === 1);
-  const dc = dcSummaries.find((d) => d.studentId === DEMO_STUDENT_ID);
-  const dcLevels: number[] = dc
-    ? Object.values(dc.levels).flatMap((l) => (l == null ? [] : [l as number]))
-    : [];
-  const dcLabel =
-    dcLevels.length === 0
-      ? "รอประเมิน"
-      : dcLevels.reduce((a, b) => a + b, 0) / dcLevels.length >= 2.5
-        ? "ระดับดีเยี่ยม"
-        : "ระดับดี";
+  const sdqSummary = sdqSummaryForParent(
+    store.sdqOf(DEMO_STUDENT_ID).filter((s) => s.round === 1)
+  );
+  const dc = dcSummaryForParent(
+    dcSummaries.find((d) => d.studentId === DEMO_STUDENT_ID),
+    dcCriteria.length
+  );
 
   if (!student) return null;
 
@@ -106,28 +102,26 @@ export default function ParentHomePage() {
               </div>
               <div className="flex gap-2.5">
                 <div className="flex-1 rounded-xl bg-surface p-3">
-                  <div className="text-[11.5px] text-muted-foreground">SDQ (ครูประเมิน)</div>
-                  <div className="mt-1.5">
-                    {teacherSdq?.level ? (
-                      <span
-                        className={
-                          teacherSdq.level === "normal"
-                            ? "rounded-full bg-risk-green-bg px-2.5 py-1 text-[11.5px] font-semibold text-risk-green"
-                            : "rounded-full bg-risk-amber-bg px-2.5 py-1 text-[11.5px] font-semibold text-risk-amber"
-                        }
-                      >
-                        {SDQ_LEVEL_LABEL[teacherSdq.level]}
-                      </span>
+                  <div className="text-[11.5px] text-muted-foreground">SDQ</div>
+                  <div className="mt-1.5 text-[12.5px] font-semibold">
+                    {sdqSummary ? (
+                      SDQ_PORTAL_LABEL[sdqSummary]
                     ) : (
-                      <span className="text-[12.5px] text-muted-foreground">รอผล</span>
+                      <span className="text-muted-foreground">รอผล</span>
                     )}
                   </div>
                 </div>
                 <div className="flex-1 rounded-xl bg-surface p-3">
                   <div className="text-[11.5px] text-muted-foreground">คุณลักษณะฯ</div>
                   <div className="mt-1.5">
-                    <span className="rounded-full bg-risk-green-bg px-2.5 py-1 text-[11.5px] font-semibold text-risk-green">
-                      {dcLabel}
+                    <span
+                      className={
+                        dc.allPassed
+                          ? "rounded-full bg-risk-green-bg px-2.5 py-1 text-[11.5px] font-semibold text-risk-green"
+                          : "rounded-full bg-muted px-2.5 py-1 text-[11.5px] font-semibold text-muted-foreground"
+                      }
+                    >
+                      {dc.label}
                     </span>
                   </div>
                 </div>
