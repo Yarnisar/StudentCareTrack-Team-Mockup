@@ -63,6 +63,8 @@ export interface ScreeningItem {
   label: string;
   /** ระดับที่รายการนี้บ่งชี้เมื่อถูกติ๊ก */
   severity: "risk" | "problem";
+  /** รายการที่ระบบกรอกให้จากผลแบบประเมิน ครูติ๊กเองไม่ได้ */
+  derivedFrom?: "red_flag" | "nine_s";
 }
 
 export interface ScreeningResult {

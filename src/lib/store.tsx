@@ -24,6 +24,7 @@ import {
 } from "./mock-data";
 import {
   classifyDimension,
+  DERIVED_ITEM_ID,
   evaluateNineS,
   evaluateRedFlag,
   isLateArrival,
@@ -78,6 +79,10 @@ interface StoreValue {
   behaviorScoreOf: (studentId: string) => number;
   caseOf: (studentId: string) => CareCase | undefined;
 
+  /** ร่างแบบประเมินที่ยังไม่ส่ง (key จาก draftKey) */
+  getDraft: <T>(key: string) => T | undefined;
+  saveDraft: (key: string, value: unknown) => void;
+
   saveScreening: (studentId: string, checked: Record<ScreeningDimension, string[]>) => Screening;
   saveRedFlag: (studentId: string, answers: Record<string, boolean>) => AssessmentOutcome;
   saveNineS: (studentId: string, answers: Record<string, 0 | 1 | 2>) => AssessmentOutcome;
@@ -86,7 +91,13 @@ interface StoreValue {
   checkIn: (studentId: string, simulatedTime?: string) => CheckinOutcome | null;
   setAppointmentStatus: (appointmentId: string, status: AppointmentStatus) => void;
   saveGuardianInfo: (appointmentId: string, info: { guardianPhone: string; caretakerName: string; guardianNote: string }) => void;
-  openCase: (studentId: string, supportType: SupportType, methods: CareMethod[], goal: string) => CareCase;
+  openCase: (
+    studentId: string,
+    supportType: SupportType,
+    methods: CareMethod[],
+    goal: string,
+    options?: { targetDate?: string; triggerSource?: string }
+  ) => CareCase;
   addFollowup: (caseId: string, actionTaken: string, result: string) => void;
   closeCase: (caseId: string) => void;
 }
@@ -95,6 +106,10 @@ const StoreContext = createContext<StoreValue | null>(null);
 
 let seq = 1000;
 const nextId = (prefix: string) => `${prefix}-${++seq}`;
+
+export type DraftForm = "screening" | "red_flag" | "nine_s" | `sdq_${SdqRater}`;
+
+export const draftKey = (form: DraftForm, studentId: string) => `${form}:${studentId}`;
 
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [screenings, setScreenings] = useState<Screening[]>(seedScreenings);
@@ -105,6 +120,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [checkins, setCheckins] = useState<CheckinLog[]>(seedCheckins);
   const [appointments, setAppointments] = useState<HomeVisitAppointment[]>(seedAppointments);
   const [careCases, setCareCases] = useState<CareCase[]>(seedCareCases);
+  const [drafts, setDrafts] = useState<Record<string, unknown>>({});
 
   const value = useMemo<StoreValue>(() => {
     const getStudent = (studentId: string) => students.find((s) => s.studentId === studentId);
@@ -140,6 +156,37 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       careCases.find((c) => c.studentId === studentId && c.status === "active") ??
       careCases.find((c) => c.studentId === studentId);
 
+    const getDraft = <T,>(key: string) => drafts[key] as T | undefined;
+
+    const saveDraft: StoreValue["saveDraft"] = (key, value) =>
+      setDrafts((prev) => ({ ...prev, [key]: value }));
+
+    const clearDraft = (key: string) =>
+      setDrafts((prev) => {
+        const rest = { ...prev };
+        delete rest[key];
+        return rest;
+      });
+
+    /** เขียนผลแบบประเมินกลับเป็นรายการในมิติสุขภาพจิตของการคัดกรอง แล้วจัดกลุ่มมิตินั้นใหม่ */
+    const applyToMentalDimension = (studentId: string, itemId: string, flagged: boolean) => {
+      setScreenings((prev) =>
+        prev.map((sc) =>
+          sc.studentId !== studentId
+            ? sc
+            : {
+                ...sc,
+                results: sc.results.map((r) => {
+                  if (r.dimension !== "mental") return r;
+                  const others = r.checkedItemIds.filter((id) => id !== itemId);
+                  const checkedItemIds = flagged ? [...others, itemId] : others;
+                  return { ...r, checkedItemIds, group: classifyDimension("mental", checkedItemIds) };
+                }),
+              }
+        )
+      );
+    };
+
     const saveScreening: StoreValue["saveScreening"] = (studentId, checked) => {
       const record: Screening = {
         screeningId: nextId("SC"),
@@ -154,6 +201,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         })),
       };
       setScreenings((prev) => [record, ...prev.filter((s) => s.studentId !== studentId)]);
+      clearDraft(draftKey("screening", studentId));
       return record;
     };
 
@@ -169,6 +217,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         assessedAt: nowThaiIso(),
       };
       setRedFlags((prev) => [record, ...prev]);
+      applyToMentalDimension(studentId, DERIVED_ITEM_ID.red_flag, result === "needs_care");
+      clearDraft(draftKey("red_flag", studentId));
       if (result === "needs_care") createSdqSet(studentId);
       return result;
     };
@@ -186,6 +236,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         assessedAt: nowThaiIso(),
       };
       setNineS((prev) => [record, ...prev]);
+      applyToMentalDimension(studentId, DERIVED_ITEM_ID.nine_s, result === "needs_care");
+      clearDraft(draftKey("nine_s", studentId));
       if (result === "needs_care") createSdqSet(studentId);
       return result;
     };
@@ -226,6 +278,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const saveSdq: StoreValue["saveSdq"] = (studentId, rater, answers) => {
       const { scaleScores, totalDifficulties, level } = scoreSdq(answers);
       const student = getStudent(studentId);
+      clearDraft(draftKey(`sdq_${rater}`, studentId));
       let saved: SdqAssessment | undefined;
 
       setSdq((prev) => {
@@ -371,18 +424,18 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       );
     };
 
-    const openCase: StoreValue["openCase"] = (studentId, supportType, methods, goal) => {
+    const openCase: StoreValue["openCase"] = (studentId, supportType, methods, goal, options) => {
       const record: CareCase = {
         caseId: nextId("CASE"),
         studentId,
-        triggerSource: "เปิดโดยครูประจำชั้น",
+        triggerSource: options?.triggerSource ?? "เปิดโดยครูประจำชั้น",
         status: "active",
         openedAt: nowThaiIso().split("T")[0],
         closedAt: null,
         supportType,
         careMethods: methods,
         goal,
-        targetDate: "",
+        targetDate: options?.targetDate ?? "",
         followups: [],
       };
       setCareCases((prev) => [record, ...prev]);
@@ -438,6 +491,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       behaviorOf,
       behaviorScoreOf,
       caseOf,
+      getDraft,
+      saveDraft,
       saveScreening,
       saveRedFlag,
       saveNineS,
@@ -450,7 +505,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       addFollowup,
       closeCase,
     };
-  }, [screenings, redFlags, nineS, sdq, behaviorRecords, checkins, appointments, careCases]);
+  }, [screenings, redFlags, nineS, sdq, behaviorRecords, checkins, appointments, careCases, drafts]);
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }

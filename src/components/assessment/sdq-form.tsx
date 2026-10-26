@@ -8,7 +8,10 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { SDQ_CHOICES, SDQ_QUESTIONS, scoreSdq } from "@/lib/rules";
+import { draftKey } from "@/lib/store";
 import { SDQ_LEVEL_LABEL, SDQ_SCALE_LABEL, SdqRater, SdqScale } from "@/lib/types";
+import { AutosaveStatus } from "./autosave-status";
+import { useDraft } from "./use-draft";
 import {
   MissingNote,
   MissingSummary,
@@ -28,16 +31,26 @@ const missingItem = (no: number): MissingItem => ({
 });
 
 export function SdqForm({
+  studentId,
   rater,
   onSubmit,
+  onExit,
   layout = "desktop",
 }: {
+  studentId: string;
   rater: SdqRater;
   onSubmit: (answers: Record<number, 0 | 1 | 2>) => void;
+  /** ปุ่ม "ออกและทำต่อภายหลัง" — ไม่ส่งมาก็ไม่แสดงปุ่ม */
+  onExit?: () => void;
   layout?: "desktop" | "mobile";
 }) {
-  const [answers, setAnswers] = useState<Record<number, 0 | 1 | 2>>({});
-  const [page, setPage] = useState(0);
+  const draft = useDraft<Record<number, 0 | 1 | 2>>(draftKey(`sdq_${rater}`, studentId), () => ({}));
+  const answers = draft.value;
+  // กลับมาทำต่อจากร่าง -> เปิดที่หน้าที่มีข้อแรกที่ยังไม่ได้ตอบ
+  const [page, setPage] = useState(() => {
+    const firstMissing = SDQ_QUESTIONS.find((q) => answers[q.no] === undefined);
+    return firstMissing ? pageOf(firstMissing.no) : 0;
+  });
   const missing = useMissingAnswers(setPage);
 
   const answeredCount = Object.keys(answers).length;
@@ -52,7 +65,7 @@ export function SdqForm({
   const mobile = layout === "mobile";
 
   const answer = (no: number, value: 0 | 1 | 2) => {
-    setAnswers((prev) => ({ ...prev, [no]: value }));
+    draft.update((prev) => ({ ...prev, [no]: value }));
     missing.resolve(`q${no}`);
   };
 
@@ -155,13 +168,21 @@ export function SdqForm({
       </Card>
 
       <div className="flex flex-wrap items-center justify-between gap-3 pb-4">
-        <span className="text-[13px] text-muted-foreground">
-          หน้า {page + 1} จาก {totalPages}
-          {missingAll.length > 0 && (
-            <span className="ml-2 text-risk-red">· ยังไม่ได้ตอบ {missingAll.length} ข้อ</span>
-          )}
-        </span>
+        <div className="flex flex-col gap-0.5">
+          <span className="text-[13px] text-muted-foreground">
+            หน้า {page + 1} จาก {totalPages}
+            {missingAll.length > 0 && (
+              <span className="ml-2 text-destructive">· ยังไม่ได้ตอบ {missingAll.length} ข้อ</span>
+            )}
+          </span>
+          <AutosaveStatus restored={draft.restored} savedAt={draft.savedAt} />
+        </div>
         <div className="flex items-center gap-3">
+          {onExit && (
+            <Button variant="ghost" onClick={onExit}>
+              ออกและทำต่อภายหลัง
+            </Button>
+          )}
           {page > 0 && (
             <Button variant="outline" onClick={() => setPage((p) => p - 1)}>
               ย้อนกลับ

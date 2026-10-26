@@ -49,6 +49,7 @@ export default function StudentSdqPage() {
           </Card>
         ) : (
           <SdqForm
+            studentId={DEMO_STUDENT_ID}
             rater="student"
             layout="mobile"
             onSubmit={(answers) => setSaved(store.saveSdq(DEMO_STUDENT_ID, "student", answers))}

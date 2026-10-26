@@ -34,6 +34,7 @@ export default function ParentResultsPage() {
       >
         <div className="p-5">
           <SdqForm
+            studentId={DEMO_STUDENT_ID}
             rater="parent"
             layout="mobile"
             onSubmit={(answers) => {

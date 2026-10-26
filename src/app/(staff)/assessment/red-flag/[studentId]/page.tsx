@@ -1,13 +1,14 @@
 "use client";
 
-import { use, useState } from "react";
+import { use } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { StepIndicator } from "@/components/assessment/step-indicator";
+import { AutosaveStatus } from "@/components/assessment/autosave-status";
+import { useDraft } from "@/components/assessment/use-draft";
 import {
   MissingNote,
-  MissingSummary,
   QuestionNumber,
   questionShellClass,
   useMissingAnswers,
@@ -18,15 +19,17 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { CURRENT_TERM } from "@/lib/mock-data";
 import { RED_FLAG_QUESTIONS } from "@/lib/rules";
-import { useStore } from "@/lib/store";
+import { draftKey, useStore } from "@/lib/store";
 
 export default function RedFlagPage({ params }: { params: Promise<{ studentId: string }> }) {
   const { studentId } = use(params);
   const router = useRouter();
   const store = useStore();
   const student = store.getStudent(studentId);
+  const key = draftKey("red_flag", studentId);
 
-  const [answers, setAnswers] = useState<Record<string, boolean>>({});
+  const draft = useDraft<Record<string, boolean>>(key, () => ({}));
+  const answers = draft.value;
   const missing = useMissingAnswers();
 
   const unanswered = RED_FLAG_QUESTIONS.map((q, index) => ({ q, index })).filter(
@@ -36,7 +39,7 @@ export default function RedFlagPage({ params }: { params: Promise<{ studentId: s
   if (!student) return <p className="p-8 text-sm text-muted-foreground">ไม่พบข้อมูลนักเรียน</p>;
 
   const answer = (id: string, value: boolean) => {
-    setAnswers((prev) => ({ ...prev, [id]: value }));
+    draft.update((prev) => ({ ...prev, [id]: value }));
     missing.resolve(id);
   };
 
@@ -81,10 +84,6 @@ export default function RedFlagPage({ params }: { params: Promise<{ studentId: s
               หากตอบ &quot;ใช่&quot; แม้เพียงข้อเดียว ระบบจะเปิดแบบประเมิน SDQ
               ทั้งฉบับครู นักเรียน และผู้ปกครองโดยอัตโนมัติ
             </p>
-          </div>
-
-          <div className="mb-4">
-            <MissingSummary missing={missing.missing} onJump={missing.jumpTo} />
           </div>
 
           <Card>
@@ -132,13 +131,14 @@ export default function RedFlagPage({ params }: { params: Promise<{ studentId: s
           </Card>
 
           <div className="mt-6 flex flex-wrap items-center justify-end gap-3 pb-4">
-            {unanswered.length > 0 && (
-              <span className="mr-auto text-[13px] text-risk-red">
-                ยังไม่ได้ตอบ {unanswered.length} ข้อ
-              </span>
-            )}
+            <div className="mr-auto flex flex-col gap-0.5">
+              <AutosaveStatus restored={draft.restored} savedAt={draft.savedAt} />
+              {unanswered.length > 0 && (
+                <span className="text-[13px] text-destructive">ยังไม่ได้ตอบ {unanswered.length} ข้อ</span>
+              )}
+            </div>
             <Button variant="outline" onClick={() => router.push(`/students/${studentId}`)}>
-              บันทึกร่าง
+              ออกและทำต่อภายหลัง
             </Button>
             <Button onClick={handleSubmit}>ประมวลผล Red Flag</Button>
           </div>

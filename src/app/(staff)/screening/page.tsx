@@ -5,7 +5,7 @@ import { RiskBadge } from "@/components/shared/risk-badge";
 import { LinkButton } from "@/components/ui/link-button";
 import { Card, CardContent } from "@/components/ui/card";
 import { CURRENT_TERM } from "@/lib/mock-data";
-import { useStore } from "@/lib/store";
+import { draftKey, useStore } from "@/lib/store";
 import { formatThaiDate, initialOf } from "@/lib/format";
 import { DIMENSION_LABEL } from "@/lib/types";
 
@@ -31,6 +31,7 @@ export default function ScreeningListPage() {
               {store.students.map((student) => {
                 const screening = store.latestScreening(student.studentId);
                 const risk = store.overallRiskOf(student.studentId);
+                const hasDraft = store.getDraft(draftKey("screening", student.studentId)) !== undefined;
                 const flagged = screening?.results
                   .filter((r) => r.group !== "green")
                   .map((r) => DIMENSION_LABEL[r.dimension])
@@ -61,10 +62,10 @@ export default function ScreeningListPage() {
                     </div>
                     <LinkButton
                       size="sm"
-                      variant={screening ? "outline" : "default"}
+                      variant={screening && !hasDraft ? "outline" : "default"}
                       href={`/screening/${student.studentId}`}
                     >
-                      {screening ? "คัดกรองใหม่" : "เริ่มคัดกรอง"}
+                      {hasDraft ? "ทำต่อ" : screening ? "คัดกรองใหม่" : "เริ่มคัดกรอง"}
                     </LinkButton>
                   </div>
                 );

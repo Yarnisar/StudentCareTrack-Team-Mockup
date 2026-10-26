@@ -10,12 +10,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
 import { useStore } from "@/lib/store";
 import { formatThaiDate } from "@/lib/format";
 import {
   CARE_METHOD_LABEL,
   CareMethod,
+  SDQ_LEVEL_LABEL,
   SUPPORT_TYPE_LABEL,
   SupportType,
 } from "@/lib/types";
@@ -35,16 +37,30 @@ function CareCasesContent() {
   const store = useStore();
   const searchParams = useSearchParams();
   const focusStudent = searchParams.get("student");
+  const from = searchParams.get("from");
 
-  const [selectedCaseId, setSelectedCaseId] = useState<string | null>(
-    () =>
-      (focusStudent ? store.caseOf(focusStudent)?.caseId : undefined) ??
-      store.careCases[0]?.caseId ??
-      null
+  // เข้ามาพร้อม ?student= ของนักเรียนที่ยังไม่มี case -> เปิดฟอร์มสร้าง case ใหม่ (ไม่แสดง case ของคนอื่นแทน)
+  const [selectedCaseId, setSelectedCaseId] = useState<string | null>(() =>
+    focusStudent
+      ? (store.caseOf(focusStudent)?.caseId ?? null)
+      : (store.careCases[0]?.caseId ?? null)
+  );
+  const [newCaseFor, setNewCaseFor] = useState<string | null>(() =>
+    focusStudent && !store.caseOf(focusStudent) ? focusStudent : null
   );
 
   const activeCase = store.careCases.find((c) => c.caseId === selectedCaseId);
   const student = activeCase ? store.getStudent(activeCase.studentId) : undefined;
+
+  const triggerSourceFor = (studentId: string) => {
+    if (from !== "sdq") return undefined;
+    const teacherSdq = store
+      .sdqOf(studentId)
+      .find((s) => s.rater === "teacher" && s.status === "completed");
+    return teacherSdq?.level
+      ? `ผลประเมิน SDQ ฉบับครู: ${SDQ_LEVEL_LABEL[teacherSdq.level]}`
+      : "ผลประเมิน SDQ ฉบับครู";
+  };
 
   const [action, setAction] = useState("");
   const [result, setResult] = useState("");
@@ -69,9 +85,12 @@ function CareCasesContent() {
                   return (
                     <button
                       key={c.caseId}
-                      onClick={() => setSelectedCaseId(c.caseId)}
+                      onClick={() => {
+                        setSelectedCaseId(c.caseId);
+                        setNewCaseFor(null);
+                      }}
                       className={
-                        selected
+                        selected && !newCaseFor
                           ? "w-full rounded-xl border border-primary bg-accent p-3 text-left"
                           : "w-full rounded-xl border border-border p-3 text-left hover:bg-muted/50"
                       }
@@ -91,7 +110,18 @@ function CareCasesContent() {
             </CardContent>
           </Card>
 
-          {activeCase && student ? (
+          {newCaseFor ? (
+            <NewCaseForm
+              key={newCaseFor}
+              studentId={newCaseFor}
+              triggerSource={triggerSourceFor(newCaseFor)}
+              onCancel={() => setNewCaseFor(null)}
+              onCreated={(caseId) => {
+                setSelectedCaseId(caseId);
+                setNewCaseFor(null);
+              }}
+            />
+          ) : activeCase && student ? (
             <div className="space-y-5">
               <Card>
                 <CardContent className="flex items-center gap-4 p-6">
@@ -109,6 +139,15 @@ function CareCasesContent() {
                       >
                         {activeCase.status === "active" ? "กำลังดำเนินการ" : "ปิด case แล้ว"}
                       </span>
+                      {activeCase.status === "closed" && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setNewCaseFor(activeCase.studentId)}
+                        >
+                          <Plus className="size-4" /> เปิด case ใหม่
+                        </Button>
+                      )}
                     </div>
                     <p className="mt-1 text-[13.5px] text-muted-foreground">
                       เปิด case {formatThaiDate(activeCase.openedAt)} · ที่มา:{" "}
@@ -263,5 +302,124 @@ function CareCasesContent() {
         </div>
       </div>
     </>
+  );
+}
+
+function NewCaseForm({
+  studentId,
+  triggerSource,
+  onCancel,
+  onCreated,
+}: {
+  studentId: string;
+  triggerSource?: string;
+  onCancel: () => void;
+  onCreated: (caseId: string) => void;
+}) {
+  const store = useStore();
+  const student = store.getStudent(studentId);
+  const risk = store.overallRiskOf(studentId);
+
+  const [supportType, setSupportType] = useState<SupportType>("prevent");
+  const [methods, setMethods] = useState<CareMethod[]>([]);
+  const [goal, setGoal] = useState("");
+  const [targetDate, setTargetDate] = useState("");
+
+  if (!student) return null;
+
+  const toggleMethod = (m: CareMethod) =>
+    setMethods((prev) => (prev.includes(m) ? prev.filter((x) => x !== m) : [...prev, m]));
+
+  const canSubmit = methods.length > 0 && goal.trim() !== "";
+
+  const handleSubmit = () => {
+    const record = store.openCase(studentId, supportType, methods, goal.trim(), {
+      targetDate: targetDate || undefined,
+      triggerSource,
+    });
+    onCreated(record.caseId);
+  };
+
+  return (
+    <Card>
+      <CardContent className="p-6">
+        <div className="mb-5 flex flex-wrap items-center gap-2.5">
+          <h2 className="text-lg font-bold">เปิด case ช่วยเหลือ · {student.fullName}</h2>
+          {risk && <RiskBadge group={risk} short />}
+        </div>
+        <p className="-mt-3 mb-5 text-[13.5px] text-muted-foreground">
+          {student.roomName} เลขที่ {student.classNo} · ที่มา: {triggerSource ?? "เปิดโดยครูประจำชั้น"}
+        </p>
+
+        <h3 className="mb-2 text-[15px] font-bold">ประเภทการช่วยเหลือ</h3>
+        <RadioGroup
+          value={supportType}
+          onValueChange={(v) => setSupportType(v as SupportType)}
+          className="mb-5 flex flex-wrap gap-2.5"
+        >
+          {SUPPORT_TYPES.map((t) => (
+            <Label
+              key={t}
+              htmlFor={`type-${t}`}
+              className="flex cursor-pointer items-center gap-2 rounded-lg border border-border px-4 py-2 text-[13.5px] font-medium has-[[data-checked]]:border-primary has-[[data-checked]]:bg-accent has-[[data-checked]]:text-primary"
+            >
+              <RadioGroupItem id={`type-${t}`} value={t} />
+              {SUPPORT_TYPE_LABEL[t]}
+            </Label>
+          ))}
+        </RadioGroup>
+
+        <h3 className="mb-2 text-[15px] font-bold">
+          วิธีการดูแล <span className="text-[12px] font-normal text-muted-foreground">(เลือกอย่างน้อย 1)</span>
+        </h3>
+        <div className="mb-5 space-y-1">
+          {CARE_METHODS.map((m) => (
+            <div key={m} className="flex items-center gap-3 py-1">
+              <Checkbox
+                id={`new-m-${m}`}
+                checked={methods.includes(m)}
+                onCheckedChange={() => toggleMethod(m)}
+              />
+              <Label htmlFor={`new-m-${m}`} className="text-[13.5px] font-normal">
+                {CARE_METHOD_LABEL[m]}
+              </Label>
+            </div>
+          ))}
+        </div>
+
+        <Label htmlFor="goal" className="mb-2 block text-[15px] font-bold">
+          เป้าหมายของแผน
+        </Label>
+        <Textarea
+          id="goal"
+          value={goal}
+          onChange={(e) => setGoal(e.target.value)}
+          placeholder="เช่น นักเรียนมาเรียนสม่ำเสมอและพูดคุยกับครูที่ปรึกษาได้อย่างน้อยสัปดาห์ละครั้ง"
+          rows={3}
+          className="mb-5"
+        />
+
+        <Label htmlFor="target-date" className="mb-2 block text-[15px] font-bold">
+          วันที่คาดว่าจะบรรลุเป้าหมาย{" "}
+          <span className="text-[12px] font-normal text-muted-foreground">(ไม่บังคับ)</span>
+        </Label>
+        <Input
+          id="target-date"
+          type="date"
+          value={targetDate}
+          onChange={(e) => setTargetDate(e.target.value)}
+          className="mb-6 w-48"
+        />
+
+        <div className="flex items-center justify-end gap-3">
+          <Button variant="outline" onClick={onCancel}>
+            ยกเลิก
+          </Button>
+          <Button disabled={!canSubmit} onClick={handleSubmit}>
+            <Plus className="size-4" /> เปิด case
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   );
 }

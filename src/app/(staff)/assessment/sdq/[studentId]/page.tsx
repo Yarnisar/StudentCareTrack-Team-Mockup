@@ -116,7 +116,7 @@ function SdqContent({ studentId }: { studentId: string }) {
                   <Button variant="outline" onClick={() => router.push(`/students/${studentId}`)}>
                     ดูข้อมูลนักเรียน
                   </Button>
-                  <Button onClick={() => router.push(`/care-cases?student=${studentId}`)}>
+                  <Button onClick={() => router.push(`/care-cases?student=${studentId}&from=sdq`)}>
                     จัดทำแผนช่วยเหลือ
                   </Button>
                 </div>
@@ -124,7 +124,9 @@ function SdqContent({ studentId }: { studentId: string }) {
             </Card>
           ) : (
             <SdqForm
+              studentId={studentId}
               rater="teacher"
+              onExit={() => router.push(`/students/${studentId}`)}
               onSubmit={(answers) => setSaved(store.saveSdq(studentId, "teacher", answers))}
             />
           )}
