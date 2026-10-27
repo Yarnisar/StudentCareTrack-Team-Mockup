@@ -11,12 +11,15 @@ import {
   HeartPulse,
   Home,
   LayoutGrid,
+  LogOut,
   QrCode,
   Settings,
   Star,
   Users,
 } from "lucide-react";
-import { CURRENT_TEACHER, SCHOOL_NAME } from "@/lib/mock-data";
+import { SCHOOL_NAME } from "@/lib/mock-data";
+import { canAccess, ROLE_INFO } from "@/lib/roles";
+import { useStore } from "@/lib/store";
 
 const NAV = [
   { href: "/dashboard", label: "ภาพรวม", icon: LayoutGrid },
@@ -33,6 +36,10 @@ const NAV = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { role } = useStore();
+  const user = ROLE_INFO[role].user;
+  // แสดงเฉพาะเมนูที่บทบาทนี้เข้าได้
+  const nav = NAV.filter((item) => canAccess(role, item.href));
 
   return (
     <aside className="flex w-[264px] shrink-0 flex-col border-r border-border bg-card">
@@ -47,7 +54,7 @@ export function Sidebar() {
       </div>
 
       <nav className="flex-1 overflow-y-auto py-3">
-        {NAV.map(({ href, label, icon: Icon }) => {
+        {nav.map(({ href, label, icon: Icon }) => {
           const active = pathname === href || pathname.startsWith(`${href}/`);
           return (
             <Link
@@ -70,14 +77,19 @@ export function Sidebar() {
       <div className="border-t border-border p-3">
         <div className="flex items-center gap-2.5 rounded-[10px] bg-surface p-2.5">
           <div className="flex size-9 items-center justify-center rounded-full bg-muted text-xs font-bold text-muted-foreground">
-            ค.
+            {user.name.replace(/^ครู/, "").charAt(0)}
           </div>
-          <div className="flex-1">
-            <div className="text-[13.5px] font-semibold">{CURRENT_TEACHER.name}</div>
-            <div className="text-[11.5px] text-muted-foreground">{CURRENT_TEACHER.role}</div>
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-[13.5px] font-semibold">{user.name}</div>
+            <div className="truncate text-[11.5px] text-muted-foreground">{user.title}</div>
           </div>
-          <Link href="/settings" aria-label="ตั้งค่าระบบ">
-            <Settings className="size-[17px] text-muted-foreground hover:text-foreground" />
+          {canAccess(role, "/settings") && (
+            <Link href="/settings" aria-label="ตั้งค่าระบบ" className="rounded-md p-1 hover:bg-muted">
+              <Settings className="size-[17px] text-muted-foreground hover:text-foreground" />
+            </Link>
+          )}
+          <Link href="/login" aria-label="ออกจากระบบ" title="ออกจากระบบ" className="rounded-md p-1 hover:bg-muted">
+            <LogOut className="size-[17px] text-muted-foreground hover:text-foreground" />
           </Link>
         </div>
       </div>

@@ -1,16 +1,9 @@
 import Link from "next/link";
-import { LinkButton } from "@/components/ui/link-button";
+import { RoleLink } from "@/components/prototype/role-link";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SCHOOL_NAME } from "@/lib/mock-data";
-
-const ROLES = [
-  { label: "แอดมินโรงเรียน", href: "/dashboard" },
-  { label: "ครูทั่วไป", href: "/behavior" },
-  { label: "ครูประจำชั้น", href: "/dashboard", primary: true },
-  { label: "นักเรียน", href: "/portal/student/card" },
-  { label: "ผู้ปกครอง", href: "/portal/parent" },
-];
+import { ROLE_ORDER } from "@/lib/roles";
 
 export default function LoginPage() {
   return (
@@ -70,9 +63,10 @@ export default function LoginPage() {
                 ลืมรหัสผ่าน?
               </Link>
             </div>
-            <LinkButton className="w-full" size="lg" href="/dashboard">
+            {/* ต้นแบบ: ยังไม่ตรวจรหัสผ่าน เข้าในบทบาทครูประจำชั้น */}
+            <RoleLink role="homeroom" className="w-full" size="lg">
               เข้าสู่ระบบ
-            </LinkButton>
+            </RoleLink>
           </form>
 
           <div className="my-7 flex items-center gap-3">
@@ -82,10 +76,8 @@ export default function LoginPage() {
           </div>
 
           <div className="flex flex-wrap gap-2">
-            {ROLES.map((role) => (
-              <LinkButton key={role.label} size="sm" variant={role.primary ? "default" : "outline"} href={role.href}>
-                {role.label}
-              </LinkButton>
+            {ROLE_ORDER.map((role) => (
+              <RoleLink key={role} role={role} size="sm" variant="outline" />
             ))}
           </div>
         </div>

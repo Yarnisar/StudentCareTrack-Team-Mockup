@@ -32,6 +32,8 @@ import {
   scoreSdq,
 } from "./rules";
 import { nowThaiIso } from "./format";
+import { usePathname } from "next/navigation";
+import { defaultRoleFor, type Role } from "./roles";
 import {
   AppointmentStatus,
   AssessmentOutcome,
@@ -61,6 +63,10 @@ export interface CheckinOutcome {
 }
 
 interface StoreValue {
+  /** บทบาทของผู้ใช้ปัจจุบัน (ต้นแบบ: เลือกจากหน้า login หรือแถบสลับบทบาท) */
+  role: Role;
+  setRole: (role: Role) => void;
+
   students: Student[];
   screenings: Screening[];
   redFlags: RedFlagAssessment[];
@@ -112,6 +118,9 @@ export type DraftForm = "screening" | "red_flag" | "nine_s" | `sdq_${SdqRater}`;
 export const draftKey = (form: DraftForm, studentId: string) => `${form}:${studentId}`;
 
 export function StoreProvider({ children }: { children: ReactNode }) {
+  // คำนวณจาก URL ของหน้าแรกที่เปิด ให้ผลเหมือนกันทั้งฝั่ง server และ client (ไม่เกิด hydration mismatch)
+  const pathname = usePathname();
+  const [role, setRole] = useState<Role>(() => defaultRoleFor(pathname));
   const [screenings, setScreenings] = useState<Screening[]>(seedScreenings);
   const [redFlags, setRedFlags] = useState<RedFlagAssessment[]>([]);
   const [nineS, setNineS] = useState<NineSAssessment[]>([]);
@@ -475,6 +484,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     };
 
     return {
+      role,
+      setRole,
       students,
       screenings,
       redFlags,
@@ -505,7 +516,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       addFollowup,
       closeCase,
     };
-  }, [screenings, redFlags, nineS, sdq, behaviorRecords, checkins, appointments, careCases, drafts]);
+  }, [role, screenings, redFlags, nineS, sdq, behaviorRecords, checkins, appointments, careCases, drafts]);
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }
