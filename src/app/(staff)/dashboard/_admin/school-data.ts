@@ -1,20 +1,21 @@
 /**
- * PROTOTYPE ONLY — ข้อมูลจำลองขนาดโรงเรียนจริง (ทิ้งได้)
+ * PROTOTYPE ONLY — ข้อมูลจำลองขนาดโรงเรียนจริง สำหรับภาพรวมของแอดมินเท่านั้น
  *
- * คำถามที่ต้นแบบนี้ตอบ:
- *   1) หน้าภาพรวมของ "แอดมินโรงเรียน" ควรแสดงอะไร ต่างจากของครูประจำชั้นอย่างไร
- *   2) เมื่อข้อมูลมีหลักพันแถว ควรแบ่งหน้าแบบไหน แทนการเลื่อนจอยาว ๆ
- *
- * ข้อมูลตัวอย่างจริงในระบบมีนักเรียนแค่ 8 คน ซึ่งน้อยเกินกว่าจะเห็นปัญหา
- * ไฟล์นี้จึงสร้างนักเรียน ~1,500 คนตามสมมติฐานโรงเรียนขนาดกลางที่ตกลงกันไว้
- * สร้างด้วยสุ่มแบบมีเมล็ดคงที่ ตัวเลขจึงเท่าเดิมทุกครั้ง เทียบระหว่างแบบร่างได้
+ * ข้อมูลตัวอย่างจริงในระบบมีนักเรียนแค่ 8 คนห้องเดียว ซึ่งน้อยเกินกว่าจะเห็นปัญหาของมุมมองทั้งโรงเรียน
+ * ไฟล์นี้จึงสร้างนักเรียน ~1,500 คนตามสมมติฐานโรงเรียนขนาดกลาง สุ่มแบบมีเมล็ดคงที่ ตัวเลขจึงเท่าเดิมทุกครั้ง
+ * ไม่เชื่อมกับ store — ทำงานในหน้าอื่นแล้วตัวเลขตรงนี้ไม่เปลี่ยน (หน้าจอบอกผู้ใช้ไว้)
+ * Project 2: แทนด้วย API สรุปรายห้องจาก backend
  */
 
 export const LEVELS = [1, 2, 3, 4, 5, 6];
+/** เป้าความคืบหน้าการคัดกรอง ใช้ไปก่อนจนกว่าจะมีวันปิดรอบจาก UC8 */
+export const SCREENING_TARGET = 0.9;
+/** case ที่ไม่มีการติดตามนานกว่านี้ถือว่าค้าง — PROTOTYPE: ยังไม่ได้ตกลงกับทีม */
+export const STALE_CASE_DAYS = 30;
 export const ROOMS_PER_LEVEL = 8;
 
-/** ห้องของครูที่ล็อกอินอยู่ ใช้ตอนสลับขอบเขตเป็นมุมมองครูประจำชั้น */
-export const MY_ROOM = "ม.3/1";
+/** ห้องของครูประจำชั้นในข้อมูลตัวอย่าง (ชื่อครูให้ตรงกับบัญชี demo) */
+const MY_ROOM = "ม.3/1";
 
 export type Risk = "green" | "amber" | "red";
 
@@ -43,8 +44,8 @@ export interface RoomSummary {
   amber: number;
   red: number;
   openCases: number;
-  /** ยังคัดกรองไม่ครบทั้งที่เลยกำหนดรอบแล้ว */
-  overdue: boolean;
+  /** คัดกรองไม่ถึง 90% — ยังไม่ใช่ "เลยกำหนด" เพราะยังไม่มีระบบช่วงเวลา (UC8) */
+  lowProgress: boolean;
 }
 
 /** สุ่มแบบมีเมล็ด (mulberry32) เพื่อให้ผลเหมือนเดิมทุกครั้งที่เปิดหน้า */
@@ -143,7 +144,7 @@ function buildSchool() {
         amber,
         red,
         openCases,
-        overdue: screened < total * 0.9,
+        lowProgress: screened < total * SCREENING_TARGET,
       });
     }
   }
@@ -156,21 +157,6 @@ const SCHOOL = buildSchool();
 export const allStudents = SCHOOL.students;
 export const allRooms = SCHOOL.rooms;
 
-export type Scope = "school" | "room";
-
-export const SCOPE_LABEL: Record<Scope, string> = {
-  school: "ทั้งโรงเรียน (แอดมิน)",
-  room: `เฉพาะ ${MY_ROOM} (ครูประจำชั้น)`,
-};
-
-export function studentsInScope(scope: Scope) {
-  return scope === "school" ? allStudents : allStudents.filter((s) => s.room === MY_ROOM);
-}
-
-export function roomsInScope(scope: Scope) {
-  return scope === "school" ? allRooms : allRooms.filter((r) => r.room === MY_ROOM);
-}
-
 export interface Totals {
   total: number;
   screened: number;
@@ -178,65 +164,46 @@ export interface Totals {
   amber: number;
   red: number;
   openCases: number;
-  overdueRooms: number;
-  redWithoutCase: number;
-  staleCases: number;
-  pendingSdq: number;
+  lowProgressRooms: number;
 }
 
-export function totalsOf(scope: Scope): Totals {
-  const students = studentsInScope(scope);
-  const rooms = roomsInScope(scope);
+export function schoolTotals(): Totals {
   return {
-    total: students.length,
-    screened: students.filter((s) => s.screened).length,
-    green: students.filter((s) => s.risk === "green").length,
-    amber: students.filter((s) => s.risk === "amber").length,
-    red: students.filter((s) => s.risk === "red").length,
-    openCases: students.filter((s) => s.hasCase).length,
-    overdueRooms: rooms.filter((r) => r.overdue).length,
-    redWithoutCase: students.filter((s) => s.risk === "red" && !s.hasCase).length,
-    staleCases: students.filter((s) => s.hasCase && (s.daysSinceFollowup ?? 0) > 30).length,
-    pendingSdq: students.reduce((sum, s) => sum + s.sdqPending, 0),
+    total: allStudents.length,
+    screened: allStudents.filter((s) => s.screened).length,
+    green: allStudents.filter((s) => s.risk === "green").length,
+    amber: allStudents.filter((s) => s.risk === "amber").length,
+    red: allStudents.filter((s) => s.risk === "red").length,
+    openCases: allStudents.filter((s) => s.hasCase).length,
+    lowProgressRooms: allRooms.filter((r) => r.lowProgress).length,
   };
 }
 
-export type TaskKind = "red_no_case" | "stale_case" | "sdq_pending" | "not_screened";
-
-export const TASK_META: Record<TaskKind, { label: string; tone: "red" | "amber" | "blue" }> = {
-  red_no_case: { label: "กลุ่มแดงยังไม่เปิดเคส", tone: "red" },
-  stale_case: { label: "เคสไม่มีการติดตามเกิน 30 วัน", tone: "red" },
-  sdq_pending: { label: "SDQ เปิดไว้แต่ยังไม่มีใครทำ", tone: "amber" },
-  not_screened: { label: "ยังไม่ได้คัดกรอง", tone: "blue" },
-};
-
-export interface Task {
-  student: ProtoStudent;
-  kind: TaskKind;
-  detail: string;
+/** ห้องที่แอดมินควรติดตาม — แอดมินตามเป็นรายห้องหรือรายครู ไม่ได้ตามนักเรียนทีละคน */
+export interface RoomIssue {
+  room: RoomSummary;
+  /** กลุ่มมีปัญหาที่ยังไม่มี case */
+  problemNoCase: number;
+  /** case ที่ไม่มีการติดตามเกิน STALE_CASE_DAYS วัน */
+  staleCases: number;
 }
 
-/** คิวงานที่ต้องจัดการ เรียงตามความเร่งด่วน */
-export function tasksOf(scope: Scope): Task[] {
-  const students = studentsInScope(scope);
-  const tasks: Task[] = [];
-
-  for (const s of students) {
-    if (s.risk === "red" && !s.hasCase) {
-      tasks.push({ student: s, kind: "red_no_case", detail: "คัดกรองพบกลุ่มแดงแต่ยังไม่มีแผนช่วยเหลือ" });
-    } else if (s.hasCase && (s.daysSinceFollowup ?? 0) > 30) {
-      tasks.push({
-        student: s,
-        kind: "stale_case",
-        detail: `ติดตามครั้งล่าสุดเมื่อ ${s.daysSinceFollowup} วันก่อน`,
-      });
-    } else if (s.sdqPending > 0) {
-      tasks.push({ student: s, kind: "sdq_pending", detail: `ค้างอยู่ ${s.sdqPending} ฉบับ` });
-    } else if (!s.screened) {
-      tasks.push({ student: s, kind: "not_screened", detail: "ยังไม่มีผลคัดกรองในภาคเรียนนี้" });
-    }
-  }
-
-  const order: TaskKind[] = ["red_no_case", "stale_case", "sdq_pending", "not_screened"];
-  return tasks.sort((a, b) => order.indexOf(a.kind) - order.indexOf(b.kind));
+export function roomIssues(): RoomIssue[] {
+  return allRooms
+    .map((room) => {
+      const own = allStudents.filter((s) => s.room === room.room);
+      return {
+        room,
+        problemNoCase: own.filter((s) => s.risk === "red" && !s.hasCase).length,
+        staleCases: own.filter((s) => s.hasCase && (s.daysSinceFollowup ?? 0) > STALE_CASE_DAYS).length,
+      };
+    })
+    .filter((i) => i.problemNoCase > 0 || i.staleCases > 0 || i.room.lowProgress)
+    // เรื่องของนักเรียนที่มีปัญหาก่อน แล้วจึงความคืบหน้าการคัดกรอง
+    .sort(
+      (a, b) =>
+        b.problemNoCase - a.problemNoCase ||
+        b.staleCases - a.staleCases ||
+        a.room.screened / a.room.total - b.room.screened / b.room.total
+    );
 }
