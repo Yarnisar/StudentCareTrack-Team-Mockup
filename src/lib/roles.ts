@@ -12,33 +12,38 @@ export const ROLE_ORDER: Role[] = ["admin", "homeroom", "subject", "student", "p
 
 export const ROLE_INFO: Record<
   Role,
-  { label: string; home: string; user: { name: string; title: string } }
+  {
+    label: string;
+    home: string;
+    /** scope = ขอบเขตความรับผิดชอบ แสดงคู่กับป้ายบทบาทในแถบด้านข้าง */
+    user: { name: string; title: string; scope: string };
+  }
 > = {
   admin: {
     label: "แอดมินโรงเรียน",
     home: "/dashboard",
-    user: { name: "ครูวิชัย ระบบดี", title: "แอดมินโรงเรียน" },
+    user: { name: "ครูวิชัย ระบบดี", title: "แอดมินโรงเรียน", scope: "ทั้งโรงเรียน" },
   },
   homeroom: {
     label: "ครูประจำชั้น",
     home: "/dashboard",
-    user: { name: "ครูสมหญิง ใจดี", title: "ครูประจำชั้น ม.3/1" },
+    user: { name: "ครูสมหญิง ใจดี", title: "ครูประจำชั้น ม.3/1", scope: "ม.3/1" },
   },
   subject: {
     label: "ครูทั่วไป",
     home: "/behavior",
-    user: { name: "ครูมานพ สอนดี", title: "ครูผู้สอน วิทยาศาสตร์" },
+    user: { name: "ครูมานพ สอนดี", title: "ครูผู้สอน วิทยาศาสตร์", scope: "วิชาวิทยาศาสตร์" },
   },
   student: {
     label: "นักเรียน",
     home: "/portal/student/card",
     // ตรงกับนักเรียนตัวอย่างของ portal (studentId 30125 ใน mock-data)
-    user: { name: "ด.ญ. แพรวา สายใจ", title: "นักเรียน ม.3/1" },
+    user: { name: "ด.ญ. แพรวา สายใจ", title: "นักเรียน ม.3/1", scope: "ม.3/1" },
   },
   parent: {
     label: "ผู้ปกครอง",
     home: "/portal/parent",
-    user: { name: "นางสาวรัตนา สายใจ", title: "ผู้ปกครอง (มารดา)" },
+    user: { name: "นางสาวรัตนา สายใจ", title: "ผู้ปกครอง (มารดา)", scope: "มารดา" },
   },
 };
 
