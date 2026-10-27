@@ -10,7 +10,9 @@ import {
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  Loader2,
   Plus,
+  RefreshCw,
   Sparkles,
   Trash2,
 } from "lucide-react";
@@ -47,6 +49,7 @@ import { NativeSelect } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
 import { previousVisitForms, SCHOOL_NAME } from "@/lib/mock-data";
 import { ROLE_INFO } from "@/lib/roles";
+import { resizeImage } from "@/lib/image";
 import { draftKey, useStore } from "@/lib/store";
 import { formatBaht, formatThaiDate } from "@/lib/format";
 import {
@@ -84,7 +87,12 @@ import {
   memberTotal,
   missingVisitAnswers,
   type NoneField,
-  PHOTO_TYPE_OPTIONS,
+  CAN_PHOTO_HOME_OPTIONS,
+  HOME_PHOTO_TYPE_OPTIONS,
+  PHOTO_REASON_OPTIONS,
+  photoReasonText,
+  photoSlots,
+  SCHOOL_SIGN_PHOTO,
   possibleUnemployed,
   POVERTY_LINE,
   RELATIONSHIP_LEVELS,
@@ -310,7 +318,9 @@ export default function HomeVisitRecordPage({
       riskFindings: [...(poor ? ["รายได้เฉลี่ยต่อคนต่ำกว่าเกณฑ์ยากจน"] : []), ...findings],
       informantName: form.informant === student.guardianRelation ? student.guardianName : form.informant,
       informantRelation: form.informant,
-      photoLabels: ["ภาพภายนอกบ้าน", "ภาพภายในบ้าน"],
+      photoLabels: photoSlots(final.photoType).map((p) => p.short),
+      photos: final.photos.slice(0, photoSlots(final.photoType).length),
+      photoReason: photoReasonText(final),
       signedBy: signer.name,
       form: final,
     });
@@ -1076,29 +1086,71 @@ export default function HomeVisitRecordPage({
               )}
 
               {question(
-                "photoType",
+                "canPhotoHome",
                 <ChipSelect
-                  label="ภาพถ่ายที่แนบมาคือ"
-                  options={PHOTO_TYPE_OPTIONS}
-                  value={form.photoType}
-                  onChange={(v) => set("photoType", v)}
+                  label="ภาพถ่ายประกอบแบบฟอร์ม"
+                  options={CAN_PHOTO_HOME_OPTIONS}
+                  value={form.canPhotoHome ?? ""}
+                  onChange={(v) =>
+                    draft.update((prev) => ({
+                      ...prev,
+                      canPhotoHome: v,
+                      // ถ่ายไม่ได้ = ใช้ภาพนักเรียนคู่ป้ายโรงเรียน (ค่าเดียวกับแบบฟอร์ม)
+                      photoType: v === "no" ? SCHOOL_SIGN_PHOTO : prev.photoType === SCHOOL_SIGN_PHOTO ? "" : prev.photoType,
+                      // ช่องรูปของสองแบบไม่ตรงกัน จึงล้างรูปเมื่อเปลี่ยนคำตอบ
+                      photos: v === prev.canPhotoHome ? prev.photos : [],
+                    }))
+                  }
                   columns={2}
                 />
               )}
 
-              <div className="grid gap-3 md:grid-cols-2">
-                {["รูปที่ 1 ภาพถ่ายสภาพบ้านนักเรียน (มีหลังคาและฝาบ้าน)", "รูปที่ 2 ภาพถ่ายภายในบ้านนักเรียน"].map(
-                  (label) => (
-                    <div
-                      key={label}
-                      className="flex h-36 flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-surface px-4 text-center"
-                    >
-                      <Camera className="size-6 text-muted-foreground" />
-                      <span className="text-[12.5px] text-muted-foreground">{label}</span>
-                    </div>
-                  )
+              {form.canPhotoHome === "yes" &&
+                question(
+                  "photoType",
+                  <ChipSelect
+                    label="บ้านในภาพเป็นแบบไหน"
+                    options={HOME_PHOTO_TYPE_OPTIONS}
+                    value={form.photoType}
+                    onChange={(v) => set("photoType", v)}
+                    columns={3}
+                  />
                 )}
-              </div>
+
+              {form.canPhotoHome === "no" &&
+                question(
+                  "photoReason",
+                  <ChipSelect
+                    label="เหตุผลที่ถ่ายรูปบ้านไม่ได้"
+                    options={PHOTO_REASON_OPTIONS}
+                    value={form.photoReason ?? ""}
+                    onChange={(v) => set("photoReason", v)}
+                    columns={2}
+                    other={otherNote("photoReason", "ระบุเหตุผล")}
+                  />
+                )}
+
+              {!!form.canPhotoHome &&
+                question(
+                  "photos",
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {photoSlots(form.photoType).map((slot, i) => (
+                      <PhotoSlot
+                        key={slot.label}
+                        label={slot.label}
+                        value={form.photos?.[i] ?? ""}
+                        onChange={(url) =>
+                          draft.update((prev) => {
+                            const photos = [...(prev.photos ?? [])];
+                            photos[i] = url;
+                            return { ...prev, photos };
+                          })
+                        }
+                      />
+                    ))}
+                  </div>
+                )}
+
 
               <div className="grid gap-4 md:grid-cols-2">
                 <Field label="ผู้รับรองข้อมูล" source="registry">
@@ -1183,6 +1235,82 @@ function RelationSelect({
         </option>
       ))}
     </NativeSelect>
+  );
+}
+
+/** ช่องแนบรูป: กดเพื่อถ่ายหรือเลือกจากเครื่อง ระบบย่อรูปก่อนเก็บ */
+function PhotoSlot({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (dataUrl: string) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleFile = async (file: File | undefined) => {
+    if (!file) return;
+    setBusy(true);
+    setError("");
+    try {
+      onChange(await resizeImage(file));
+    } catch {
+      setError("เปิดไฟล์นี้ไม่ได้ ลองเลือกรูปอื่น");
+    } finally {
+      setBusy(false);
+      if (inputRef.current) inputRef.current.value = "";
+    }
+  };
+
+  return (
+    <div>
+      {/* ไม่ใส่ capture เพื่อให้มือถือถามว่าจะถ่ายใหม่หรือเลือกจากคลังรูป */}
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        aria-label={label}
+        onChange={(e) => handleFile(e.target.files?.[0])}
+      />
+      {value ? (
+        <div className="overflow-hidden rounded-xl border border-border">
+          {/* eslint-disable-next-line @next/next/no-img-element -- data URL ในต้นแบบ ใช้ next/image ไม่ได้ */}
+          <img src={value} alt={label} className="h-44 w-full object-cover" />
+          <div className="flex items-center gap-2 px-3 py-2">
+            <span className="flex-1 truncate text-[12.5px] text-muted-foreground">{label}</span>
+            <Button size="sm" variant="ghost" onClick={() => inputRef.current?.click()}>
+              <RefreshCw className="size-3.5" /> เปลี่ยน
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => onChange("")} aria-label={`ลบ${label}`}>
+              <Trash2 className="size-3.5" />
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          disabled={busy}
+          className="flex h-44 w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-surface px-4 text-center transition-colors hover:border-primary/50 hover:bg-accent"
+        >
+          {busy ? (
+            <Loader2 className="size-6 animate-spin text-muted-foreground" />
+          ) : (
+            <Camera className="size-6 text-primary" />
+          )}
+          <span className="text-[13px] font-semibold text-primary">
+            {busy ? "กำลังย่อรูป..." : "ถ่ายรูปหรือเลือกจากเครื่อง"}
+          </span>
+          <span className="text-[12px] text-muted-foreground">{label}</span>
+        </button>
+      )}
+      {error && <p className="mt-1 text-[12.5px] text-destructive">{error}</p>}
+    </div>
   );
 }
 

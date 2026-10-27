@@ -266,16 +266,42 @@ export const INFORMANT_OPTIONS = [
   "ทวด", "พ่อเลี้ยง", "แม่เลี้ยง",
 ];
 
-/** ประเภทภาพถ่ายที่แนบ (หน้า 4) */
-export const PHOTO_TYPE_OPTIONS: CheckboxOption[] = [
+/**
+ * ภาพถ่ายหน้า 4: แบบฟอร์มรวม "ภาพนักเรียนและป้ายชื่อโรงเรียน" ไว้ในรายการเดียวกับประเภทบ้าน
+ * หน้าจอแยกเป็นคำถามก่อนว่าถ่ายรูปบ้านได้ไหม เพื่อไม่ให้ครูเข้าใจว่าเป็นแค่ประเภทของรูป
+ */
+export const CAN_PHOTO_HOME_OPTIONS: CheckboxOption[] = [
+  { id: "yes", label: "ถ่ายรูปบ้านได้" },
+  { id: "no", label: "ถ่ายรูปบ้านไม่ได้ ใช้ภาพนักเรียนคู่ป้ายชื่อโรงเรียนแทน" },
+];
+
+/** ประเภทบ้านในภาพถ่าย (เมื่อถ่ายรูปบ้านได้) */
+export const HOME_PHOTO_TYPE_OPTIONS: CheckboxOption[] = [
   { id: "parents_home", label: "บ้านที่อาศัยอยู่กับพ่อแม่ (เป็นเจ้าของ / เช่า)" },
   { id: "relative_home", label: "บ้านของญาติ / ผู้ปกครองที่ไม่ใช่ญาติ" },
   { id: "institution", label: "บ้านหรือที่พักประเภท วัด มูลนิธิ หอพัก โรงงาน อยู่กับนายจ้าง" },
-  {
-    id: "school_sign",
-    label: "ภาพนักเรียนและป้ายชื่อโรงเรียน เนื่องจากถ่ายภาพบ้านไม่ได้",
-  },
 ];
+
+/** ค่าในแบบฟอร์มเมื่อถ่ายรูปบ้านไม่ได้ — แนบรูปเดียวและต้องเลือกเหตุผล */
+export const SCHOOL_SIGN_PHOTO = "school_sign";
+
+/** เหตุผลที่ถ่ายรูปบ้านไม่ได้ — PROTOTYPE: รายการเสนอ ยังไม่ได้เทียบกับคู่มือ สพฐ. */
+export const PHOTO_REASON_OPTIONS: CheckboxOption[] = [
+  { id: "guardian_declined", label: "ผู้ปกครองไม่สะดวกให้เข้าบ้าน" },
+  { id: "dormitory", label: "นักเรียนพักหอพัก / วัด / มูลนิธิ" },
+  { id: "unreachable", label: "เดินทางไปที่บ้านไม่ได้" },
+  { id: OTHER_ID, label: OTHER_LABEL },
+];
+
+/** ช่องรูปที่ต้องแนบตามประเภทภาพถ่าย (หน้า 4 ของแบบฟอร์ม) */
+export function photoSlots(photoType: string): { label: string; short: string }[] {
+  return photoType === SCHOOL_SIGN_PHOTO
+    ? [{ label: "ภาพนักเรียนคู่กับป้ายชื่อโรงเรียน", short: "ภาพนักเรียนคู่ป้ายโรงเรียน" }]
+    : [
+        { label: "รูปที่ 1 ภาพถ่ายสภาพบ้านนักเรียน (มีหลังคาและฝาบ้าน)", short: "ภาพภายนอกบ้าน" },
+        { label: "รูปที่ 2 ภาพถ่ายภายในบ้านนักเรียน", short: "ภาพภายในบ้าน" },
+      ];
+}
 
 /** ประเภทรายได้ตามแบบฟอร์ม (บาท/เดือน) */
 export const INCOME_COLUMNS = [
@@ -329,7 +355,8 @@ export type OtherField =
   | "welfareReceived"
   | "travelMode"
   | "duties"
-  | "hobbies";
+  | "hobbies"
+  | "photoReason";
 
 /** เลือก "อื่น ๆ" ในข้อนั้นอยู่หรือไม่ */
 export function choseOther(form: VisitForm, field: OtherField): boolean {
@@ -376,6 +403,12 @@ export interface VisitForm {
   confirmed: ConfirmSection[];
   /** ข้อความที่ระบุเมื่อเลือก "อื่น ๆ" */
   otherNotes: Partial<Record<OtherField, string>>;
+  /** ถ่ายรูปบ้านได้ไหม: "yes" | "no" (ยังไม่ตอบ = "") */
+  canPhotoHome: string;
+  /** รูปตามลำดับช่องใน photoSlots (ต้นแบบ: data URL ที่ย่อแล้ว) */
+  photos: string[];
+  /** เหตุผลที่ถ่ายรูปบ้านไม่ได้ (id จาก PHOTO_REASON_OPTIONS) */
+  photoReason: string;
 }
 
 export type ConfirmSection = "household" | "status";
@@ -431,6 +464,13 @@ export function possibleUnemployed(form: VisitForm): HouseholdMemberRow[] {
     const age = Number(m.age);
     return m.age !== "" && age >= 15 && age <= 65 && m.relation !== "นักเรียน" && memberTotal(m) === 0;
   });
+}
+
+/** เหตุผลที่ถ่ายรูปบ้านไม่ได้เป็นข้อความ (ใช้แสดงและเก็บในผล) */
+export function photoReasonText(form: VisitForm): string | undefined {
+  if (form.canPhotoHome !== "no" || !form.photoReason) return undefined;
+  if (form.photoReason === OTHER_ID) return form.otherNotes?.photoReason?.trim() || OTHER_LABEL;
+  return PHOTO_REASON_OPTIONS.find((o) => o.id === form.photoReason)?.label;
 }
 
 /** ค่าที่ใช้จริงตอนบันทึก: รวมค่าที่ระบบคำนวณให้ (ข้อ 4.1 และ 5.2) */
@@ -524,6 +564,9 @@ export function initialVisitForm(
     devices: [],
     informant: guardianRelation && INFORMANT_OPTIONS.includes(guardianRelation) ? guardianRelation : "",
     photoType: "",
+    canPhotoHome: "",
+    photos: [],
+    photoReason: "",
     noneFound: [...previousNone],
     needsConfirm: previous ? ["household", "status"] : [],
     confirmed: [],
@@ -574,13 +617,20 @@ export function missingVisitAnswers(
     ["6.10", form.internet !== ""],
     ["6.11", listDone("devices")],
     ["informant", form.informant !== ""],
-    ["photoType", form.photoType !== ""],
+    ["canPhotoHome", !!form.canPhotoHome],
+    ["photoType", form.canPhotoHome !== "yes" || form.photoType !== ""],
+    ["photoReason", form.canPhotoHome !== "no" || (!!form.photoReason && otherDone("photoReason"))],
+    // ช่องรูปแสดงหลังตอบว่าถ่ายรูปบ้านได้ไหม จึงเช็กหลังจากนั้น
+    ["photos", !form.canPhotoHome || photoSlots(form.photoType).every((_, i) => !!form.photos?.[i])],
   ];
   const LABELS: Record<string, string> = {
     "confirm-household": "ยืนยันข้อ 3",
     "confirm-status": "ยืนยันข้อ 4",
     informant: "ผู้ให้ข้อมูล",
-    photoType: "ภาพถ่าย",
+    canPhotoHome: "ถ่ายรูปบ้านได้ไหม",
+    photoType: "ประเภทบ้าน",
+    photos: "แนบรูปถ่าย",
+    photoReason: "เหตุผลที่ถ่ายรูปบ้านไม่ได้",
   };
   return checks
     .filter(([, done]) => !done)

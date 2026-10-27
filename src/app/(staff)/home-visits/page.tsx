@@ -177,16 +177,32 @@ export default function HomeVisitsPage() {
                       <CardContent className="p-6">
                         <h3 className="mb-3 text-[15.5px] font-bold">ภาพถ่ายที่อยู่อาศัย</h3>
                         <div className="flex gap-3">
-                          {record.photoLabels.map((label) => (
-                            <div
-                              key={label}
-                              className="flex h-32 flex-1 flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-surface"
-                            >
-                              <Camera className="size-6 text-muted-foreground" />
-                              <span className="text-[12.5px] text-muted-foreground">{label}</span>
-                            </div>
-                          ))}
+                          {record.photoLabels.map((label, i) =>
+                            record.photos?.[i] ? (
+                              <figure key={label} className="flex-1 overflow-hidden rounded-xl border border-border">
+                                {/* eslint-disable-next-line @next/next/no-img-element -- data URL ในต้นแบบ ใช้ next/image ไม่ได้ */}
+                                <img src={record.photos[i]} alt={label} className="h-32 w-full object-cover" />
+                                <figcaption className="px-3 py-1.5 text-[12px] text-muted-foreground">
+                                  {label}
+                                </figcaption>
+                              </figure>
+                            ) : (
+                              <div
+                                key={label}
+                                className="flex h-32 flex-1 flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-surface"
+                              >
+                                <Camera className="size-6 text-muted-foreground" />
+                                <span className="text-[12.5px] text-muted-foreground">{label}</span>
+                              </div>
+                            )
+                          )}
                         </div>
+                        {record.photoReason && (
+                          <p className="mt-3 text-[12.5px]">
+                            <span className="text-muted-foreground">เหตุผลที่ถ่ายรูปบ้านไม่ได้: </span>
+                            {record.photoReason}
+                          </p>
+                        )}
                         <p className="mt-3 text-[11.5px] leading-relaxed text-muted-foreground">
                           กรณีเข้าเยี่ยมที่บ้านไม่ได้ ให้ใช้ภาพนักเรียนคู่กับป้ายโรงเรียนแทน
                           พร้อมระบุเหตุผล

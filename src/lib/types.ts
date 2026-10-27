@@ -252,6 +252,10 @@ export interface HomeVisitRecord {
   informantName: string;
   informantRelation: string;
   photoLabels: string[];
+  /** รูปตามลำดับของ photoLabels (ต้นแบบ: data URL · Project 2: ลิงก์ไฟล์บน server) */
+  photos?: string[];
+  /** เหตุผลกรณีใช้ภาพนักเรียนคู่ป้ายโรงเรียนแทนรูปบ้าน */
+  photoReason?: string;
   signedBy: string;
   signedAt: string;
   /** คำตอบทั้งแบบฟอร์ม (ข้อมูลตัวอย่างเดิมไม่มี) */
