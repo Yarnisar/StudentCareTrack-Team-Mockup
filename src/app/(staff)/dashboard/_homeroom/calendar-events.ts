@@ -1,22 +1,22 @@
 /**
  * เหตุการณ์ในปฏิทินของภาพรวมครูประจำชั้น: ข้อมูลชุดเดียวกับตารางสถานะ แต่ดูตามวัน
- * - ช่วงเวลาของแต่ละกระบวนการ (lib/periods.ts) และวันปิดรอบพร้อมจำนวนที่ยังไม่เสร็จ
- * - นัดเยี่ยมบ้าน (UC3) และวันเป้าหมายของ case ที่เปิดอยู่ (UC10)
- * ยังไม่มีวันติดตามครั้งถัดไปของ case (UC10 Subflow B) เพราะแบบบันทึกการติดตามยังไม่มีช่องนี้
+ * - ช่วงเวลาที่แอดมินตั้งในหน้าตั้งค่า (store.assessmentWindows) และวันปิดพร้อมจำนวนที่ยังไม่เสร็จ
+ * - นัดเยี่ยมบ้าน (UC3), วันติดตามครั้งถัดไปและวันเป้าหมายของ case ที่เปิดอยู่ (UC10)
  */
 
 import { formatThaiTime } from "@/lib/format";
-import { PROCESS_PERIODS, type PeriodProcess } from "@/lib/periods";
+import { dueStatus, KIND_LABEL } from "@/lib/periods";
 import type { useStore } from "@/lib/store";
-import { APPOINTMENT_STATUS_LABEL, type Student } from "@/lib/types";
-import { PROCESS_LABEL, type ProcessSummary } from "./process-status";
+import { APPOINTMENT_STATUS_LABEL, CASE_URGENCY_LABEL, type Student } from "@/lib/types";
+import type { Item } from "./process-status";
 
 type Store = ReturnType<typeof useStore>;
 
-export type EventKind = "visit" | "close" | "case_target";
+export type EventKind = "visit" | "case_followup" | "close" | "case_target";
 
 export const EVENT_LABEL: Record<EventKind, string> = {
   visit: "นัดเยี่ยมบ้าน",
+  case_followup: "วันติดตาม case",
   close: "ปิดรอบ",
   case_target: "วันเป้าหมาย case",
 };
@@ -30,49 +30,44 @@ export interface CalendarEvent {
   title: string;
   detail: string;
   student?: Student;
-  /** เรื่องที่ต้องจับตา (ขอเปลี่ยนวัน, ยังมีงานค้างตอนปิดรอบ) แสดงเด่นกว่าปกติ */
+  /** เรื่องที่ต้องจับตา (ขอเปลี่ยนวัน, ยังมีงานค้างตอนปิดรอบ, case เร่งด่วนหรือเลยวันติดตาม) แสดงเด่นกว่าปกติ */
   attention?: boolean;
   href?: string;
   action?: string;
 }
 
 export interface PeriodRange {
-  process: PeriodProcess;
+  id: string;
+  label: string;
   opensAt: string;
   closesAt: string;
 }
 
-const PERIOD_HREF: Record<PeriodProcess, string> = {
-  screening: "/screening",
-  assessment: "/assessment",
-  home_visit: "/home-visits",
-};
-
+/** termId ที่ไม่มีข้อมูล (items ว่าง) จะไม่มีเหตุการณ์ หน้าจอจึงบอกให้เปลี่ยนตัวกรองเหมือนตาราง */
 export function calendarEvents(
   store: Store,
-  termId: string,
-  summaries: ProcessSummary[]
+  items: Item[],
+  hasData: boolean
 ): { events: CalendarEvent[]; periods: PeriodRange[] } {
-  const termPeriods = PROCESS_PERIODS[termId];
-  if (!termPeriods || summaries.length === 0) return { events: [], periods: [] };
+  if (!hasData) return { events: [], periods: [] };
 
-  const periods = (Object.keys(termPeriods) as PeriodProcess[]).map((process) => ({
-    process,
-    ...termPeriods[process],
+  const windows = store.assessmentWindows.filter((w) => w.enabled);
+  const periods = windows.map((w) => ({
+    id: w.id,
+    label: KIND_LABEL[w.kind] + (w.round ? ` รอบ ${w.round}` : ""),
+    opensAt: w.openDate,
+    closesAt: w.closeDate,
   }));
   const events: CalendarEvent[] = [];
 
   for (const p of periods) {
-    const counts = summaries.find((s) => s.process === p.process)?.counts;
-    const left = counts ? counts.pending + counts.near_due + counts.overdue : 0;
+    const left = items.filter((i) => i.windowId === p.id && i.status !== "done").length;
     events.push({
       date: p.closesAt,
       kind: "close",
-      title: `ปิดรอบ${PROCESS_LABEL[p.process]}`,
-      detail: left > 0 ? `ยังไม่เสร็จ ${left} คน` : "ดำเนินการครบแล้ว",
+      title: `ปิดรอบ ${p.label}`,
+      detail: left > 0 ? `ยังไม่เสร็จ ${left} คน` : "ไม่มีงานค้างในรอบนี้",
       attention: left > 0,
-      href: PERIOD_HREF[p.process],
-      action: "ดูรายชื่อ",
     });
   }
 
@@ -91,18 +86,34 @@ export function calendarEvents(
     });
   }
 
-  for (const c of store.careCases.filter((c) => c.status === "active" && c.targetDate)) {
+  for (const c of store.careCases.filter((c) => c.status === "active")) {
     const student = store.getStudent(c.studentId);
     if (!student) continue;
-    events.push({
-      date: c.targetDate,
-      kind: "case_target",
-      title: student.fullName,
-      detail: "ถึงวันที่ตั้งเป้าไว้ ควรประเมินผลหรือปรับแผน",
-      student,
-      href: `/care-cases?student=${c.studentId}`,
-      action: "ดู case",
-    });
+    const href = `/care-cases?student=${c.studentId}`;
+    if (c.nextFollowupDate) {
+      const overdue = dueStatus(c.nextFollowupDate) === "overdue";
+      events.push({
+        date: c.nextFollowupDate,
+        kind: "case_followup",
+        title: student.fullName,
+        detail: `ความเร่งด่วน: ${CASE_URGENCY_LABEL[c.urgency]}${overdue ? " · เลยวันติดตามแล้ว" : ""}`,
+        student,
+        attention: c.urgency === "high" || overdue,
+        href,
+        action: "บันทึกการติดตาม",
+      });
+    }
+    if (c.targetDate) {
+      events.push({
+        date: c.targetDate,
+        kind: "case_target",
+        title: student.fullName,
+        detail: "ถึงวันที่ตั้งเป้าไว้ ควรประเมินผลหรือปรับแผน",
+        student,
+        href,
+        action: "ดู case",
+      });
+    }
   }
 
   events.sort((a, b) => a.date.localeCompare(b.date) || EVENT_KINDS.indexOf(a.kind) - EVENT_KINDS.indexOf(b.kind));

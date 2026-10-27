@@ -92,7 +92,7 @@ export function VariantB({
           <>
             <div className="mb-3 flex items-center gap-3">
               <div>
-                <h2 className="text-[15.5px] font-bold">ช่วงเวลาการทำแบบประเมิน</h2>
+                <h2 className="text-[15.5px] font-bold">ช่วงเวลาดำเนินงาน</h2>
                 <p className="text-[12.5px] text-muted-foreground">
                   คลิกแถวเพื่อแก้ไข · การแก้ไขมีผลทันทีเมื่อกดบันทึกในแผงด้านขวา
                 </p>

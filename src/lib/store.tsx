@@ -34,11 +34,13 @@ import {
 import { nowThaiIso } from "./format";
 import { usePathname } from "next/navigation";
 import { defaultRoleFor, type Role } from "./roles";
+import { INITIAL_WINDOWS, type AssessmentWindow } from "./periods";
 import {
   AppointmentStatus,
   AssessmentOutcome,
   BehaviorRecord,
   CareCase,
+  CaseUrgency,
   CareMethod,
   CheckinLog,
   DIMENSION_ORDER,
@@ -78,6 +80,9 @@ interface StoreValue {
   appointments: HomeVisitAppointment[];
   careCases: CareCase[];
   homeVisitRecords: HomeVisitRecord[];
+  /** ช่วงเวลาดำเนินงานที่แอดมินตั้งในหน้าตั้งค่า (UC3 Subflow A, UC8) */
+  assessmentWindows: AssessmentWindow[];
+  setAssessmentWindows: React.Dispatch<React.SetStateAction<AssessmentWindow[]>>;
 
   getStudent: (studentId: string) => Student | undefined;
   latestScreening: (studentId: string) => Screening | undefined;
@@ -112,9 +117,10 @@ interface StoreValue {
     supportType: SupportType,
     methods: CareMethod[],
     goal: string,
-    options?: { targetDate?: string; triggerSource?: string }
+    options: { urgency: CaseUrgency; nextFollowupDate: string; targetDate?: string; triggerSource?: string }
   ) => CareCase;
-  addFollowup: (caseId: string, actionTaken: string, result: string) => void;
+  addFollowup: (caseId: string, actionTaken: string, result: string, nextFollowupDate: string) => void;
+  setCaseUrgency: (caseId: string, urgency: CaseUrgency) => void;
   closeCase: (caseId: string) => void;
 }
 
@@ -141,6 +147,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [appointments, setAppointments] = useState<HomeVisitAppointment[]>(seedAppointments);
   const [careCases, setCareCases] = useState<CareCase[]>(seedCareCases);
   const [homeVisitRecords, setHomeVisitRecords] = useState<HomeVisitRecord[]>(seedHomeVisitRecords);
+  const [assessmentWindows, setAssessmentWindows] = useState<AssessmentWindow[]>(INITIAL_WINDOWS);
   const [drafts, setDrafts] = useState<Record<string, unknown>>({});
 
   const value = useMemo<StoreValue>(() => {
@@ -465,26 +472,29 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const record: CareCase = {
         caseId: nextId("CASE"),
         studentId,
-        triggerSource: options?.triggerSource ?? "เปิดโดยครูประจำชั้น",
+        triggerSource: options.triggerSource ?? "เปิดโดยครูประจำชั้น",
         status: "active",
         openedAt: nowThaiIso().split("T")[0],
         closedAt: null,
         supportType,
         careMethods: methods,
         goal,
-        targetDate: options?.targetDate ?? "",
+        targetDate: options.targetDate ?? "",
+        urgency: options.urgency,
+        nextFollowupDate: options.nextFollowupDate,
         followups: [],
       };
       setCareCases((prev) => [record, ...prev]);
       return record;
     };
 
-    const addFollowup: StoreValue["addFollowup"] = (caseId, actionTaken, result) => {
+    const addFollowup: StoreValue["addFollowup"] = (caseId, actionTaken, result, nextFollowupDate) => {
       setCareCases((prev) =>
         prev.map((c) =>
           c.caseId === caseId
             ? {
                 ...c,
+                nextFollowupDate,
                 followups: [
                   {
                     followupId: nextId("FU"),
@@ -492,6 +502,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
                     result,
                     followupDate: nowThaiIso().split("T")[0],
                     recordedByName: CURRENT_TEACHER.name,
+                    nextFollowupDate,
                   },
                   ...c.followups,
                 ],
@@ -499,6 +510,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             : c
         )
       );
+    };
+
+    const setCaseUrgency: StoreValue["setCaseUrgency"] = (caseId, urgency) => {
+      setCareCases((prev) => prev.map((c) => (c.caseId === caseId ? { ...c, urgency } : c)));
     };
 
     const closeCase: StoreValue["closeCase"] = (caseId) => {
@@ -524,6 +539,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       appointments,
       careCases,
       homeVisitRecords,
+      assessmentWindows,
+      setAssessmentWindows,
       getStudent,
       latestScreening,
       overallRiskOf,
@@ -544,9 +561,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       saveHomeVisit,
       openCase,
       addFollowup,
+      setCaseUrgency,
       closeCase,
     };
-  }, [role, screenings, redFlags, nineS, sdq, behaviorRecords, checkins, appointments, careCases, homeVisitRecords, drafts]);
+  }, [role, screenings, redFlags, nineS, sdq, behaviorRecords, checkins, appointments, careCases, homeVisitRecords, assessmentWindows, drafts]);
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }

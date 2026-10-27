@@ -68,7 +68,7 @@ export function HomeroomOverview() {
   const { items, summaries } = processStatus(store, termId);
   const shown = items.filter((i) => matches(i, process, status));
   const noData = summaries.length === 0;
-  const { events, periods } = calendarEvents(store, termId, summaries);
+  const { events, periods } = calendarEvents(store, items, !noData);
 
   const pick = (p: ProcessKey | "all", s: StatusFilter) => {
     const same = p === process && s === status;
@@ -176,7 +176,7 @@ export function HomeroomOverview() {
                 <thead>
                   <tr className="border-b border-border text-left text-[12px] text-muted-foreground">
                     <th className="py-2 font-medium">กระบวนการ</th>
-                    <th className="w-28 py-2 font-medium">ปิดรอบ</th>
+                    <th className="w-44 py-2 font-medium">ปิดรอบ</th>
                     {STATUS_COLUMNS.map((s) => (
                       <th key={s} className="w-28 py-2 text-center font-medium">
                         {STATUS_LABEL[s]}
@@ -284,8 +284,16 @@ function ProcessRow({
   return (
     <tr className="border-b border-border">
       {name}
-      <td className="py-3 text-muted-foreground">
-        {row.closesAt ? formatThaiDate(row.closesAt) : <span className="text-[12px]">ตามวันเป้าหมายของ case</span>}
+      <td className="py-3 text-[12.5px] text-muted-foreground">
+        {row.process === "care"
+          ? "ตามวันติดตามของแต่ละ case"
+          : row.closes.length === 0
+            ? "ยังไม่ได้ตั้งช่วงเวลา"
+            : row.closes.map((c) => (
+                <div key={c.label}>
+                  {c.label} {formatThaiDate(c.date)}
+                </div>
+              ))}
       </td>
       {STATUS_COLUMNS.map((s) => (
         <td key={s} className="py-3 text-center">

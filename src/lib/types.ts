@@ -294,7 +294,18 @@ export interface CareFollowup {
   result: string;
   followupDate: string;
   recordedByName: string;
+  /** วันติดตามครั้งถัดไปที่กำหนดตอนบันทึกครั้งนี้ (UC10 Subflow B) */
+  nextFollowupDate?: string;
 }
+
+/** ระดับความเร่งด่วนของ case (รายงาน 2.1.7 ข้อ 2) — PROTOTYPE: จำนวนระดับยังไม่ได้ตกลงกับทีม */
+export type CaseUrgency = "high" | "medium" | "low";
+
+export const CASE_URGENCY_LABEL: Record<CaseUrgency, string> = {
+  high: "เร่งด่วน",
+  medium: "ปานกลาง",
+  low: "ไม่เร่งด่วน",
+};
 
 export interface CareCase {
   caseId: string;
@@ -307,6 +318,9 @@ export interface CareCase {
   careMethods: CareMethod[];
   goal: string;
   targetDate: string;
+  urgency: CaseUrgency;
+  /** วันติดตามครั้งถัดไป ("" = ยังไม่กำหนด) ใช้คำนวณใกล้ครบกำหนด / เกินกำหนดในหน้าภาพรวม */
+  nextFollowupDate: string;
   followups: CareFollowup[];
 }
 

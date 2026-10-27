@@ -5,43 +5,29 @@
  * และ (2) เพิ่ม/แก้ไข/ลบกฎความประพฤติ ควรมีหน้าตาแบบไหน"
  *
  * เก็บในหน่วยความจำล้วน ไม่มีการบันทึกลงที่ใด กดรีเฟรชแล้วค่ากลับไปตั้งต้น
+ * ช่วงเวลาเก็บใน store (ชนิดข้อมูลอยู่ที่ lib/periods.ts) เพื่อให้หน้าภาพรวมคำนวณวันครบกำหนดจากค่าชุดเดียวกัน
+ * ส่วนกฎความประพฤติยังเป็นสถานะร่างของหน้านี้เท่านั้น
  */
 
 import { useCallback, useMemo, useState } from "react";
 import { DEMO_TODAY, behaviorRules as seedRules } from "@/lib/mock-data";
+import { INITIAL_WINDOWS, shiftDate, type AssessmentWindow, type WindowStatus } from "@/lib/periods";
+import { useStore } from "@/lib/store";
 import type { BehaviorRule, SdqRater } from "@/lib/types";
+
+export {
+  INITIAL_WINDOWS,
+  KIND_LABEL,
+  shiftDate,
+  windowStatus,
+  type AssessmentKind,
+  type AssessmentWindow,
+  type WindowStatus,
+} from "@/lib/periods";
 
 /** ขอบเขตภาคเรียนที่ 2/2569 ใช้เป็นแกนเวลาของทุก variant */
 export const TERM_START = "2569-11-01";
 export const TERM_END = "2570-03-31";
-
-export type AssessmentKind = "screening" | "red_flag" | "nine_s" | "sdq" | "eq";
-
-export const KIND_LABEL: Record<AssessmentKind, string> = {
-  screening: "คัดกรอง 6 มิติ",
-  red_flag: "Red Flag",
-  nine_s: "9S",
-  sdq: "SDQ",
-  eq: "EQ",
-};
-
-export interface AssessmentWindow {
-  id: string;
-  kind: AssessmentKind;
-  label: string;
-  round?: 1 | 2;
-  /** วันเปิดให้ทำ (พ.ศ. yyyy-mm-dd) */
-  openDate: string;
-  /** วันปิดรับ */
-  closeDate: string;
-  enabled: boolean;
-  /** ปิดรอบแล้วห้ามบันทึกย้อนหลัง */
-  lockAfterClose: boolean;
-  /** แจ้งเตือนล่วงหน้ากี่วันก่อนปิด */
-  remindDaysBefore: number;
-  /** ผู้ที่ต้องทำแบบประเมินรอบนี้ */
-  raters: SdqRater[];
-}
 
 export const RATER_LABEL: Record<SdqRater, string> = {
   teacher: "ครู",
@@ -49,92 +35,12 @@ export const RATER_LABEL: Record<SdqRater, string> = {
   parent: "ผู้ปกครอง",
 };
 
-export const INITIAL_WINDOWS: AssessmentWindow[] = [
-  {
-    id: "W1",
-    kind: "screening",
-    label: "คัดกรองนักเรียน 6 มิติ",
-    openDate: "2569-11-01",
-    closeDate: "2569-11-30",
-    enabled: true,
-    lockAfterClose: true,
-    remindDaysBefore: 7,
-    raters: ["teacher"],
-  },
-  {
-    id: "W2",
-    kind: "red_flag",
-    label: "ประเมิน Red Flag (กลุ่มเสี่ยง/มีปัญหา)",
-    openDate: "2569-12-01",
-    closeDate: "2569-12-15",
-    enabled: true,
-    lockAfterClose: true,
-    remindDaysBefore: 3,
-    raters: ["teacher"],
-  },
-  {
-    id: "W3",
-    kind: "nine_s",
-    label: "ประเมิน 9S",
-    openDate: "2569-12-16",
-    closeDate: "2569-12-31",
-    enabled: true,
-    lockAfterClose: false,
-    remindDaysBefore: 3,
-    raters: ["teacher"],
-  },
-  {
-    id: "W4",
-    kind: "sdq",
-    label: "SDQ รอบที่ 1",
-    round: 1,
-    openDate: "2570-01-05",
-    closeDate: "2570-01-31",
-    enabled: true,
-    lockAfterClose: true,
-    remindDaysBefore: 7,
-    raters: ["teacher", "student", "parent"],
-  },
-  {
-    id: "W5",
-    kind: "sdq",
-    label: "SDQ รอบที่ 2",
-    round: 2,
-    openDate: "2570-02-10",
-    closeDate: "2570-02-28",
-    enabled: true,
-    lockAfterClose: true,
-    remindDaysBefore: 7,
-    raters: ["teacher", "student", "parent"],
-  },
-  {
-    id: "W6",
-    kind: "eq",
-    label: "ประเมิน EQ ปลายภาค",
-    openDate: "2570-03-01",
-    closeDate: "2570-03-15",
-    enabled: false,
-    lockAfterClose: false,
-    remindDaysBefore: 5,
-    raters: ["teacher", "student"],
-  },
-];
-
-export type WindowStatus = "disabled" | "upcoming" | "open" | "closed";
-
 export const STATUS_META: Record<WindowStatus, { label: string; className: string }> = {
   open: { label: "เปิดให้ทำอยู่", className: "bg-risk-green-bg text-risk-green" },
   upcoming: { label: "ยังไม่ถึงรอบ", className: "bg-accent text-primary" },
   closed: { label: "ปิดรอบแล้ว", className: "bg-muted text-muted-foreground" },
   disabled: { label: "ปิดใช้งาน", className: "bg-risk-amber-bg text-risk-amber" },
 };
-
-export function windowStatus(w: AssessmentWindow, today: string = DEMO_TODAY): WindowStatus {
-  if (!w.enabled) return "disabled";
-  if (today < w.openDate) return "upcoming";
-  if (today > w.closeDate) return "closed";
-  return "open";
-}
 
 /** แปลงวันที่ พ.ศ. เป็นสัดส่วน 0–1 บนแกนเวลาภาคเรียน */
 export function termFraction(date: string): number {
@@ -145,15 +51,6 @@ export function termFraction(date: string): number {
   const start = toMs(TERM_START);
   const end = toMs(TERM_END);
   return Math.min(1, Math.max(0, (toMs(date) - start) / (end - start)));
-}
-
-/** บวก/ลบวันบนสตริงวันที่ พ.ศ. */
-export function shiftDate(date: string, days: number): string {
-  const [y, m, d] = date.split("-").map(Number);
-  const dt = new Date(Date.UTC(y - 543, m - 1, d));
-  dt.setUTCDate(dt.getUTCDate() + days);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${dt.getUTCFullYear() + 543}-${pad(dt.getUTCMonth() + 1)}-${pad(dt.getUTCDate())}`;
 }
 
 /** คู่ของช่วงเวลาที่ทับซ้อนกัน — ใช้เตือนแอดมินว่าครูจะมีงานชนกัน */
@@ -195,12 +92,12 @@ let ruleSeq = 100;
 let windowSeq = 100;
 
 export function useSettingsPrototype() {
-  const [windows, setWindows] = useState<AssessmentWindow[]>(INITIAL_WINDOWS);
+  const { assessmentWindows: windows, setAssessmentWindows: setWindows } = useStore();
   const [rules, setRules] = useState<BehaviorRule[]>(seedRules);
 
   const updateWindow = useCallback((id: string, patch: Partial<AssessmentWindow>) => {
     setWindows((prev) => prev.map((w) => (w.id === id ? { ...w, ...patch } : w)));
-  }, []);
+  }, [setWindows]);
 
   const addWindow = useCallback(() => {
     const id = `W-NEW-${++windowSeq}`;
@@ -219,11 +116,11 @@ export function useSettingsPrototype() {
       },
     ]);
     return id;
-  }, []);
+  }, [setWindows]);
 
   const removeWindow = useCallback((id: string) => {
     setWindows((prev) => prev.filter((w) => w.id !== id));
-  }, []);
+  }, [setWindows]);
 
   const updateRule = useCallback((ruleId: string, patch: Partial<BehaviorRule>) => {
     setRules((prev) => prev.map((r) => (r.ruleId === ruleId ? { ...r, ...patch } : r)));
@@ -251,7 +148,7 @@ export function useSettingsPrototype() {
   const reset = useCallback(() => {
     setWindows(INITIAL_WINDOWS);
     setRules(seedRules);
-  }, []);
+  }, [setWindows]);
 
   const dirty = useMemo(
     () =>

@@ -8,13 +8,12 @@
  */
 
 import { useState } from "react";
-import { ChevronLeft, ChevronRight, Flag, House, Target, type LucideIcon } from "lucide-react";
+import { CalendarClock, ChevronLeft, ChevronRight, Flag, House, Target, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { LinkButton } from "@/components/ui/link-button";
 import { formatThaiDate } from "@/lib/format";
 import { DEMO_TODAY } from "@/lib/mock-data";
-import { PROCESS_LABEL } from "./process-status";
 import {
   EVENT_KINDS,
   EVENT_LABEL,
@@ -30,7 +29,12 @@ const MONTHS = [
 const WEEKDAYS_SHORT = ["อา.", "จ.", "อ.", "พ.", "พฤ.", "ศ.", "ส."];
 const WEEKDAYS = ["อาทิตย์", "จันทร์", "อังคาร", "พุธ", "พฤหัสบดี", "ศุกร์", "เสาร์"];
 
-const EVENT_ICON: Record<EventKind, LucideIcon> = { visit: House, close: Flag, case_target: Target };
+const EVENT_ICON: Record<EventKind, LucideIcon> = {
+  visit: House,
+  case_followup: CalendarClock,
+  close: Flag,
+  case_target: Target,
+};
 
 const pad = (n: number) => String(n).padStart(2, "0");
 const keyOf = (year: number, month: number, day: number) => `${year}-${pad(month)}-${pad(day)}`;
@@ -113,7 +117,7 @@ export function HomeroomCalendar({ events, periods }: { events: CalendarEvent[];
           {openPeriods.length > 0 && (
             <div className="mt-4 space-y-1.5">
               {openPeriods.map((p) => (
-                <PeriodBar key={p.process} period={p} monthStart={monthStart} monthEnd={monthEnd} total={total} />
+                <PeriodBar key={p.id} period={p} monthStart={monthStart} monthEnd={monthEnd} total={total} />
               ))}
             </div>
           )}
@@ -257,7 +261,7 @@ function PeriodBar({
   const closesHere = period.closesAt <= monthEnd;
   return (
     <div className="flex items-center gap-3 text-[12px]">
-      <span className="w-24 shrink-0 font-medium sm:w-40">{PROCESS_LABEL[period.process]}</span>
+      <span className="w-24 shrink-0 font-medium sm:w-40">{period.label}</span>
       <div className="relative h-2 flex-1 rounded-full bg-muted">
         <div
           className="absolute inset-y-0 rounded-full bg-primary/30"

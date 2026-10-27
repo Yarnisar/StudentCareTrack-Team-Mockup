@@ -437,6 +437,8 @@ export const careCases: CareCase[] = [
     goal:
       "ลดความกังวลด้านการเรียนและเศรษฐกิจ โดยประสานทุนการศึกษาจากโรงเรียน และให้คำปรึกษาต่อเนื่องสัปดาห์ละ 1 ครั้ง จนถึงสิ้นภาคเรียน",
     targetDate: "2570-03-31",
+    urgency: "medium",
+    nextFollowupDate: "2570-02-25",
     followups: [
       {
         followupId: "FU-003",
@@ -445,6 +447,7 @@ export const careCases: CareCase[] = [
           "พบว่ารายได้ครัวเรือนต่ำกว่าเกณฑ์ และนักเรียนใช้เวลากับเกมมาก ผู้ปกครองขอความช่วยเหลือด้านทุนการศึกษา",
         followupDate: "2570-02-18",
         recordedByName: CURRENT_TEACHER.name,
+        nextFollowupDate: "2570-02-25",
       },
       {
         followupId: "FU-002",
@@ -473,6 +476,8 @@ export const careCases: CareCase[] = [
     careMethods: ["counseling", "guidance_teacher"],
     goal: "ส่งต่อครูแนะแนวเพื่อประเมินเชิงลึกด้านสุขภาพจิต และติดตามพฤติกรรมการมาสาย",
     targetDate: "2570-03-15",
+    urgency: "high",
+    nextFollowupDate: "2570-02-21",
     followups: [
       {
         followupId: "FU-010",
@@ -480,6 +485,7 @@ export const careCases: CareCase[] = [
         result: "ครูแนะแนวรับเรื่องแล้ว นัดพบนักเรียนสัปดาห์หน้า",
         followupDate: "2570-02-14",
         recordedByName: CURRENT_TEACHER.name,
+        nextFollowupDate: "2570-02-21",
       },
     ],
   },

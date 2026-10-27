@@ -59,7 +59,7 @@ export function VariantA({
 
         <Card>
           <CardContent className="p-6">
-            <h2 className="text-[15.5px] font-bold">ช่วงเวลาการทำแบบประเมิน</h2>
+            <h2 className="text-[15.5px] font-bold">ช่วงเวลาดำเนินงาน</h2>
             <p className="mt-0.5 mb-4 text-[12.5px] text-muted-foreground">
               นอกช่วงเวลาที่กำหนด ระบบจะไม่เปิดให้ครู นักเรียน หรือผู้ปกครองทำแบบประเมินรอบนั้น
             </p>
