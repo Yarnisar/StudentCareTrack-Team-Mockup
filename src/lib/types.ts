@@ -1,5 +1,7 @@
 /** ชนิดข้อมูลหลักของระบบ อ้างอิงตาม ER Diagram ในบทที่ 3 */
 
+import type { VisitForm } from "./home-visit-form";
+
 export type UserRole =
   | "admin_school"
   | "teacher_general"
@@ -236,6 +238,8 @@ export interface HomeVisitAppointment {
   status: AppointmentStatus;
   guardianNote?: string;
   guardianPhone?: string;
+  /** ผู้ดูแลเมื่อผู้ปกครองไม่อยู่บ้าน: ความสัมพันธ์ (เลือกจากรายการ) และชื่อ (ไม่บังคับ) */
+  caretakerRelation?: string;
   caretakerName?: string;
 }
 
@@ -250,6 +254,8 @@ export interface HomeVisitRecord {
   photoLabels: string[];
   signedBy: string;
   signedAt: string;
+  /** คำตอบทั้งแบบฟอร์ม (ข้อมูลตัวอย่างเดิมไม่มี) */
+  form?: VisitForm;
 }
 
 /** 4 ประเภทการช่วยเหลือ ตามแนวทาง HERO OBEC CARE */

@@ -3,6 +3,12 @@
  * อ้างอิงแบบฟอร์มจริงของ สพฐ. ซึ่งรวมการคัดกรองนักเรียนยากจนไว้ด้วยกัน
  */
 
+import type { PreviousVisitForm } from "./mock-data";
+
+export const OTHER_ID = "other";
+/** ข้อความของตัวเลือก "อื่น ๆ" ในรายการแบบข้อความ — เลือกแล้วต้องระบุ */
+export const OTHER_LABEL = "อื่น ๆ";
+
 export interface CheckboxOption {
   id: string;
   label: string;
@@ -195,6 +201,64 @@ export const DEVICE_OPTIONS: CheckboxOption[] = [
   { id: "social_2h", label: "เข้าใช้ LINE, Facebook, X หรือแชท เกินวันละ 2 ชั่วโมง" },
 ];
 
+/** ความสัมพันธ์กับนักเรียนของสมาชิกครัวเรือน (ข้อ 3) — ใช้คำเดียวกันทุกที่เพื่อให้ข้อ 4.1 และ 5.2 คำนวณได้แม่น */
+export const MEMBER_RELATION_OPTIONS = [
+  "นักเรียน",
+  "บิดา", "มารดา", "พ่อเลี้ยง", "แม่เลี้ยง",
+  "พี่ชาย", "พี่สาว", "น้องชาย", "น้องสาว",
+  "ปู่", "ย่า", "ตา", "ยาย", "ทวด",
+  "ลุง", "ป้า", "น้า", "อา",
+  "ญาติอื่น", "ผู้อาศัยที่ไม่ใช่ญาติ",
+];
+
+/** การศึกษาสูงสุดของผู้ปกครอง */
+export const EDUCATION_OPTIONS = [
+  "ไม่ได้เรียน",
+  "ประถมศึกษา",
+  "มัธยมศึกษาตอนต้น",
+  "มัธยมศึกษาตอนปลาย / ปวช.",
+  "ปวส. / อนุปริญญา",
+  "ปริญญาตรี",
+  "สูงกว่าปริญญาตรี",
+];
+
+/** อาชีพหลักของผู้ปกครอง — PROTOTYPE: ยังไม่ได้เทียบกับหมวดอาชีพในแบบฟอร์ม สพฐ. */
+export const OCCUPATION_OPTIONS = [
+  "เกษตรกร",
+  "รับจ้างทั่วไป",
+  "ค้าขาย / ธุรกิจส่วนตัว",
+  "พนักงานบริษัท / โรงงาน",
+  "รับราชการ / รัฐวิสาหกิจ",
+  "ประมง",
+  "แม่บ้าน / พ่อบ้าน",
+  "ว่างงาน",
+  OTHER_LABEL,
+];
+
+/** ตัวเลือกเวลาเดินทางไปโรงเรียน (นาที) */
+export const TRAVEL_TIME_MINUTES = [5, 10, 15, 20, 25, 30, 40, 45, 60, 75, 90, 120, 150, 180, 240];
+
+export function formatMinutes(total: number): string {
+  const h = Math.floor(total / 60);
+  const m = total % 60;
+  if (h === 0) return `${m} นาที`;
+  return m === 0 ? `${h} ชม.` : `${h} ชม. ${m} นาที`;
+}
+
+/** ผู้ดูแลเมื่อผู้ปกครองไม่อยู่บ้าน ที่ผู้ปกครองเลือกล่วงหน้าใน portal */
+export const CARETAKER_RELATION_OPTIONS = [
+  "ปู่", "ย่า", "ตา", "ยาย", "ลุง", "ป้า", "น้า", "อา", "พี่", "ญาติอื่น",
+  "เพื่อนบ้าน",
+  "นักเรียนอยู่บ้านเอง",
+  OTHER_LABEL,
+];
+
+export function formatCaretaker(relation?: string, name?: string): string {
+  if (!relation && !name) return "";
+  if (!relation) return name ?? "";
+  return name ? `${relation} (${name})` : relation;
+}
+
 /** ผู้ให้ข้อมูลนักเรียน */
 export const INFORMANT_OPTIONS = [
   "บิดา", "มารดา", "พี่ชาย", "พี่สาว", "น้า", "อา",
@@ -235,3 +299,318 @@ export interface HouseholdMemberRow {
 export function memberTotal(row: HouseholdMemberRow): number {
   return INCOME_COLUMNS.reduce((sum, col) => sum + (row.income[col.key] || 0), 0);
 }
+
+/* ------------------------------------------------------------------ */
+/* ค่าของแบบฟอร์มทั้งชุด (เก็บเป็นร่างอัตโนมัติ และส่งเข้า store เมื่อบันทึก) */
+/* ------------------------------------------------------------------ */
+
+/** หมวดที่มีปุ่ม "ไม่พบ/ไม่มี" — ต้องเลือกรายการที่พบ หรือยืนยันว่าไม่พบ จึงนับว่าตรวจแล้ว */
+export const NONE_FIELDS = [
+  "dependencies",
+  "housingConditions",
+  "welfareReceived",
+  "healthRisks",
+  "welfareRisks",
+  "duties",
+  "substances",
+  "violence",
+  "sexual",
+  "gaming",
+  "devices",
+] as const;
+export type NoneField = (typeof NONE_FIELDS)[number];
+export type ListField = NoneField | "supportRequests" | "hobbies";
+
+/** ข้อที่มีตัวเลือก "อื่น ๆ" และต้องระบุเพิ่ม */
+export type OtherField =
+  | "occupation"
+  | "caretakerWhenAway"
+  | "supportRequests"
+  | "welfareReceived"
+  | "travelMode"
+  | "duties"
+  | "hobbies";
+
+/** เลือก "อื่น ๆ" ในข้อนั้นอยู่หรือไม่ */
+export function choseOther(form: VisitForm, field: OtherField): boolean {
+  const value = form[field];
+  if (field === "occupation") return value === OTHER_LABEL;
+  return Array.isArray(value) ? value.includes(OTHER_ID) : value === OTHER_ID;
+}
+
+export interface VisitForm {
+  occupation: string;
+  education: string;
+  members: HouseholdMemberRow[];
+  dependencies: string[];
+  housingType: string;
+  housingConditions: string[];
+  vehicles: Record<string, boolean | undefined>;
+  farmland: string;
+  hoursTogether: string;
+  relations: Record<string, string>;
+  caretakerWhenAway: string;
+  supportRequests: string[];
+  welfareReceived: string[];
+  guardianConcern: string;
+  healthRisks: string[];
+  welfareRisks: string[];
+  travelKm: string;
+  travelHours: string;
+  travelMinutes: string;
+  travelMode: string;
+  duties: string[];
+  hobbies: string[];
+  substances: string[];
+  violence: string[];
+  sexual: string[];
+  gaming: string[];
+  internet: string;
+  devices: string[];
+  informant: string;
+  photoType: string;
+  /** หมวดที่ครูยืนยันว่าไม่พบ — แยก "ยังไม่ได้ตรวจ" ออกจาก "ไม่พบ" */
+  noneFound: NoneField[];
+  /** ส่วนที่ดึงจากการเยี่ยมครั้งก่อนและต้องให้ครูยืนยันว่ายังถูกต้อง (UC4 ทางเลือก A) */
+  needsConfirm: ConfirmSection[];
+  confirmed: ConfirmSection[];
+  /** ข้อความที่ระบุเมื่อเลือก "อื่น ๆ" */
+  otherNotes: Partial<Record<OtherField, string>>;
+}
+
+export type ConfirmSection = "household" | "status";
+
+/** ขั้นของแบบฟอร์ม เรียงตามลำดับที่ถามในวันเยี่ยมบ้าน */
+export const VISIT_STEPS = [
+  { title: "ครอบครัวและรายได้", sections: "ข้อ 1–3" },
+  { title: "สถานะครัวเรือน", sections: "ข้อ 4" },
+  { title: "ความสัมพันธ์ในครอบครัว", sections: "ข้อ 5" },
+  { title: "พฤติกรรมและความเสี่ยง", sections: "ข้อ 6" },
+  { title: "ผู้ให้ข้อมูลและรับรอง", sections: "ข้อ 7" },
+] as const;
+
+/** แถวในข้อ 5.2 จับคู่กับคำที่ครูพิมพ์ในช่องความสัมพันธ์ของข้อ 3 */
+const RELATION_KEYWORDS: Record<(typeof FAMILY_MEMBERS)[number], string[]> = {
+  "บิดา": ["บิดา", "พ่อเลี้ยง"],
+  "มารดา": ["มารดา", "แม่เลี้ยง"],
+  "พี่ชาย / น้องชาย": ["พี่ชาย", "น้องชาย"],
+  "พี่สาว / น้องสาว": ["พี่สาว", "น้องสาว"],
+  "ปู่ / ย่า / ตา / ยาย": ["ปู่", "ย่า", "ตา", "ยาย", "ทวด"],
+  "ญาติ": ["ญาติอื่น", "น้า", "อา", "ป้า", "ลุง"],
+};
+
+/**
+ * ข้อ 5.2 ที่ใช้จริง: คำตอบของครู หรือ "ไม่มี" สำหรับคนที่ไม่อยู่ในสมาชิกครัวเรือนข้อ 3
+ * ครูเปลี่ยนได้ เช่น บิดาไม่ได้อยู่บ้านแต่ยังติดต่อกัน
+ */
+export function effectiveRelations(form: VisitForm): Record<string, string> {
+  const relations = form.members.map((m) => m.relation.trim()).filter(Boolean);
+  return Object.fromEntries(
+    FAMILY_MEMBERS.map((row) => {
+      if (form.relations[row]) return [row, form.relations[row]];
+      const present = relations.some((r) => RELATION_KEYWORDS[row].includes(r));
+      return [row, present ? "" : "ไม่มี"];
+    })
+  );
+}
+
+/**
+ * ข้อ 4.1 ที่คำนวณได้จากตารางสมาชิกข้อ 3 — ระบบเลือกให้และล็อกไว้ ถ้าผิดให้แก้ที่ข้อ 3
+ * ข้อ "ว่างงาน" ดูจากรายได้อย่างเดียวไม่ได้ จึงเป็นแค่ข้อเสนอให้ครูถาม (ดู possibleUnemployed)
+ */
+export function derivedDependencies(form: VisitForm): string[] {
+  return [
+    ...(form.members.some((m) => m.disability) ? ["dep_disabled"] : []),
+    ...(form.members.some((m) => Number(m.age) > 60) ? ["dep_elderly"] : []),
+  ];
+}
+
+/** สมาชิกอายุ 15–65 ปีที่ไม่ใช่นักเรียนและไม่มีรายได้ — อาจว่างงาน ให้ครูถามยืนยัน */
+export function possibleUnemployed(form: VisitForm): HouseholdMemberRow[] {
+  return form.members.filter((m) => {
+    const age = Number(m.age);
+    return m.age !== "" && age >= 15 && age <= 65 && m.relation !== "นักเรียน" && memberTotal(m) === 0;
+  });
+}
+
+/** ค่าที่ใช้จริงตอนบันทึก: รวมค่าที่ระบบคำนวณให้ (ข้อ 4.1 และ 5.2) */
+export function finalizeVisitForm(form: VisitForm): VisitForm {
+  return {
+    ...form,
+    dependencies: [...new Set([...derivedDependencies(form), ...form.dependencies])],
+    relations: effectiveRelations(form),
+  };
+}
+
+/** แถวในข้อ 5.2 ที่ระบบเลือก "ไม่มี" ให้ (ครูยังไม่ได้เลือกเอง) */
+export function suggestedNoRelation(form: VisitForm): string[] {
+  const effective = effectiveRelations(form);
+  return FAMILY_MEMBERS.filter((row) => !form.relations[row] && effective[row] === "ไม่มี");
+}
+
+export const emptyMember = (id: string): HouseholdMemberRow => ({
+  id,
+  relation: "",
+  age: "",
+  disability: false,
+  income: { wage: 0, agriculture: 0, business: 0, welfare: 0, other: 0 },
+});
+
+/** ข้อ 5.3 จากผู้ดูแลที่ผู้ปกครองเลือกไว้ล่วงหน้า (ตัวเลือกเดียวกันจึงไม่ต้องเดา) */
+export function caretakerOptionFrom(relation: string | undefined): string {
+  if (!relation) return "";
+  if (relation === "เพื่อนบ้าน") return "neighbor";
+  if (relation === "นักเรียนอยู่บ้านเอง") return "alone";
+  if (relation === OTHER_LABEL) return OTHER_ID;
+  return "relative";
+}
+
+export interface VisitContext {
+  /** ความสัมพันธ์ของผู้ปกครองตามทะเบียน ใช้เป็นผู้ให้ข้อมูลและสมาชิกเริ่มต้น */
+  guardianRelation?: string;
+  /** ผู้ดูแลเมื่อผู้ปกครองไม่อยู่ ที่ผู้ปกครองเลือกไว้ล่วงหน้า */
+  caretakerRelation?: string;
+  caretakerName?: string;
+}
+
+/**
+ * ค่าเริ่มต้น: ดึงจากการเยี่ยมบ้านครั้งก่อน ทะเบียนนักเรียน และคำตอบล่วงหน้าของผู้ปกครอง
+ * ไม่เดาข้อ 5.6 และ 5.8 จากข้อความอิสระของผู้ปกครอง — แสดงข้อความให้ครูอ่านประกอบแทน
+ */
+export function initialVisitForm(
+  previous: PreviousVisitForm | undefined,
+  { guardianRelation, caretakerRelation, caretakerName }: VisitContext
+): VisitForm {
+  const firstVisitMembers = [
+    { ...emptyMember("m1"), relation: "นักเรียน" },
+    ...(guardianRelation ? [{ ...emptyMember("m2"), relation: guardianRelation }] : []),
+  ];
+
+  // คำตอบ "ไม่มี" จากครั้งก่อนถือว่าตรวจแล้ว ครูแก้ได้ถ้าเปลี่ยนไป
+  const previousNone = previous
+    ? (["dependencies", "housingConditions", "duties"] as const).filter((f) => previous[f].length === 0)
+    : [];
+
+  return {
+    occupation: "",
+    education: "",
+    members: previous ? previous.householdMembers.map((m) => ({ ...m })) : firstVisitMembers,
+    dependencies: previous?.dependencies ?? [],
+    housingType: previous?.housingType ?? "",
+    housingConditions: previous?.housingConditions ?? [],
+    vehicles: previous
+      ? Object.fromEntries(VEHICLE_OPTIONS.map((v) => [v.id, previous.vehicles.includes(v.id)]))
+      : {},
+    farmland: previous?.farmland ?? "",
+    hoursTogether: previous?.hoursTogether ?? "",
+    relations: {},
+    caretakerWhenAway: previous?.caretakerWhenAway ?? caretakerOptionFrom(caretakerRelation),
+    supportRequests: [],
+    welfareReceived: [],
+    guardianConcern: "",
+    healthRisks: [],
+    welfareRisks: [],
+    travelKm: previous?.travelKm ?? "",
+    travelHours: previous?.travelHours ?? "",
+    travelMinutes: previous?.travelMinutes ?? "",
+    travelMode: previous?.travelMode ?? "",
+    duties: previous?.duties ?? [],
+    hobbies: [],
+    substances: [],
+    violence: [],
+    sexual: [],
+    gaming: [],
+    internet: previous?.internet ?? "",
+    devices: [],
+    informant: guardianRelation && INFORMANT_OPTIONS.includes(guardianRelation) ? guardianRelation : "",
+    photoType: "",
+    noneFound: [...previousNone],
+    needsConfirm: previous ? ["household", "status"] : [],
+    confirmed: [],
+    // ผู้ปกครองเลือก "อื่น ๆ" และระบุชื่อไว้ → ใช้เป็นข้อความระบุของข้อ 5.3
+    otherNotes:
+      !previous && caretakerOptionFrom(caretakerRelation) === OTHER_ID && caretakerName
+        ? { caretakerWhenAway: caretakerName }
+        : {},
+  };
+}
+
+/**
+ * ข้อบังคับที่ยังไม่ได้ตอบ เรียงตามลำดับในแบบฟอร์ม
+ * ข้อไม่บังคับ: อาชีพ/การศึกษาผู้ปกครอง, 5.6, 5.8 และ 6.5 (ไม่มีตัวเลือก "ไม่มี" ในแบบฟอร์ม)
+ */
+export function missingVisitAnswers(
+  form: VisitForm
+): { key: string; label: string; page: number }[] {
+  const listDone = (f: NoneField) =>
+    form[f].length > 0 ||
+    form.noneFound.includes(f) ||
+    (f === "dependencies" && derivedDependencies(form).length > 0);
+  const confirmDone = (s: ConfirmSection) => !form.needsConfirm.includes(s) || form.confirmed.includes(s);
+  const relations = effectiveRelations(form);
+  /** เลือก "อื่น ๆ" แล้วต้องระบุด้วย */
+  const otherDone = (f: OtherField) => !choseOther(form, f) || !!form.otherNotes?.[f]?.trim();
+  const checks: [key: string, done: boolean][] = [
+    ["3", form.members.length > 0 && form.members.every((m) => m.relation.trim() !== "")],
+    ["confirm-household", confirmDone("household")],
+    ["confirm-status", confirmDone("status")],
+    ["4.1", listDone("dependencies")],
+    ["4.2", form.housingType !== ""],
+    ["4.3", listDone("housingConditions")],
+    ["4.4", VEHICLE_OPTIONS.every((v) => form.vehicles[v.id] !== undefined)],
+    ["4.5", form.farmland !== ""],
+    ["5.1", form.hoursTogether.trim() !== ""],
+    ["5.2", FAMILY_MEMBERS.every((m) => !!relations[m])],
+    ["5.3", form.caretakerWhenAway !== "" && otherDone("caretakerWhenAway")],
+    ["5.7", listDone("welfareReceived") && otherDone("welfareReceived")],
+    ["6.1", listDone("healthRisks")],
+    ["6.2", listDone("welfareRisks")],
+    ["6.3", form.travelKm.trim() !== "" && form.travelMode !== "" && otherDone("travelMode")],
+    ["6.4", listDone("duties") && otherDone("duties")],
+    ["6.6", listDone("substances")],
+    ["6.7", listDone("violence")],
+    ["6.8", listDone("sexual")],
+    ["6.9", listDone("gaming")],
+    ["6.10", form.internet !== ""],
+    ["6.11", listDone("devices")],
+    ["informant", form.informant !== ""],
+    ["photoType", form.photoType !== ""],
+  ];
+  const LABELS: Record<string, string> = {
+    "confirm-household": "ยืนยันข้อ 3",
+    "confirm-status": "ยืนยันข้อ 4",
+    informant: "ผู้ให้ข้อมูล",
+    photoType: "ภาพถ่าย",
+  };
+  return checks
+    .filter(([, done]) => !done)
+    .map(([key]) => ({ key, label: LABELS[key] ?? `ข้อ ${key}`, page: stepOf(key) }));
+}
+
+/** ขั้นของแบบฟอร์มที่ข้อนั้นอยู่ (ลำดับตาม VISIT_STEPS) */
+export function stepOf(key: string): number {
+  if (key === "confirm-household" || key === "3") return 0;
+  if (key === "confirm-status" || key.startsWith("4.")) return 1;
+  if (key.startsWith("5.")) return 2;
+  if (key.startsWith("6.")) return 3;
+  return 4;
+}
+
+/** หมวดความเสี่ยงของนักเรียน (ข้อ 6) ที่ใช้สรุปผลและเสนอเปิด case */
+const RISK_GROUPS: [field: NoneField, options: CheckboxOption[]][] = [
+  ["healthRisks", HEALTH_RISK_OPTIONS],
+  ["welfareRisks", WELFARE_RISK_OPTIONS],
+  ["substances", SUBSTANCE_OPTIONS],
+  ["violence", VIOLENCE_OPTIONS],
+  ["sexual", SEXUAL_OPTIONS],
+  ["gaming", GAMING_OPTIONS],
+];
+
+export function visitRiskFindings(form: VisitForm): string[] {
+  return RISK_GROUPS.flatMap(([field, options]) =>
+    options.filter((o) => form[field].includes(o.id)).map((o) => o.label)
+  );
+}
+
+/** เกณฑ์รายได้เฉลี่ยต่อคนต่อเดือนของการคัดกรองนักเรียนยากจน */
+export const POVERTY_LINE = 3000;

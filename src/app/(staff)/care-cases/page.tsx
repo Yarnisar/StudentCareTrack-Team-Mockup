@@ -53,6 +53,7 @@ function CareCasesContent() {
   const student = activeCase ? store.getStudent(activeCase.studentId) : undefined;
 
   const triggerSourceFor = (studentId: string) => {
+    if (from === "home_visit") return "ผลการเยี่ยมบ้าน";
     if (from !== "sdq") return undefined;
     const teacherSdq = store
       .sdqOf(studentId)

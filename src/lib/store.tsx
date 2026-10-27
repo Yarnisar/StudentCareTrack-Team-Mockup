@@ -17,7 +17,7 @@ import {
   CURRENT_TERM,
   dcSummaries,
   educationDocuments as seedDocuments,
-  homeVisitRecords,
+  homeVisitRecords as seedHomeVisitRecords,
   screenings as seedScreenings,
   sdqAssessments as seedSdq,
   students,
@@ -43,6 +43,7 @@ import {
   CheckinLog,
   DIMENSION_ORDER,
   HomeVisitAppointment,
+  HomeVisitRecord,
   NineSAssessment,
   RedFlagAssessment,
   RiskGroup,
@@ -76,6 +77,7 @@ interface StoreValue {
   checkins: CheckinLog[];
   appointments: HomeVisitAppointment[];
   careCases: CareCase[];
+  homeVisitRecords: HomeVisitRecord[];
 
   getStudent: (studentId: string) => Student | undefined;
   latestScreening: (studentId: string) => Screening | undefined;
@@ -96,7 +98,15 @@ interface StoreValue {
   addBehaviorRecord: (studentId: string, ruleId: string, description: string) => void;
   checkIn: (studentId: string, simulatedTime?: string) => CheckinOutcome | null;
   setAppointmentStatus: (appointmentId: string, status: AppointmentStatus) => void;
-  saveGuardianInfo: (appointmentId: string, info: { guardianPhone: string; caretakerName: string; guardianNote: string }) => void;
+  saveGuardianInfo: (
+    appointmentId: string,
+    info: { guardianPhone: string; caretakerRelation: string; caretakerName: string; guardianNote: string }
+  ) => void;
+  /** บันทึกผลการเยี่ยมบ้าน ปิดนัดหมายเป็น "เสร็จสิ้น" และลบร่าง */
+  saveHomeVisit: (
+    appointmentId: string,
+    result: Omit<HomeVisitRecord, "recordId" | "appointmentId" | "studentId" | "signedAt">
+  ) => HomeVisitRecord | null;
   openCase: (
     studentId: string,
     supportType: SupportType,
@@ -113,9 +123,10 @@ const StoreContext = createContext<StoreValue | null>(null);
 let seq = 1000;
 const nextId = (prefix: string) => `${prefix}-${++seq}`;
 
-export type DraftForm = "screening" | "red_flag" | "nine_s" | `sdq_${SdqRater}`;
+export type DraftForm = "screening" | "red_flag" | "nine_s" | `sdq_${SdqRater}` | "home_visit";
 
-export const draftKey = (form: DraftForm, studentId: string) => `${form}:${studentId}`;
+/** id คือ studentId ของแบบประเมิน หรือ appointmentId ของการเยี่ยมบ้าน */
+export const draftKey = (form: DraftForm, id: string) => `${form}:${id}`;
 
 export function StoreProvider({ children }: { children: ReactNode }) {
   // คำนวณจาก URL ของหน้าแรกที่เปิด ให้ผลเหมือนกันทั้งฝั่ง server และ client (ไม่เกิด hydration mismatch)
@@ -129,6 +140,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [checkins, setCheckins] = useState<CheckinLog[]>(seedCheckins);
   const [appointments, setAppointments] = useState<HomeVisitAppointment[]>(seedAppointments);
   const [careCases, setCareCases] = useState<CareCase[]>(seedCareCases);
+  const [homeVisitRecords, setHomeVisitRecords] = useState<HomeVisitRecord[]>(seedHomeVisitRecords);
   const [drafts, setDrafts] = useState<Record<string, unknown>>({});
 
   const value = useMemo<StoreValue>(() => {
@@ -433,6 +445,22 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       );
     };
 
+    const saveHomeVisit: StoreValue["saveHomeVisit"] = (appointmentId, result) => {
+      const appointment = appointments.find((a) => a.appointmentId === appointmentId);
+      if (!appointment) return null;
+      const record: HomeVisitRecord = {
+        ...result,
+        recordId: nextId("HVR"),
+        appointmentId,
+        studentId: appointment.studentId,
+        signedAt: nowThaiIso().split("T")[0],
+      };
+      setHomeVisitRecords((prev) => [record, ...prev.filter((r) => r.appointmentId !== appointmentId)]);
+      setAppointmentStatus(appointmentId, "completed");
+      clearDraft(draftKey("home_visit", appointmentId));
+      return record;
+    };
+
     const openCase: StoreValue["openCase"] = (studentId, supportType, methods, goal, options) => {
       const record: CareCase = {
         caseId: nextId("CASE"),
@@ -495,6 +523,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       checkins,
       appointments,
       careCases,
+      homeVisitRecords,
       getStudent,
       latestScreening,
       overallRiskOf,
@@ -512,11 +541,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       checkIn,
       setAppointmentStatus,
       saveGuardianInfo,
+      saveHomeVisit,
       openCase,
       addFollowup,
       closeCase,
     };
-  }, [role, screenings, redFlags, nineS, sdq, behaviorRecords, checkins, appointments, careCases, drafts]);
+  }, [role, screenings, redFlags, nineS, sdq, behaviorRecords, checkins, appointments, careCases, homeVisitRecords, drafts]);
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }
@@ -527,4 +557,4 @@ export function useStore() {
   return ctx;
 }
 
-export { behaviorRules, dcSummaries, homeVisitRecords, seedDocuments as educationDocuments };
+export { behaviorRules, dcSummaries, seedDocuments as educationDocuments };

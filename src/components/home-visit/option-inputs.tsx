@@ -4,7 +4,27 @@ import { Check, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { cn } from "cn";
 import { AutoBadge, FillSource } from "./field-shell";
-import type { CheckboxOption } from "@/lib/home-visit-form";
+import { Input } from "@/components/ui/input";
+import { OTHER_ID, type CheckboxOption } from "@/lib/home-visit-form";
+
+/** ช่องระบุเพิ่มเมื่อเลือก "อื่น ๆ" */
+export interface OtherNote {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+}
+
+function OtherInput({ note, label }: { note: OtherNote; label: string }) {
+  return (
+    <Input
+      aria-label={`ระบุ${label}`}
+      value={note.value}
+      onChange={(e) => note.onChange(e.target.value)}
+      placeholder={note.placeholder ?? "ระบุ"}
+      className="mt-2 h-10"
+    />
+  );
+}
 
 /* ------------------------------------------------------------------ */
 /* หัวข้อของกลุ่มตัวเลือก                                              */
@@ -57,8 +77,13 @@ export function ChipGroup({
   source,
   hint,
   columns = 2,
-  /** ปุ่มทางลัดสำหรับหมวดความเสี่ยง: ยืนยันว่าไม่พบรายการใดในหมวดนี้ */
+  /** ปุ่มยืนยันว่าไม่พบรายการใดในหมวดนี้ — แยกจาก "ยังไม่ได้ตรวจ" (ไม่ได้เลือกให้ตั้งแต่ต้น) */
   noneLabel,
+  noneSelected = false,
+  onNone,
+  lockedIds = [],
+  lockedNote,
+  other,
 }: {
   label: string;
   options: CheckboxOption[];
@@ -69,8 +94,17 @@ export function ChipGroup({
   hint?: string;
   columns?: number;
   noneLabel?: string;
+  noneSelected?: boolean;
+  onNone?: () => void;
+  /** ตัวเลือกที่ระบบเลือกให้จากข้อมูลส่วนอื่น ครูกดเปลี่ยนตรงนี้ไม่ได้ */
+  lockedIds?: string[];
+  /** ข้อความใต้ตัวเลือกที่ถูกล็อก เช่น "จากตารางข้อ 3" */
+  lockedNote?: string;
+  /** แสดงช่องระบุเมื่อเลือก "อื่น ๆ" */
+  other?: OtherNote;
 }) {
-  const none = selected.length === 0;
+  const count = new Set([...selected, ...lockedIds]).size;
+  const none = noneSelected && count === 0;
 
   return (
     <div>
@@ -78,13 +112,14 @@ export function ChipGroup({
         label={label}
         source={source}
         hint={hint}
-        selectedCount={selected.length}
+        selectedCount={count}
         actions={
           <div className="flex items-center gap-2">
             {noneLabel && (
               <button
                 type="button"
-                onClick={onClear}
+                aria-pressed={none}
+                onClick={onNone}
                 className={cn(
                   "flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[12px] font-semibold transition-colors",
                   none
@@ -96,7 +131,7 @@ export function ChipGroup({
                 {noneLabel}
               </button>
             )}
-            {!noneLabel && selected.length > 0 && onClear && (
+            {!noneLabel && count > 0 && onClear && (
               <button
                 type="button"
                 onClick={onClear}
@@ -114,18 +149,21 @@ export function ChipGroup({
         style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
       >
         {options.map((opt) => {
-          const active = selected.includes(opt.id);
+          const locked = lockedIds.includes(opt.id);
+          const active = locked || selected.includes(opt.id);
           return (
             <button
               key={opt.id}
               type="button"
               aria-pressed={active}
+              disabled={locked}
               onClick={() => onToggle(opt.id)}
               className={cn(
                 CHIP_BASE,
                 active
                   ? "border-primary bg-accent font-semibold text-primary"
-                  : "border-border bg-card hover:border-primary/40 hover:bg-muted/60"
+                  : "border-border bg-card hover:border-primary/40 hover:bg-muted/60",
+                locked && "cursor-default"
               )}
             >
               <span
@@ -136,11 +174,19 @@ export function ChipGroup({
               >
                 {active && <Check className="size-3.5 text-primary-foreground" strokeWidth={3} />}
               </span>
-              {opt.label}
+              <span>
+                {opt.label}
+                {locked && lockedNote && (
+                  <span className="block text-[11.5px] font-normal text-muted-foreground">
+                    {lockedNote}
+                  </span>
+                )}
+              </span>
             </button>
           );
         })}
       </div>
+      {other && selected.includes(OTHER_ID) && <OtherInput note={other} label={label} />}
     </div>
   );
 }
@@ -157,6 +203,7 @@ export function ChipSelect({
   source,
   hint,
   columns = 2,
+  other,
 }: {
   label: string;
   options: CheckboxOption[];
@@ -165,6 +212,8 @@ export function ChipSelect({
   source?: FillSource;
   hint?: string;
   columns?: number;
+  /** แสดงช่องระบุเมื่อเลือก "อื่น ๆ" */
+  other?: OtherNote;
 }) {
   return (
     <div>
@@ -201,6 +250,7 @@ export function ChipSelect({
           );
         })}
       </div>
+      {other && value === OTHER_ID && <OtherInput note={other} label={label} />}
     </div>
   );
 }

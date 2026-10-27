@@ -376,7 +376,8 @@ export const appointments: HomeVisitAppointment[] = [
     proposedDate: "2570-02-18T15:30:00",
     status: "confirmed",
     guardianPhone: "08x-xxx-4471",
-    caretakerName: "ยาย (นางบุญมา สายใจ)",
+    caretakerRelation: "ยาย",
+    caretakerName: "นางบุญมา สายใจ",
     guardianNote: "อยากขอคำแนะนำเรื่องทุนการศึกษา และการดูแลเรื่องการใช้โทรศัพท์ของลูก",
   },
   {

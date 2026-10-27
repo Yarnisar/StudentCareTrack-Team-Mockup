@@ -1,9 +1,28 @@
 "use client";
 
-import { use, useMemo, useState } from "react";
+import { use, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Camera, ChevronLeft, Plus, Sparkles, Trash2 } from "lucide-react";
+import {
+  AlertTriangle,
+  Camera,
+  Check,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+  Sparkles,
+  Trash2,
+} from "lucide-react";
+import { cn } from "cn";
+import { AutosaveStatus } from "@/components/assessment/autosave-status";
+import {
+  MissingNote,
+  MissingSummary,
+  questionShellClass,
+  useMissingAnswers,
+} from "@/components/assessment/missing-answers";
+import { useDraft } from "@/components/assessment/use-draft";
 import { PageHeader } from "@/components/layout/page-header";
 import {
   AutoBadge,
@@ -24,15 +43,26 @@ import { LinkButton } from "@/components/ui/link-button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { NativeSelect } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
-import { CURRENT_TEACHER, previousVisitForms, SCHOOL_NAME } from "@/lib/mock-data";
-import { useStore } from "@/lib/store";
+import { previousVisitForms, SCHOOL_NAME } from "@/lib/mock-data";
+import { ROLE_INFO } from "@/lib/roles";
+import { draftKey, useStore } from "@/lib/store";
 import { formatBaht, formatThaiDate } from "@/lib/format";
 import {
   CARETAKER_OPTIONS,
+  caretakerOptionFrom,
   DEPENDENCY_OPTIONS,
+  derivedDependencies,
   DEVICE_OPTIONS,
+  type ConfirmSection,
   DUTY_OPTIONS,
+  EDUCATION_OPTIONS,
+  formatCaretaker,
+  formatMinutes,
+  effectiveRelations,
+  emptyMember,
+  finalizeVisitForm,
   FAMILY_MEMBERS,
   FARMLAND_OPTIONS,
   GAMING_OPTIONS,
@@ -42,20 +72,35 @@ import {
   HOUSING_TYPE_OPTIONS,
   INCOME_COLUMNS,
   INFORMANT_OPTIONS,
+  MEMBER_RELATION_OPTIONS,
+  OCCUPATION_OPTIONS,
+  OTHER_LABEL,
+  type OtherField,
+  initialVisitForm,
   INTERNET_OPTIONS,
   IncomeKey,
   HouseholdMemberRow,
+  type ListField,
   memberTotal,
+  missingVisitAnswers,
+  type NoneField,
   PHOTO_TYPE_OPTIONS,
+  possibleUnemployed,
+  POVERTY_LINE,
   RELATIONSHIP_LEVELS,
   SEXUAL_OPTIONS,
   SUBSTANCE_OPTIONS,
+  suggestedNoRelation,
   SUPPORT_REQUEST_OPTIONS,
   TRAVEL_OPTIONS,
+  TRAVEL_TIME_MINUTES,
   VEHICLE_OPTIONS,
   VIOLENCE_OPTIONS,
   WELFARE_RECEIVED_OPTIONS,
   WELFARE_RISK_OPTIONS,
+  type VisitForm,
+  VISIT_STEPS,
+  visitRiskFindings,
 } from "@/lib/home-visit-form";
 
 export default function HomeVisitRecordPage({
@@ -74,20 +119,11 @@ export default function HomeVisitRecordPage({
 
   /* ---------------- ค่าเริ่มต้นที่ระบบกรอกให้อัตโนมัติ ---------------- */
 
-  const autoFilled = useMemo(() => {
+  // นับเฉพาะคำตอบในแบบฟอร์มที่ระบบกรอกให้จริง (ไม่นับช่องอ่านอย่างเดียวของข้อ 1)
+  const autoFilled = (() => {
     const map = new Map<string, FillSource>();
     if (!student) return map;
 
-    // จากทะเบียนนักเรียน
-    ["school", "studentName", "classRoom", "studentCitizenId", "guardianName", "guardianRelation", "address"].forEach(
-      (k) => map.set(k, "registry")
-    );
-    // จากข้อมูลที่ผู้ปกครองกรอกล่วงหน้าผ่านระบบ
-    if (appointment?.guardianPhone) map.set("guardianPhone", "guardian");
-    if (appointment?.caretakerName) map.set("caretakerNote", "guardian");
-    if (appointment?.guardianNote) map.set("guardianConcern", "guardian");
-    if (appointment?.guardianNote) map.set("supportRequests", "guardian");
-    // จากการเยี่ยมบ้านครั้งก่อน
     if (previous) {
       [
         "householdMembers",
@@ -102,64 +138,38 @@ export default function HomeVisitRecordPage({
         "duties",
         "internet",
       ].forEach((k) => map.set(k, "previous"));
+    } else {
+      // เยี่ยมครั้งแรก: ใส่นักเรียนและผู้ปกครองตามทะเบียนเป็นสมาชิกเริ่มต้น
+      map.set("householdMembers", "registry");
+      if (caretakerOptionFrom(appointment?.caretakerRelation)) map.set("caretakerWhenAway", "guardian");
     }
-    // จากผลการคัดกรอง 6 มิติ
-    if (screening) {
-      const flagged = screening.results.filter((r) => r.group !== "green").map((r) => r.dimension);
-      if (flagged.includes("physical")) map.set("healthRisks", "screening");
-      if (flagged.includes("welfare")) map.set("welfareRisks", "screening");
-      if (flagged.includes("behavior")) map.set("gaming", "screening");
-    }
+    if (INFORMANT_OPTIONS.includes(student.guardianRelation)) map.set("informant", "registry");
     return map;
-  }, [student, appointment, previous, screening]);
+  })();
 
-  const initialMembers: HouseholdMemberRow[] = previous
-    ? previous.householdMembers.map((m) => ({ ...m }))
-    : [
-        {
-          id: "m1",
-          relation: "",
-          age: "",
-          disability: false,
-          income: { wage: 0, agriculture: 0, business: 0, welfare: 0, other: 0 },
-        },
-      ];
+  /** มิติที่ผลคัดกรองเข้าเกณฑ์ — ไม่ได้กรอกให้ แต่เตือนให้ถามเรื่องนั้นเป็นพิเศษ */
+  const flaggedDimensions = new Set(
+    screening?.results.filter((r) => r.group !== "green").map((r) => r.dimension) ?? []
+  );
 
-  const [members, setMembers] = useState<HouseholdMemberRow[]>(initialMembers);
-  const [dependencies, setDependencies] = useState<string[]>(previous?.dependencies ?? []);
-  const [housingType, setHousingType] = useState(previous?.housingType ?? "");
-  const [housingConditions, setHousingConditions] = useState<string[]>(
-    previous?.housingConditions ?? []
+  // ทุกช่องอยู่ในก้อนเดียว บันทึกเป็นร่างอัตโนมัติทุกครั้งที่เปลี่ยน (ไม่ต้องกดบันทึกร่าง)
+  const draft = useDraft<VisitForm>(draftKey("home_visit", appointmentId), () =>
+    initialVisitForm(previous, {
+      guardianRelation: student?.guardianRelation,
+      caretakerRelation: appointment?.caretakerRelation,
+      caretakerName: appointment?.caretakerName,
+    })
   );
-  const [vehicles, setVehicles] = useState<Record<string, boolean | undefined>>(() =>
-    Object.fromEntries((previous?.vehicles ?? []).map((v) => [v, true]))
+  const form = draft.value;
+  // แบ่งเป็นขั้นตามหัวข้อของแบบฟอร์ม ข้ามไปขั้นไหนก็ได้ และพาข้ามขั้นได้เมื่อมีข้อที่ยังขาด
+  // เปิดร่างที่ทำค้างไว้ → เริ่มที่ขั้นแรกที่ยังไม่ครบ
+  const [step, setStep] = useState(() =>
+    draft.restored ? (missingVisitAnswers(draft.value)[0]?.page ?? 0) : 0
   );
-  const [farmland, setFarmland] = useState(previous?.farmland ?? "");
-  const [hoursTogether, setHoursTogether] = useState(previous?.hoursTogether ?? "");
-  const [relations, setRelations] = useState<Record<string, string>>({});
-  const [caretakerWhenAway, setCaretakerWhenAway] = useState(previous?.caretakerWhenAway ?? "");
-  const [supportRequests, setSupportRequests] = useState<string[]>(
-    appointment?.guardianNote ? ["economic"] : []
-  );
-  const [welfareReceived, setWelfareReceived] = useState<string[]>([]);
-  const [guardianConcern, setGuardianConcern] = useState(appointment?.guardianNote ?? "");
-  const [healthRisks, setHealthRisks] = useState<string[]>([]);
-  const [welfareRisks, setWelfareRisks] = useState<string[]>([]);
-  const [travelKm, setTravelKm] = useState(previous?.travelKm ?? "");
-  const [travelHours, setTravelHours] = useState(previous?.travelHours ?? "");
-  const [travelMinutes, setTravelMinutes] = useState(previous?.travelMinutes ?? "");
-  const [travelMode, setTravelMode] = useState(previous?.travelMode ?? "");
-  const [duties, setDuties] = useState<string[]>(previous?.duties ?? []);
-  const [hobbies, setHobbies] = useState<string[]>([]);
-  const [substances, setSubstances] = useState<string[]>([]);
-  const [violence, setViolence] = useState<string[]>([]);
-  const [sexual, setSexual] = useState<string[]>([]);
-  const [gaming, setGaming] = useState<string[]>([]);
-  const [internet, setInternet] = useState(previous?.internet ?? "");
-  const [devices, setDevices] = useState<string[]>([]);
-  const [informant, setInformant] = useState("");
-  const [photoType, setPhotoType] = useState("");
-  const [onlyEmpty, setOnlyEmpty] = useState(false);
+  const [showRegistry, setShowRegistry] = useState(false);
+  const missing = useMissingAnswers(setStep);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [saved, setSaved] = useState<{ findings: string[]; poor: boolean } | null>(null);
 
   if (!appointment || !student) {
     return (
@@ -169,26 +179,155 @@ export default function HomeVisitRecordPage({
     );
   }
 
+  const { members } = form;
   const totalIncome = members.reduce((sum, m) => sum + memberTotal(m), 0);
   const perCapita = members.length > 0 ? Math.round(totalIncome / members.length) : 0;
 
-  /** สลับค่าในรายการแบบ functional update — กันการกดติดกันเร็ว ๆ แล้วค่าหาย */
-  const toggle = (
-    set: React.Dispatch<React.SetStateAction<string[]>>,
-    id: string
-  ) => set((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  const set = <K extends keyof VisitForm>(key: K, value: VisitForm[K]) =>
+    draft.update((prev) => ({ ...prev, [key]: value }));
 
-  const autoCount = autoFilled.size;
-  const totalFields = 24;
-  const percent = Math.round((autoCount / totalFields) * 100);
+  const setMembers = (fn: (prev: HouseholdMemberRow[]) => HouseholdMemberRow[]) =>
+    draft.update((prev) => ({ ...prev, members: fn(prev.members) }));
+
+  /** เลือกรายการในหมวด = ตรวจแล้วและพบ จึงยกเลิก "ไม่พบ" ของหมวดนั้น */
+  const toggleItem = (field: ListField, id: string) =>
+    draft.update((prev) => ({
+      ...prev,
+      [field]: prev[field].includes(id) ? prev[field].filter((x) => x !== id) : [...prev[field], id],
+      noneFound: prev.noneFound.filter((f) => f !== field),
+    }));
+
+  const toggleNone = (field: NoneField) =>
+    draft.update((prev) =>
+      prev.noneFound.includes(field)
+        ? { ...prev, noneFound: prev.noneFound.filter((f) => f !== field) }
+        : { ...prev, [field]: [], noneFound: [...prev.noneFound, field] }
+    );
+
+  /** props ของ ChipGroup สำหรับหมวดที่มีปุ่ม "ไม่พบ" */
+  const noneGroup = (field: NoneField) => ({
+    selected: form[field],
+    onToggle: (id: string) => toggleItem(field, id),
+    onClear: () => set(field, []),
+    noneSelected: form.noneFound.includes(field),
+    onNone: () => toggleNone(field),
+  });
+
+  /** ช่องระบุของตัวเลือก "อื่น ๆ" */
+  const otherNote = (field: OtherField, placeholder?: string) => ({
+    value: form.otherNotes?.[field] ?? "",
+    onChange: (value: string) => set("otherNotes", { ...form.otherNotes, [field]: value }),
+    placeholder,
+  });
+
+  // เวลาเดินทางเก็บเป็นชั่วโมงกับนาทีตามแบบฟอร์ม แต่เลือกจากรายการเดียว
+  const travelTotal =
+    form.travelHours === "" && form.travelMinutes === ""
+      ? ""
+      : String((Number(form.travelHours) || 0) * 60 + (Number(form.travelMinutes) || 0));
+  // ค่าจากการเยี่ยมครั้งก่อนที่ไม่ตรงกับรายการ ยังแสดงเป็นตัวเลือกได้
+  const travelChoices =
+    travelTotal === "" || TRAVEL_TIME_MINUTES.includes(Number(travelTotal))
+      ? TRAVEL_TIME_MINUTES
+      : [...TRAVEL_TIME_MINUTES, Number(travelTotal)].sort((a, b) => a - b);
+
+  const toggleConfirm = (section: ConfirmSection) =>
+    set(
+      "confirmed",
+      form.confirmed.includes(section)
+        ? form.confirmed.filter((c) => c !== section)
+        : [...form.confirmed, section]
+    );
+
+  const relations = effectiveRelations(form);
+  const derived = derivedDependencies(form);
+  const unemployed = possibleUnemployed(form);
+  const labelOf = (options: { id: string; label: string }[], id: string) =>
+    options.find((o) => o.id === id)?.label;
+  const statusSummary = [
+    labelOf(HOUSING_TYPE_OPTIONS, form.housingType),
+    ...VEHICLE_OPTIONS.filter((v) => form.vehicles[v.id]).map((v) => v.label),
+    labelOf(FARMLAND_OPTIONS, form.farmland),
+    ...[...new Set([...derived, ...form.dependencies])].map((id) => labelOf(DEPENDENCY_OPTIONS, id)),
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  const suggestedNone = suggestedNoRelation(form);
+
+  const pending = missingVisitAnswers(form);
+  const pendingIn = (i: number) => pending.filter((m) => m.page === i).length;
+  const lastStep = VISIT_STEPS.length - 1;
+
+  const goToStep = (i: number) => {
+    setStep(i);
+    scrollRef.current?.scrollTo({ top: 0 });
+  };
+
+  /** ถัดไป: ถ้าขั้นนี้ยังตอบไม่ครบ พาไปข้อแรกที่ขาดในขั้นนี้ (ไม่ปิดปุ่ม) */
+  const handleNext = () => {
+    const items = pending.filter((m) => m.page === step);
+    if (items.length > 0) {
+      missing.report(items);
+      return;
+    }
+    goToStep(step + 1);
+  };
+  const flagged = (key: string) => missing.isMissing(key) && pending.some((m) => m.key === key);
+
+  /** กล่องของข้อบังคับ: ใช้ระบุตำแหน่งเมื่อพาไปข้อที่ยังไม่ได้ตอบ และแสดงแถบซ้ายเมื่อยังขาด */
+  const question = (key: string, children: ReactNode) => (
+    <div
+      ref={missing.registerNode(key)}
+      className={cn("-mx-3 rounded-sm px-3", questionShellClass(flagged(key)))}
+    >
+      {children}
+      <MissingNote show={flagged(key)} />
+    </div>
+  );
+
 
   const bySource = (source: FillSource) =>
     [...autoFilled.values()].filter((v) => v === source).length;
 
+  const signer = ROLE_INFO[store.role].user;
+  const poor = perCapita > 0 && perCapita < POVERTY_LINE;
+
   const handleSave = () => {
-    store.setAppointmentStatus(appointmentId, "completed");
-    router.push("/home-visits");
+    if (pending.length > 0) {
+      missing.report(pending);
+      return;
+    }
+    const final = finalizeVisitForm(form);
+    const findings = visitRiskFindings(final);
+    store.saveHomeVisit(appointmentId, {
+      householdMembers: members.map((m) => ({
+        memberId: m.id,
+        relation: m.relation,
+        age: Number(m.age) || 0,
+        occupation: "-",
+        monthlyIncome: memberTotal(m),
+      })),
+      riskFindings: [...(poor ? ["รายได้เฉลี่ยต่อคนต่ำกว่าเกณฑ์ยากจน"] : []), ...findings],
+      informantName: form.informant === student.guardianRelation ? student.guardianName : form.informant,
+      informantRelation: form.informant,
+      photoLabels: ["ภาพภายนอกบ้าน", "ภาพภายในบ้าน"],
+      signedBy: signer.name,
+      form: final,
+    });
+    setSaved({ findings, poor });
   };
+
+  if (saved) {
+    return (
+      <VisitSaved
+        studentId={student.studentId}
+        studentName={student.fullName}
+        findings={saved.findings}
+        poor={saved.poor}
+        hasCase={store.caseOf(student.studentId)?.status === "active"}
+      />
+    );
+  }
 
   return (
     <>
@@ -197,7 +336,7 @@ export default function HomeVisitRecordPage({
         subtitle="แบบฟอร์มรวมการคัดกรองนักเรียนยากจน (4 หน้า) ตามแบบของ สพฐ."
       />
 
-      <div className="flex-1 overflow-y-auto p-8">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 md:p-8">
         <div className="mx-auto max-w-5xl space-y-5">
           <Link
             href="/home-visits"
@@ -206,29 +345,29 @@ export default function HomeVisitRecordPage({
             <ChevronLeft className="size-4" /> กลับไปรายการนัดหมาย
           </Link>
 
+          <VisitStepper step={step} pendingIn={pendingIn} onSelect={goToStep} />
+
           {/* สรุปการกรอกอัตโนมัติ */}
+          {step === 0 && (
           <div className="rounded-xl border border-blue-200 bg-accent p-5">
             <div className="flex flex-wrap items-center gap-3">
               <Sparkles className="size-5 text-primary" />
               <div className="flex-1">
                 <h2 className="text-[15px] font-bold text-accent-foreground">
-                  ระบบกรอกข้อมูลให้อัตโนมัติแล้ว {autoCount} จาก {totalFields} กลุ่มข้อมูล ({percent}%)
+                  {pending.length === 0
+                    ? "ตอบครบทุกข้อบังคับแล้ว"
+                    : `เหลือ ${pending.length} ข้อที่ต้องถามในวันเยี่ยมบ้าน`}
                 </h2>
                 <p className="mt-1 text-[13px] text-accent-foreground">
-                  ครูกรอกเพิ่มเฉพาะข้อมูลที่ต้องสอบถามจริงในวันลงพื้นที่
+                  {autoFilled.size > 0
+                    ? `ระบบกรอกให้แล้ว ${autoFilled.size} ข้อ ครูตรวจทานและแก้เฉพาะที่เปลี่ยนไป`
+                    : "ครูกรอกข้อมูลที่สอบถามในวันลงพื้นที่"}
                 </p>
               </div>
-              <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-blue-200 bg-card px-3 py-2 text-[12.5px] font-medium">
-                <Checkbox
-                  checked={onlyEmpty}
-                  onCheckedChange={() => setOnlyEmpty((v) => !v)}
-                />
-                แสดงเฉพาะส่วนที่ต้องกรอกเพิ่ม
-              </label>
             </div>
 
             <div className="mt-3 flex flex-wrap gap-2">
-              {(["registry", "guardian", "previous", "screening"] as FillSource[]).map((s) => {
+              {(["registry", "guardian", "previous"] as FillSource[]).map((s) => {
                 const count = bySource(s);
                 if (count === 0) return null;
                 return (
@@ -236,7 +375,7 @@ export default function HomeVisitRecordPage({
                     key={s}
                     className={`rounded-md px-2.5 py-1 text-[11.5px] font-semibold ${SOURCE_STYLE[s]}`}
                   >
-                    {SOURCE_LABEL[s]} · {count} กลุ่ม
+                    {SOURCE_LABEL[s]} · {count} ข้อ
                   </span>
                 );
               })}
@@ -247,11 +386,31 @@ export default function HomeVisitRecordPage({
               )}
             </div>
           </div>
+          )}
 
           {/* หน้า 1 : ข้อมูลนักเรียนและผู้ปกครอง */}
-          {!onlyEmpty && (
+          {step === 0 && (
+            <>
             <SectionCard no="1." title="ข้อมูลนักเรียนและผู้ปกครอง" description="หน้า 1 ของแบบฟอร์ม">
-              <div className="grid gap-4 md:grid-cols-2">
+              {/* ข้อมูลทะเบียนอ่านอย่างเดียว: ย่อเป็นบรรทัดเดียว กดดูทั้งหมดได้ */}
+              <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-lg bg-surface px-3.5 py-2.5 text-[13px]">
+                <AutoBadge source="registry" />
+                <span className="font-semibold">{student.fullName}</span>
+                <span className="text-muted-foreground">
+                  {student.roomName} เลขที่ {student.classNo} · ผู้ปกครอง {student.guardianName} (
+                  {student.guardianRelation}) · โทร {appointment.guardianPhone ?? student.guardianPhone}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setShowRegistry((v) => !v)}
+                  aria-expanded={showRegistry}
+                  className="ml-auto text-[12.5px] font-semibold text-primary hover:underline"
+                >
+                  {showRegistry ? "ซ่อน" : "ดูข้อมูลทะเบียนทั้งหมด"}
+                </button>
+              </div>
+              {showRegistry && (
+              <div className="mb-4 grid gap-4 md:grid-cols-2">
                 <Field label="โรงเรียน" source="registry">
                   <ReadOnly value={SCHOOL_NAME} />
                 </Field>
@@ -272,22 +431,55 @@ export default function HomeVisitRecordPage({
                 </Field>
                 <Field
                   label="เบอร์โทรศัพท์"
-                  source={autoFilled.get("guardianPhone")}
+                  source={appointment.guardianPhone ? "guardian" : "registry"}
                 >
                   <ReadOnly value={appointment.guardianPhone ?? student.guardianPhone} />
                 </Field>
                 <Field label="ที่อยู่" source="registry" className="md:col-span-2">
                   <ReadOnly value={student.address} />
                 </Field>
+              </div>
+              )}
+              <div className="grid gap-4 md:grid-cols-2">
                 <Field label="อาชีพผู้ปกครอง" htmlFor="occupation">
-                  <Input id="occupation" placeholder="สอบถามในวันเยี่ยมบ้าน" />
+                  <NativeSelect
+                    id="occupation"
+                    value={form.occupation}
+                    onChange={(e) => set("occupation", e.target.value)}
+                  >
+                    <option value="">เลือกอาชีพ</option>
+                    {OCCUPATION_OPTIONS.map((o) => (
+                      <option key={o} value={o}>
+                        {o}
+                      </option>
+                    ))}
+                  </NativeSelect>
+                  {form.occupation === OTHER_LABEL && (
+                    <Input
+                      aria-label="ระบุอาชีพ"
+                      value={form.otherNotes?.occupation ?? ""}
+                      onChange={(e) => otherNote("occupation").onChange(e.target.value)}
+                      placeholder="ระบุอาชีพ"
+                      className="mt-2 h-10"
+                    />
+                  )}
                 </Field>
                 <Field label="การศึกษาสูงสุดของผู้ปกครอง" htmlFor="education">
-                  <Input id="education" placeholder="สอบถามในวันเยี่ยมบ้าน" />
+                  <NativeSelect
+                    id="education"
+                    value={form.education}
+                    onChange={(e) => set("education", e.target.value)}
+                  >
+                    <option value="">เลือกระดับการศึกษา</option>
+                    {EDUCATION_OPTIONS.map((o) => (
+                      <option key={o} value={o}>
+                        {o}
+                      </option>
+                    ))}
+                  </NativeSelect>
                 </Field>
               </div>
             </SectionCard>
-          )}
 
           {/* ข้อ 3 : สมาชิกครัวเรือนและรายได้ */}
           <SectionCard
@@ -295,16 +487,45 @@ export default function HomeVisitRecordPage({
             title="จำนวนสมาชิกในครัวเรือนและรายได้"
             description="รวมตัวนักเรียน · รายได้เฉลี่ยต่อเดือนแยกตามประเภท (บาท/เดือน)"
           >
-            {autoFilled.get("householdMembers") && (
+            {form.needsConfirm.includes("household") ? (
+              <div className="mb-4">
+                {question(
+                  "confirm-household",
+                  <ConfirmPrevious
+                    what="สมาชิกครัวเรือนและรายได้"
+                    summary={`${members.length} คน · รายได้รวม ${formatBaht(totalIncome)} บาท/เดือน`}
+                    confirmed={form.confirmed.includes("household")}
+                    onToggle={() => toggleConfirm("household")}
+                  />
+                )}
+              </div>
+            ) : (
               <div className="mb-3 flex items-center gap-2">
-                <AutoBadge source="previous" />
+                <AutoBadge source="registry" />
                 <span className="text-[12.5px] text-muted-foreground">
-                  ดึงรายชื่อสมาชิกและรายได้จากการเยี่ยมบ้านครั้งก่อนมาแล้ว ครูเพียงตรวจสอบและแก้ไขเฉพาะที่เปลี่ยนแปลง
+                  ใส่นักเรียนและผู้ปกครองตามทะเบียนไว้ให้แล้ว เพิ่มสมาชิกคนอื่นที่อาศัยอยู่ด้วย
                 </span>
               </div>
             )}
 
-            <div className="overflow-x-auto">
+            {question(
+              "3",
+            <>
+            {/* มือถือ: การ์ดทีละคน กรอกเฉพาะประเภทรายได้ที่มีจริง */}
+            <div className="space-y-3 md:hidden">
+              {members.map((m, i) => (
+                <MemberCard
+                  key={m.id}
+                  member={m}
+                  index={i}
+                  onChange={(patch) =>
+                    setMembers((prev) => prev.map((x, xi) => (xi === i ? { ...x, ...patch } : x)))
+                  }
+                  onRemove={() => setMembers((prev) => prev.filter((_, xi) => xi !== i))}
+                />
+              ))}
+            </div>
+            <div className="hidden overflow-x-auto md:block">
               <table className="w-full min-w-[820px] text-[13px]">
                 <thead>
                   <tr className="border-b-2 border-border text-[11.5px] text-muted-foreground">
@@ -324,17 +545,14 @@ export default function HomeVisitRecordPage({
                   {members.map((m, i) => (
                     <tr key={m.id} className="border-b border-border">
                       <td className="py-1.5 pr-2">
-                        <Input
+                        <RelationSelect
                           value={m.relation}
-                          onChange={(e) =>
+                          onChange={(relation) =>
                             setMembers((prev) =>
-                              prev.map((x, xi) =>
-                                xi === i ? { ...x, relation: e.target.value } : x
-                              )
+                              prev.map((x, xi) => (xi === i ? { ...x, relation } : x))
                             )
                           }
-                          placeholder="เช่น บิดา"
-                          className="h-9"
+                          label={`ความสัมพันธ์ของสมาชิกคนที่ ${i + 1}`}
                         />
                       </td>
                       <td className="px-1 py-1.5">
@@ -349,6 +567,7 @@ export default function HomeVisitRecordPage({
                               )
                             )
                           }
+                          inputMode="numeric"
                           className="h-9 text-center"
                         />
                       </td>
@@ -384,6 +603,7 @@ export default function HomeVisitRecordPage({
                                 )
                               )
                             }
+                            inputMode="numeric"
                             className="h-9 text-right"
                             placeholder="0"
                           />
@@ -406,139 +626,197 @@ export default function HomeVisitRecordPage({
                 </tbody>
               </table>
             </div>
+            </>
+            )}
 
             <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() =>
-                  setMembers((prev) => [
-                    ...prev,
-                    {
-                      id: `m${Date.now()}`,
-                      relation: "",
-                      age: "",
-                      disability: false,
-                      income: { wage: 0, agriculture: 0, business: 0, welfare: 0, other: 0 },
-                    },
-                  ])
+                  setMembers((prev) => [...prev, emptyMember(`m${Date.now()}`)])
                 }
               >
                 <Plus className="size-4" /> เพิ่มสมาชิก
               </Button>
 
-              <div className="flex gap-3">
+              <div className="flex flex-wrap gap-3">
                 <div className="rounded-lg bg-surface px-4 py-2.5 text-[13px]">
                   รวมรายได้ครัวเรือน{" "}
                   <b className="ml-1 text-foreground">{formatBaht(totalIncome)} บาท</b>
                 </div>
                 <div
                   className={
-                    perCapita > 0 && perCapita < 3000
+                    poor
                       ? "rounded-lg bg-risk-amber-bg px-4 py-2.5 text-[13px] font-semibold text-risk-amber"
                       : "rounded-lg bg-surface px-4 py-2.5 text-[13px]"
                   }
                 >
                   รายได้เฉลี่ยต่อคน{" "}
                   <b className="ml-1">{formatBaht(perCapita)} บาท/เดือน</b>
-                  {perCapita > 0 && perCapita < 3000 && " · เข้าเกณฑ์ยากจน"}
+                  {poor && " · เข้าเกณฑ์ยากจน"}
                 </div>
               </div>
             </div>
+
           </SectionCard>
+            </>
+          )}
 
           {/* ข้อ 4 : สถานะของครัวเรือน */}
+          {step === 1 && (
           <SectionCard no="4." title="สถานะของครัวเรือน" description="กรอกเฉพาะบุคคลที่อาศัยในบ้านปัจจุบัน">
+            {form.needsConfirm.includes("status") && (
+              <div className="mb-6">
+                {question(
+                  "confirm-status",
+                  <ConfirmPrevious
+                    what="สถานะของครัวเรือน"
+                    summary={statusSummary}
+                    confirmed={form.confirmed.includes("status")}
+                    onToggle={() => toggleConfirm("status")}
+                  />
+                )}
+              </div>
+            )}
             <div className="space-y-6">
-              <ChipGroup
-                label="4.1 ภาระพึ่งพิงของครัวเรือน"
-                options={DEPENDENCY_OPTIONS}
-                selected={dependencies}
-                onToggle={(id) => toggle(setDependencies, id)}
-                onClear={() => setDependencies([])}
-                source={autoFilled.get("dependencies")}
-                noneLabel="ไม่มีภาระพึ่งพิง"
-                columns={2}
-              />
-              <ChipSelect
-                label="4.2 ประเภทที่อยู่อาศัย"
-                options={HOUSING_TYPE_OPTIONS}
-                value={housingType}
-                onChange={setHousingType}
-                source={autoFilled.get("housingType")}
-                columns={3}
-              />
-              <ChipGroup
-                label="4.3 สภาพที่อยู่อาศัย"
-                options={HOUSING_CONDITION_OPTIONS}
-                selected={housingConditions}
-                onToggle={(id) => toggle(setHousingConditions, id)}
-                onClear={() => setHousingConditions([])}
-                source={autoFilled.get("housingConditions")}
-                noneLabel="สภาพบ้านปกติ"
-                columns={1}
-              />
-              <YesNoRows
-                label="4.4 ยานพาหนะของครอบครัว"
-                rows={VEHICLE_OPTIONS}
-                values={vehicles}
-                onChange={(id, value) => setVehicles((prev) => ({ ...prev, [id]: value }))}
-                source={autoFilled.get("vehicles")}
-              />
-              <ChipSelect
-                label="4.5 ที่ดินทำกิน"
-                options={FARMLAND_OPTIONS}
-                value={farmland}
-                onChange={setFarmland}
-                source={autoFilled.get("farmland")}
-                columns={2}
-              />
+              {question(
+                "4.1",
+                <ChipGroup
+                  label="4.1 ภาระพึ่งพิงของครัวเรือน"
+                  options={DEPENDENCY_OPTIONS}
+                  {...noneGroup("dependencies")}
+                  lockedIds={derived}
+                  lockedNote="เลือกให้จากตารางข้อ 3 — แก้ที่ตาราง"
+                  hint={
+                    unemployed.length > 0
+                      ? `ไม่มีรายได้ในข้อ 3: ${unemployed.map((m) => `${m.relation} (${m.age} ปี)`).join(", ")} — ถามว่าว่างงานหรือไม่`
+                      : undefined
+                  }
+                  source={autoFilled.get("dependencies")}
+                  noneLabel="ไม่มีภาระพึ่งพิง"
+                  columns={2}
+                />
+              )}
+              {question(
+                "4.2",
+                <ChipSelect
+                  label="4.2 ประเภทที่อยู่อาศัย"
+                  options={HOUSING_TYPE_OPTIONS}
+                  value={form.housingType}
+                  onChange={(v) => set("housingType", v)}
+                  source={autoFilled.get("housingType")}
+                  columns={3}
+                />
+              )}
+              {question(
+                "4.3",
+                <ChipGroup
+                  label="4.3 สภาพที่อยู่อาศัย"
+                  options={HOUSING_CONDITION_OPTIONS}
+                  {...noneGroup("housingConditions")}
+                  source={autoFilled.get("housingConditions")}
+                  noneLabel="สภาพบ้านปกติ"
+                  columns={1}
+                />
+              )}
+              {question(
+                "4.4",
+                <YesNoRows
+                  label="4.4 ยานพาหนะของครอบครัว"
+                  rows={VEHICLE_OPTIONS}
+                  values={form.vehicles}
+                  onChange={(id, value) => set("vehicles", { ...form.vehicles, [id]: value })}
+                  source={autoFilled.get("vehicles")}
+                />
+              )}
+              {question(
+                "4.5",
+                <ChipSelect
+                  label="4.5 ที่ดินทำกิน"
+                  options={FARMLAND_OPTIONS}
+                  value={form.farmland}
+                  onChange={(v) => set("farmland", v)}
+                  source={autoFilled.get("farmland")}
+                  columns={2}
+                />
+              )}
             </div>
           </SectionCard>
+          )}
 
           {/* ข้อ 5 : ความสัมพันธ์ในครอบครัว */}
+          {step === 2 && (
           <SectionCard no="5." title="ความสัมพันธ์ในครอบครัว" description="หน้า 2 ของแบบฟอร์ม">
             <div className="space-y-6">
-              <div className="grid gap-4 md:grid-cols-2">
-                <Field
-                  label="5.1 สมาชิกในครอบครัวมีเวลาอยู่ร่วมกันกี่ชั่วโมงต่อวัน"
-                  htmlFor="hours"
-                  source={autoFilled.get("hoursTogether")}
-                >
-                  <Input
-                    id="hours"
-                    value={hoursTogether}
-                    onChange={(e) => setHoursTogether(e.target.value)}
-                    placeholder="ชั่วโมง/วัน"
-                  />
-                </Field>
-              </div>
+              {question(
+                "5.1",
+                <div className="grid gap-4 md:grid-cols-2">
+                  <Field
+                    label="5.1 สมาชิกในครอบครัวมีเวลาอยู่ร่วมกันกี่ชั่วโมงต่อวัน"
+                    htmlFor="hours"
+                    source={autoFilled.get("hoursTogether")}
+                  >
+                    <NativeSelect
+                      id="hours"
+                      value={form.hoursTogether}
+                      onChange={(e) => set("hoursTogether", e.target.value)}
+                    >
+                      <option value="">เลือกจำนวนชั่วโมง</option>
+                      {Array.from({ length: 25 }, (_, h) => (
+                        <option key={h} value={String(h)}>
+                          {h === 0 ? "ไม่ถึง 1 ชั่วโมง" : `${h} ชั่วโมง`}
+                        </option>
+                      ))}
+                    </NativeSelect>
+                  </Field>
+                </div>
+              )}
 
-              <SegmentedRows
-                label="5.2 ความสัมพันธ์ระหว่างนักเรียนกับสมาชิกในครอบครัว"
-                hint="เลือกระดับความสัมพันธ์ของแต่ละคน หากไม่มีสมาชิกคนนั้นให้เลือก “ไม่มี”"
-                rows={FAMILY_MEMBERS}
-                choices={RELATIONSHIP_LEVELS}
-                values={relations}
-                onChange={(row, choice) =>
-                  setRelations((prev) => ({ ...prev, [row]: choice }))
-                }
-              />
+              {question(
+                "5.2",
+                <SegmentedRows
+                  label="5.2 ความสัมพันธ์ระหว่างนักเรียนกับสมาชิกในครอบครัว"
+                  hint={
+                    suggestedNone.length > 0
+                      ? `ระบบเลือก “ไม่มี” ให้ ${suggestedNone.join(", ")} เพราะไม่อยู่ในสมาชิกครัวเรือนข้อ 3 เปลี่ยนได้ถ้ายังติดต่อกันอยู่`
+                      : "เลือกระดับความสัมพันธ์ของแต่ละคน หากไม่มีสมาชิกคนนั้นให้เลือก “ไม่มี”"
+                  }
+                  rows={FAMILY_MEMBERS}
+                  choices={RELATIONSHIP_LEVELS}
+                  values={relations}
+                  onChange={(row, choice) => set("relations", { ...form.relations, [row]: choice })}
+                />
+              )}
 
-              <ChipSelect
-                label="5.3 กรณีที่ผู้ปกครองไม่อยู่บ้าน ฝากนักเรียนอยู่บ้านกับใคร"
-                options={CARETAKER_OPTIONS}
-                value={caretakerWhenAway}
-                onChange={setCaretakerWhenAway}
-                source={autoFilled.get("caretakerWhenAway")}
-                columns={4}
-              />
+              {question(
+                "5.3",
+                <ChipSelect
+                  label="5.3 กรณีที่ผู้ปกครองไม่อยู่บ้าน ฝากนักเรียนอยู่บ้านกับใคร"
+                  options={CARETAKER_OPTIONS}
+                  value={form.caretakerWhenAway}
+                  onChange={(v) => set("caretakerWhenAway", v)}
+                  source={autoFilled.get("caretakerWhenAway")}
+                  columns={4}
+                  other={otherNote("caretakerWhenAway", "ระบุผู้ดูแล")}
+                />
+              )}
 
-              {appointment.caretakerName && (
+              {(appointment.caretakerRelation || appointment.caretakerName) && (
                 <div className="flex items-center gap-2 rounded-lg bg-risk-green-bg px-3.5 py-2.5">
                   <AutoBadge source="guardian" />
                   <span className="text-[12.5px] text-risk-green">
-                    ผู้ปกครองระบุไว้ล่วงหน้าว่า: {appointment.caretakerName}
+                    ผู้ปกครองระบุไว้ล่วงหน้าว่า:{" "}
+                    {formatCaretaker(appointment.caretakerRelation, appointment.caretakerName)}
+                  </span>
+                </div>
+              )}
+
+              {appointment.guardianNote && (
+                <div className="flex items-start gap-2 rounded-lg bg-risk-green-bg px-3.5 py-2.5">
+                  <AutoBadge source="guardian" />
+                  <span className="text-[12.5px] text-risk-green">
+                    สิ่งที่ผู้ปกครองอยากให้ครูช่วย (ใช้ประกอบข้อ 5.6 และ 5.8): {appointment.guardianNote}
                   </span>
                 </div>
               )}
@@ -546,74 +824,78 @@ export default function HomeVisitRecordPage({
               <ChipGroup
                 label="5.6 สิ่งที่ผู้ปกครองต้องการให้โรงเรียนช่วยเหลือนักเรียน"
                 options={SUPPORT_REQUEST_OPTIONS}
-                selected={supportRequests}
-                onToggle={(id) => toggle(setSupportRequests, id)}
-                onClear={() => setSupportRequests([])}
-                source={autoFilled.get("supportRequests")}
+                selected={form.supportRequests}
+                onToggle={(id) => toggleItem("supportRequests", id)}
+                onClear={() => set("supportRequests", [])}
                 columns={2}
+                other={otherNote("supportRequests", "ระบุความช่วยเหลือที่ต้องการ")}
               />
 
-              <ChipGroup
-                label="5.7 ความช่วยเหลือที่ครอบครัวเคยได้รับหรือต้องการได้รับ"
-                options={WELFARE_RECEIVED_OPTIONS}
-                selected={welfareReceived}
-                onToggle={(id) => toggle(setWelfareReceived, id)}
-                onClear={() => setWelfareReceived([])}
-                noneLabel="ไม่เคยได้รับ"
-                columns={3}
-              />
+              {question(
+                "5.7",
+                <ChipGroup
+                  label="5.7 ความช่วยเหลือที่ครอบครัวเคยได้รับหรือต้องการได้รับ"
+                  options={WELFARE_RECEIVED_OPTIONS}
+                  {...noneGroup("welfareReceived")}
+                  noneLabel="ไม่เคยได้รับ"
+                  columns={3}
+                  other={otherNote("welfareReceived", "ระบุความช่วยเหลือ")}
+                />
+              )}
 
               <Field
                 label="5.8 ข้อห่วงใยของผู้ปกครองที่มีต่อนักเรียน"
                 htmlFor="concern"
-                source={autoFilled.get("guardianConcern")}
               >
                 <Textarea
                   id="concern"
-                  value={guardianConcern}
-                  onChange={(e) => setGuardianConcern(e.target.value)}
+                  value={form.guardianConcern}
+                  onChange={(e) => set("guardianConcern", e.target.value)}
                   rows={3}
                   placeholder="บันทึกสิ่งที่ผู้ปกครองห่วงใย"
                 />
               </Field>
             </div>
           </SectionCard>
+          )}
 
-
+          {step === 3 && (
           <SectionCard no="6." title="พฤติกรรมและความเสี่ยง" description="หน้า 2–3 ของแบบฟอร์ม">
             <div className="space-y-6">
-              <ChipGroup
-                label="6.1 สุขภาพ"
-                options={HEALTH_RISK_OPTIONS}
-                selected={healthRisks}
-                onToggle={(id) => toggle(setHealthRisks, id)}
-                onClear={() => setHealthRisks([])}
-                source={autoFilled.get("healthRisks")}
-                hint={
-                  autoFilled.get("healthRisks")
-                    ? "ผลคัดกรองมิติสุขภาพกายของนักเรียนเข้าเกณฑ์ — ตรวจสอบและเลือกรายการที่พบจริง"
-                    : undefined
-                }
-                noneLabel="สุขภาพปกติดี"
-                columns={2}
-              />
+              {question(
+                "6.1",
+                <ChipGroup
+                  label="6.1 สุขภาพ"
+                  options={HEALTH_RISK_OPTIONS}
+                  {...noneGroup("healthRisks")}
+                  hint={
+                    flaggedDimensions.has("physical")
+                      ? "ผลคัดกรองมิติสุขภาพกายของนักเรียนเข้าเกณฑ์ — ตรวจสอบและเลือกรายการที่พบจริง"
+                      : undefined
+                  }
+                  noneLabel="สุขภาพปกติดี"
+                  columns={2}
+                />
+              )}
 
-              <ChipGroup
-                label="6.2 สวัสดิภาพหรือความปลอดภัย"
-                options={WELFARE_RISK_OPTIONS}
-                selected={welfareRisks}
-                onToggle={(id) => toggle(setWelfareRisks, id)}
-                onClear={() => setWelfareRisks([])}
-                source={autoFilled.get("welfareRisks")}
-                hint={
-                  autoFilled.get("welfareRisks")
-                    ? "ผลคัดกรองมิติสวัสดิภาพเข้าเกณฑ์ — ตรวจสอบรายการที่เกี่ยวข้อง"
-                    : undefined
-                }
-                noneLabel="ไม่พบความเสี่ยง"
-                columns={2}
-              />
+              {question(
+                "6.2",
+                <ChipGroup
+                  label="6.2 สวัสดิภาพหรือความปลอดภัย"
+                  options={WELFARE_RISK_OPTIONS}
+                  {...noneGroup("welfareRisks")}
+                  hint={
+                    flaggedDimensions.has("welfare")
+                      ? "ผลคัดกรองมิติสวัสดิภาพเข้าเกณฑ์ — ตรวจสอบรายการที่เกี่ยวข้อง"
+                      : undefined
+                  }
+                  noneLabel="ไม่พบความเสี่ยง"
+                  columns={2}
+                />
+              )}
 
+              {question(
+                "6.3",
               <div>
                 <div className="mb-2.5 flex flex-wrap items-center gap-2">
                   <span className="text-[13.5px] font-semibold">
@@ -621,148 +903,188 @@ export default function HomeVisitRecordPage({
                   </span>
                   {autoFilled.get("travel") && <AutoBadge source="previous" />}
                 </div>
-                <div className="grid gap-3 md:grid-cols-3">
+                <div className="grid gap-3 md:grid-cols-2">
                   <Field label="ระยะทางไป-กลับ (กิโลเมตร)" htmlFor="km">
-                    <Input id="km" value={travelKm} onChange={(e) => setTravelKm(e.target.value)} />
-                  </Field>
-                  <Field label="เวลาเดินทาง (ชั่วโมง)" htmlFor="hh">
-                    <Input id="hh" value={travelHours} onChange={(e) => setTravelHours(e.target.value)} />
-                  </Field>
-                  <Field label="เวลาเดินทาง (นาที)" htmlFor="mm">
                     <Input
-                      id="mm"
-                      value={travelMinutes}
-                      onChange={(e) => setTravelMinutes(e.target.value)}
+                      id="km"
+                      inputMode="decimal"
+                      value={form.travelKm}
+                      onChange={(e) => set("travelKm", e.target.value)}
                     />
+                  </Field>
+                  <Field label="เวลาเดินทาง (เที่ยวเดียว)" htmlFor="travel-time">
+                    <NativeSelect
+                      id="travel-time"
+                      value={travelTotal}
+                      onChange={(e) => {
+                        const total = e.target.value === "" ? null : Number(e.target.value);
+                        draft.update((prev) => ({
+                          ...prev,
+                          travelHours: total === null ? "" : String(Math.floor(total / 60)),
+                          travelMinutes: total === null ? "" : String(total % 60),
+                        }));
+                      }}
+                    >
+                      <option value="">เลือกเวลาเดินทาง</option>
+                      {travelChoices.map((m) => (
+                        <option key={m} value={String(m)}>
+                          {formatMinutes(m)}
+                        </option>
+                      ))}
+                    </NativeSelect>
                   </Field>
                 </div>
                 <div className="mt-4">
                   <ChipSelect
                     label="วิธีการเดินทาง"
                     options={TRAVEL_OPTIONS}
-                    value={travelMode}
-                    onChange={setTravelMode}
+                    value={form.travelMode}
+                    onChange={(v) => set("travelMode", v)}
                     columns={4}
+                    other={otherNote("travelMode", "ระบุวิธีการเดินทาง")}
                   />
                 </div>
               </div>
+              )}
 
-              <ChipGroup
-                label="6.4 ภาระงานความรับผิดชอบของนักเรียนต่อครอบครัว"
-                options={DUTY_OPTIONS}
-                selected={duties}
-                onToggle={(id) => toggle(setDuties, id)}
-                onClear={() => setDuties([])}
-                source={autoFilled.get("duties")}
-                noneLabel="ไม่มีภาระงาน"
-                columns={2}
-              />
+              {question(
+                "6.4",
+                <ChipGroup
+                  label="6.4 ภาระงานความรับผิดชอบของนักเรียนต่อครอบครัว"
+                  options={DUTY_OPTIONS}
+                  {...noneGroup("duties")}
+                  source={autoFilled.get("duties")}
+                  noneLabel="ไม่มีภาระงาน"
+                  columns={2}
+                  other={otherNote("duties", "ระบุภาระงาน")}
+                />
+              )}
 
               <ChipGroup
                 label="6.5 กิจกรรมยามว่างหรืองานอดิเรก"
                 options={HOBBY_OPTIONS}
-                selected={hobbies}
-                onToggle={(id) => toggle(setHobbies, id)}
-                onClear={() => setHobbies([])}
+                selected={form.hobbies}
+                onToggle={(id) => toggleItem("hobbies", id)}
+                onClear={() => set("hobbies", [])}
                 columns={3}
+                other={otherNote("hobbies", "ระบุกิจกรรม")}
               />
 
-              <ChipGroup
-                label="6.6 พฤติกรรมการใช้สารเสพติด"
-                options={SUBSTANCE_OPTIONS}
-                selected={substances}
-                onToggle={(id) => toggle(setSubstances, id)}
-                onClear={() => setSubstances([])}
-                noneLabel="ไม่พบความเสี่ยง"
-                columns={2}
-              />
+              {question(
+                "6.6",
+                <ChipGroup
+                  label="6.6 พฤติกรรมการใช้สารเสพติด"
+                  options={SUBSTANCE_OPTIONS}
+                  {...noneGroup("substances")}
+                  noneLabel="ไม่พบความเสี่ยง"
+                  columns={2}
+                />
+              )}
 
-              <ChipGroup
-                label="6.7 พฤติกรรมการใช้ความรุนแรง"
-                options={VIOLENCE_OPTIONS}
-                selected={violence}
-                onToggle={(id) => toggle(setViolence, id)}
-                onClear={() => setViolence([])}
-                noneLabel="ไม่พบความเสี่ยง"
-                columns={3}
-              />
+              {question(
+                "6.7",
+                <ChipGroup
+                  label="6.7 พฤติกรรมการใช้ความรุนแรง"
+                  options={VIOLENCE_OPTIONS}
+                  {...noneGroup("violence")}
+                  noneLabel="ไม่พบความเสี่ยง"
+                  columns={3}
+                />
+              )}
 
-              <ChipGroup
-                label="6.8 พฤติกรรมทางเพศ"
-                options={SEXUAL_OPTIONS}
-                selected={sexual}
-                onToggle={(id) => toggle(setSexual, id)}
-                onClear={() => setSexual([])}
-                noneLabel="ไม่พบความเสี่ยง"
-                columns={2}
-              />
+              {question(
+                "6.8",
+                <ChipGroup
+                  label="6.8 พฤติกรรมทางเพศ"
+                  options={SEXUAL_OPTIONS}
+                  {...noneGroup("sexual")}
+                  noneLabel="ไม่พบความเสี่ยง"
+                  columns={2}
+                />
+              )}
 
-              <ChipGroup
-                label="6.9 การติดเกม"
-                options={GAMING_OPTIONS}
-                selected={gaming}
-                onToggle={(id) => toggle(setGaming, id)}
-                onClear={() => setGaming([])}
-                source={autoFilled.get("gaming")}
-                hint={
-                  autoFilled.get("gaming")
-                    ? "ผลคัดกรองมิติพฤติกรรมเข้าเกณฑ์ — ตรวจสอบรายการที่เกี่ยวข้อง"
-                    : undefined
-                }
-                noneLabel="ไม่พบความเสี่ยง"
-                columns={3}
-              />
+              {question(
+                "6.9",
+                <ChipGroup
+                  label="6.9 การติดเกม"
+                  options={GAMING_OPTIONS}
+                  {...noneGroup("gaming")}
+                  hint={
+                    flaggedDimensions.has("behavior")
+                      ? "ผลคัดกรองมิติพฤติกรรมเข้าเกณฑ์ — ตรวจสอบรายการที่เกี่ยวข้อง"
+                      : undefined
+                  }
+                  noneLabel="ไม่พบความเสี่ยง"
+                  columns={3}
+                />
+              )}
 
-              <ChipSelect
-                label="6.10 การเข้าถึงสื่อคอมพิวเตอร์และอินเทอร์เน็ตที่บ้าน"
-                options={INTERNET_OPTIONS}
-                value={internet}
-                onChange={setInternet}
-                source={autoFilled.get("internet")}
-                columns={2}
-              />
+              {question(
+                "6.10",
+                <ChipSelect
+                  label="6.10 การเข้าถึงสื่อคอมพิวเตอร์และอินเทอร์เน็ตที่บ้าน"
+                  options={INTERNET_OPTIONS}
+                  value={form.internet}
+                  onChange={(v) => set("internet", v)}
+                  source={autoFilled.get("internet")}
+                  columns={2}
+                />
+              )}
 
-              <ChipGroup
-                label="6.11 การใช้เครื่องมือสื่อสารอิเล็กทรอนิกส์"
-                options={DEVICE_OPTIONS}
-                selected={devices}
-                onToggle={(id) => toggle(setDevices, id)}
-                onClear={() => setDevices([])}
-                noneLabel="ไม่พบพฤติกรรมข้างต้น"
-                columns={2}
-              />
+              {question(
+                "6.11",
+                <ChipGroup
+                  label="6.11 การใช้เครื่องมือสื่อสารอิเล็กทรอนิกส์"
+                  options={DEVICE_OPTIONS}
+                  {...noneGroup("devices")}
+                  noneLabel="ไม่พบพฤติกรรมข้างต้น"
+                  columns={2}
+                />
+              )}
             </div>
           </SectionCard>
+          )}
 
-
+          {step === 4 && (
           <SectionCard no="7." title="ผู้ให้ข้อมูลและการรับรองข้อมูล" description="หน้า 3–4 ของแบบฟอร์ม">
             <div className="space-y-5">
+              {question(
+                "informant",
               <div>
-                <Label className="text-[13px] font-semibold">ผู้ให้ข้อมูลนักเรียน</Label>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {INFORMANT_OPTIONS.map((opt) => (
-                    <button
-                      key={opt}
-                      onClick={() => setInformant(opt)}
-                      className={
-                        informant === opt
-                          ? "rounded-lg border border-primary bg-accent px-3.5 py-1.5 text-[13px] font-semibold text-primary"
-                          : "rounded-lg border border-border px-3.5 py-1.5 text-[13px] text-muted-foreground hover:bg-muted"
-                      }
-                    >
-                      {opt}
-                    </button>
-                  ))}
+                <div className="flex flex-wrap items-center gap-2">
+                  <Label htmlFor="informant" className="text-[13px] font-semibold">
+                    ผู้ให้ข้อมูลนักเรียน
+                  </Label>
+                  {autoFilled.get("informant") && form.informant === student.guardianRelation && (
+                    <AutoBadge source="registry" />
+                  )}
                 </div>
+                <NativeSelect
+                  id="informant"
+                  value={form.informant}
+                  onChange={(e) => set("informant", e.target.value)}
+                  className="mt-2 md:max-w-xs"
+                >
+                  <option value="">เลือกผู้ให้ข้อมูล</option>
+                  {INFORMANT_OPTIONS.map((opt) => (
+                    <option key={opt} value={opt}>
+                      {opt}
+                    </option>
+                  ))}
+                </NativeSelect>
               </div>
+              )}
 
-              <ChipSelect
-                label="ภาพถ่ายที่แนบมาคือ"
-                options={PHOTO_TYPE_OPTIONS}
-                value={photoType}
-                onChange={setPhotoType}
-                columns={2}
-              />
+              {question(
+                "photoType",
+                <ChipSelect
+                  label="ภาพถ่ายที่แนบมาคือ"
+                  options={PHOTO_TYPE_OPTIONS}
+                  value={form.photoType}
+                  onChange={(v) => set("photoType", v)}
+                  columns={2}
+                />
+              )}
 
               <div className="grid gap-3 md:grid-cols-2">
                 {["รูปที่ 1 ภาพถ่ายสภาพบ้านนักเรียน (มีหลังคาและฝาบ้าน)", "รูปที่ 2 ภาพถ่ายภายในบ้านนักเรียน"].map(
@@ -780,10 +1102,10 @@ export default function HomeVisitRecordPage({
 
               <div className="grid gap-4 md:grid-cols-2">
                 <Field label="ผู้รับรองข้อมูล" source="registry">
-                  <ReadOnly value={CURRENT_TEACHER.name} />
+                  <ReadOnly value={signer.name} />
                 </Field>
                 <Field label="ตำแหน่ง" source="registry">
-                  <ReadOnly value="ครูประจำชั้น" />
+                  <ReadOnly value={signer.title} />
                 </Field>
               </div>
 
@@ -792,18 +1114,343 @@ export default function HomeVisitRecordPage({
               </div>
             </div>
           </SectionCard>
+          )}
 
-          <div className="flex items-center justify-between pb-6">
-            <p className="text-[13px] text-muted-foreground">
-              ข้อมูลที่บันทึกจะเชื่อมกับผลการคัดกรองและ case การช่วยเหลือของนักเรียนโดยอัตโนมัติ
-            </p>
-            <div className="flex gap-3">
-              <LinkButton variant="outline" href="/home-visits">
-                บันทึกร่าง
-              </LinkButton>
-              <Button onClick={handleSave}>บันทึกผลการเยี่ยมบ้าน</Button>
+          <MissingSummary missing={missing.missing.filter((m) => flagged(m.key))} onJump={missing.jumpTo} />
+
+          <div className="flex flex-wrap items-center justify-between gap-3 pb-6">
+            <div className="flex flex-col gap-0.5">
+              <AutosaveStatus restored={draft.restored} savedAt={draft.savedAt} />
+              <p className="text-[13px] text-muted-foreground">
+                {pending.length > 0 ? (
+                  <span>ทั้งฟอร์มยังเหลือ {pending.length} ข้อ</span>
+                ) : (
+                  "ตอบครบทุกข้อแล้ว · หลังบันทึก ระบบจะสรุปความเสี่ยงที่พบให้ดูต่อ"
+                )}
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <Button variant="ghost" onClick={() => router.push("/home-visits")}>
+                ออกและทำต่อภายหลัง
+              </Button>
+              {step > 0 && (
+                <Button variant="outline" onClick={() => goToStep(step - 1)}>
+                  <ChevronLeft className="size-4" /> ย้อนกลับ
+                </Button>
+              )}
+              {step < lastStep ? (
+                <Button onClick={handleNext}>
+                  ถัดไป <ChevronRight className="size-4" />
+                </Button>
+              ) : (
+                <Button onClick={handleSave}>บันทึกผลการเยี่ยมบ้าน</Button>
+              )}
             </div>
           </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+/** ความสัมพันธ์ของสมาชิกครัวเรือน — เลือกจากรายการเดียวกันทุกแถว ค่าเก่าที่ไม่อยู่ในรายการยังแสดงได้ */
+function RelationSelect({
+  value,
+  onChange,
+  label,
+  className,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  label: string;
+  className?: string;
+}) {
+  const options =
+    value === "" || MEMBER_RELATION_OPTIONS.includes(value)
+      ? MEMBER_RELATION_OPTIONS
+      : [value, ...MEMBER_RELATION_OPTIONS];
+  return (
+    <NativeSelect
+      aria-label={label}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className={className}
+    >
+      <option value="">เลือก</option>
+      {options.map((o) => (
+        <option key={o} value={o}>
+          {o}
+        </option>
+      ))}
+    </NativeSelect>
+  );
+}
+
+/** แถบขั้นของแบบฟอร์ม: กดไปขั้นไหนก็ได้ และบอกจำนวนข้อที่ยังเหลือของแต่ละขั้น */
+function VisitStepper({
+  step,
+  pendingIn,
+  onSelect,
+}: {
+  step: number;
+  pendingIn: (i: number) => number;
+  onSelect: (i: number) => void;
+}) {
+  return (
+    <nav aria-label="ขั้นของแบบฟอร์ม" className="overflow-x-auto">
+      <ol className="flex min-w-max gap-2">
+        {VISIT_STEPS.map((s, i) => {
+          const left = pendingIn(i);
+          const active = i === step;
+          return (
+            <li key={s.title}>
+              <button
+                type="button"
+                onClick={() => onSelect(i)}
+                aria-current={active ? "step" : undefined}
+                className={cn(
+                  "flex items-center gap-2.5 rounded-xl border px-3.5 py-2.5 text-left transition-colors",
+                  active ? "border-primary bg-accent" : "border-border bg-card hover:bg-muted/60"
+                )}
+              >
+                <span
+                  className={cn(
+                    "flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-bold",
+                    left === 0
+                      ? "bg-risk-green-bg text-risk-green"
+                      : active
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted text-muted-foreground"
+                  )}
+                >
+                  {left === 0 ? <Check className="size-3.5" strokeWidth={3} /> : i + 1}
+                </span>
+                <span>
+                  <span
+                    className={cn(
+                      "block text-[13px] font-semibold",
+                      active ? "text-primary" : "text-foreground"
+                    )}
+                  >
+                    {s.title}
+                  </span>
+                  <span className="block text-[11.5px] text-muted-foreground">
+                    {s.sections} · {left === 0 ? "ครบแล้ว" : `เหลือ ${left} ข้อ`}
+                  </span>
+                </span>
+              </button>
+            </li>
+          );
+        })}
+      </ol>
+    </nav>
+  );
+}
+
+/** ยืนยันข้อมูลที่ดึงจากการเยี่ยมครั้งก่อนทั้งส่วนในครั้งเดียว (UC4 ทางเลือก A) */
+function ConfirmPrevious({
+  what,
+  summary,
+  confirmed,
+  onToggle,
+}: {
+  what: string;
+  /** สรุปสั้นของค่าปัจจุบัน ให้ครูยืนยันได้โดยไม่ต้องเลื่อนดูทุกข้อ */
+  summary: string;
+  confirmed: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <div
+      className={cn(
+        "flex flex-wrap items-center gap-3 rounded-xl border px-4 py-3",
+        confirmed ? "border-risk-green/40 bg-risk-green-bg" : "border-border bg-surface"
+      )}
+    >
+      <div className="min-w-0 flex-1">
+        <p className={cn("text-[13px] font-semibold", confirmed ? "text-risk-green" : "text-foreground")}>
+          {confirmed
+            ? `ยืนยันแล้วว่า${what}ถูกต้อง`
+            : `${what}จากการเยี่ยมครั้งก่อน ยังเหมือนเดิมไหม`}
+        </p>
+        {summary && <p className="mt-0.5 text-[12.5px] text-muted-foreground">{summary}</p>}
+        {!confirmed && (
+          <p className="mt-0.5 text-[12px] text-muted-foreground">ถ้ามีอะไรเปลี่ยน แก้ด้านล่างก่อนแล้วจึงยืนยัน</p>
+        )}
+      </div>
+      <Button size="sm" variant={confirmed ? "ghost" : "default"} onClick={onToggle}>
+        {confirmed ? "ยกเลิกการยืนยัน" : <><Check className="size-4" /> ข้อมูลถูกต้อง</>}
+      </Button>
+    </div>
+  );
+}
+
+/** สมาชิกครัวเรือนบนมือถือ: แสดงเฉพาะประเภทรายได้ที่มีค่า ที่เหลือกดเพิ่มทีละประเภท */
+function MemberCard({
+  member,
+  index,
+  onChange,
+  onRemove,
+}: {
+  member: HouseholdMemberRow;
+  index: number;
+  onChange: (patch: Partial<HouseholdMemberRow>) => void;
+  onRemove: () => void;
+}) {
+  const [added, setAdded] = useState<IncomeKey[]>([]);
+  const shown = INCOME_COLUMNS.filter((c) => member.income[c.key] > 0 || added.includes(c.key));
+  const hidden = INCOME_COLUMNS.filter((c) => !shown.includes(c));
+
+  return (
+    <div className="rounded-xl border border-border p-3.5">
+      <div className="flex items-end gap-2">
+        <div className="flex-1">
+          <Label className="text-[12px] text-muted-foreground">ความสัมพันธ์</Label>
+          <RelationSelect
+            value={member.relation}
+            onChange={(relation) => onChange({ relation })}
+            label={`ความสัมพันธ์ของสมาชิกคนที่ ${index + 1}`}
+            className="mt-1"
+          />
+        </div>
+        <div className="w-20">
+          <Label className="text-[12px] text-muted-foreground">อายุ</Label>
+          <Input
+            inputMode="numeric"
+            value={member.age}
+            onChange={(e) => onChange({ age: e.target.value === "" ? "" : Number(e.target.value) })}
+            className="mt-1 h-10 text-center"
+          />
+        </div>
+        <button
+          type="button"
+          onClick={onRemove}
+          aria-label={`ลบสมาชิกคนที่ ${index + 1}`}
+          className="flex size-10 items-center justify-center text-muted-foreground hover:text-risk-red"
+        >
+          <Trash2 className="size-4" />
+        </button>
+      </div>
+
+      <label className="mt-3 flex items-center gap-2 text-[13px]">
+        <Checkbox
+          checked={member.disability}
+          onCheckedChange={() => onChange({ disability: !member.disability })}
+        />
+        มีความพิการ
+      </label>
+
+      <div className="mt-3 space-y-2">
+        {shown.map((col) => (
+          <div key={col.key} className="flex items-center gap-2">
+            <span className="flex-1 text-[12.5px] text-muted-foreground">{col.label}</span>
+            <Input
+              inputMode="numeric"
+              value={member.income[col.key] || ""}
+              onChange={(e) =>
+                onChange({ income: { ...member.income, [col.key]: Number(e.target.value) || 0 } })
+              }
+              placeholder="0"
+              className="h-10 w-28 text-right"
+            />
+          </div>
+        ))}
+        {hidden.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {hidden.map((col) => (
+              <button
+                key={col.key}
+                type="button"
+                onClick={() => setAdded((prev) => [...prev, col.key])}
+                className="flex items-center gap-1 rounded-lg border border-dashed border-border px-2.5 py-1.5 text-[12px] text-muted-foreground hover:bg-muted"
+              >
+                <Plus className="size-3.5" /> {col.label}
+              </button>
+            ))}
+          </div>
+        )}
+        <div className="flex justify-between border-t border-border pt-2 text-[13px]">
+          <span className="text-muted-foreground">รวมรายได้</span>
+          <b>{formatBaht(memberTotal(member))} บาท/เดือน</b>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** หลังบันทึก: สรุปสิ่งที่พบ และเสนอเปิด case เมื่อพบความเสี่ยง (UC4 ทางเลือก B) */
+function VisitSaved({
+  studentId,
+  studentName,
+  findings,
+  poor,
+  hasCase,
+}: {
+  studentId: string;
+  studentName: string;
+  findings: string[];
+  poor: boolean;
+  hasCase: boolean;
+}) {
+  const atRisk = findings.length > 0 || poor;
+
+  return (
+    <>
+      <PageHeader title="แบบบันทึกการเยี่ยมบ้านนักเรียน" subtitle={studentName} />
+      <div className="flex-1 overflow-y-auto p-8">
+        <div className="mx-auto max-w-2xl space-y-5">
+          <div className="rounded-xl border border-border bg-card p-6">
+            <div className="flex items-center gap-3">
+              <CheckCircle2 className="size-6 text-risk-green" />
+              <h2 className="text-[17px] font-bold">บันทึกผลการเยี่ยมบ้านแล้ว</h2>
+            </div>
+            <p className="mt-1.5 text-[13.5px] text-muted-foreground">
+              นัดหมายนี้เปลี่ยนสถานะเป็น “เสร็จสิ้น” และดูผลย้อนหลังได้ที่หน้าจัดการการเยี่ยมบ้าน
+            </p>
+          </div>
+
+          {atRisk ? (
+            <div className="rounded-xl border border-risk-amber/40 bg-risk-amber-bg p-6">
+              <div className="flex items-center gap-2.5">
+                <AlertTriangle className="size-5 text-risk-amber" />
+                <h3 className="text-[15px] font-bold text-risk-amber">
+                  พบสิ่งที่ควรติดตาม {findings.length + (poor ? 1 : 0)} รายการ
+                </h3>
+              </div>
+              <ul className="mt-3 space-y-1.5">
+                {poor && (
+                  <li className="text-[13.5px]">
+                    • รายได้เฉลี่ยต่อคนต่ำกว่าเกณฑ์ยากจน ({formatBaht(POVERTY_LINE)} บาท/เดือน)
+                  </li>
+                )}
+                {findings.map((f) => (
+                  <li key={f} className="text-[13.5px]">
+                    • {f}
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-3 text-[13px] text-muted-foreground">
+                {hasCase
+                  ? "นักเรียนมี case ช่วยเหลืออยู่แล้ว ควรบันทึกผลการเยี่ยมบ้านเป็นการติดตามใน case"
+                  : "ควรเปิด case ช่วยเหลือเพื่อวางแผนดูแลต่อ"}
+              </p>
+              <div className="mt-4 flex flex-wrap gap-3">
+                <LinkButton href={`/care-cases?student=${studentId}&from=home_visit`}>
+                  {hasCase ? "ไปที่ case ของนักเรียน" : "เปิด case ช่วยเหลือ"}
+                </LinkButton>
+                <LinkButton variant="outline" href="/home-visits">
+                  กลับไปรายการนัดหมาย
+                </LinkButton>
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-xl border border-border bg-card p-6">
+              <p className="text-[13.5px]">ไม่พบความเสี่ยงจากการเยี่ยมบ้านครั้งนี้</p>
+              <LinkButton className="mt-4" href="/home-visits">
+                กลับไปรายการนัดหมาย
+              </LinkButton>
+            </div>
+          )}
         </div>
       </div>
     </>

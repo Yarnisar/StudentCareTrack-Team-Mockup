@@ -7,9 +7,10 @@ import { Button } from "@/components/ui/button";
 import { LinkButton } from "@/components/ui/link-button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { homeVisitRecords, useStore } from "@/lib/store";
+import { draftKey, useStore } from "@/lib/store";
 import { formatBaht, formatThaiDate, formatThaiTime } from "@/lib/format";
 import { APPOINTMENT_STATUS_LABEL, AppointmentStatus } from "@/lib/types";
+import { formatCaretaker } from "@/lib/home-visit-form";
 
 const STATUS_STYLE: Record<AppointmentStatus, string> = {
   pending: "bg-risk-amber-bg text-risk-amber",
@@ -25,7 +26,9 @@ export default function HomeVisitsPage() {
 
   const appointment = store.appointments.find((a) => a.appointmentId === selected);
   const student = appointment ? store.getStudent(appointment.studentId) : undefined;
-  const record = homeVisitRecords.find((r) => r.appointmentId === selected);
+  const record = store.homeVisitRecords.find((r) => r.appointmentId === selected);
+  const hasDraft = store.getDraft(draftKey("home_visit", selected)) !== undefined;
+  const recordLabel = hasDraft ? "ทำต่อจากร่างที่บันทึกไว้" : "บันทึกผลการเยี่ยมบ้าน";
 
   const totalIncome = record?.householdMembers.reduce((s, m) => s + m.monthlyIncome, 0) ?? 0;
   const perCapita = record ? Math.round(totalIncome / record.householdMembers.length) : 0;
@@ -99,7 +102,7 @@ export default function HomeVisitsPage() {
                   </span>
                   {appointment.status === "confirmed" && (
                     <LinkButton href={`/home-visits/${appointment.appointmentId}/record`}>
-                      <Check className="size-4" /> บันทึกผลการเยี่ยมบ้าน
+                      <Check className="size-4" /> {recordLabel}
                     </LinkButton>
                   )}
                 </CardContent>
@@ -111,7 +114,7 @@ export default function HomeVisitsPage() {
                     <h3 className="text-[15.5px] font-bold">ข้อมูลที่ผู้ปกครองให้ไว้ล่วงหน้า</h3>
                     <div className="mt-3 grid gap-3 sm:grid-cols-2">
                       <Field label="เบอร์ติดต่อที่สะดวก" value={appointment.guardianPhone ?? "-"} />
-                      <Field label="ผู้ดูแลหลักกรณีไม่อยู่บ้าน" value={appointment.caretakerName ?? "-"} />
+                      <Field label="ผู้ดูแลหลักกรณีไม่อยู่บ้าน" value={formatCaretaker(appointment.caretakerRelation, appointment.caretakerName) || "-"} />
                     </div>
                     <div className="mt-3">
                       <Field label="สิ่งที่อยากให้ครูช่วยเหลือ" value={appointment.guardianNote} />
@@ -203,7 +206,7 @@ export default function HomeVisitsPage() {
                         className="mt-4"
                         href={`/home-visits/${appointment.appointmentId}/record`}
                       >
-                        เปิดแบบฟอร์มบันทึกผลการเยี่ยมบ้าน
+                        {hasDraft ? "ทำต่อจากร่างที่บันทึกไว้" : "เปิดแบบฟอร์มบันทึกผลการเยี่ยมบ้าน"}
                       </LinkButton>
                     ) : (
                       <Button className="mt-4" disabled>

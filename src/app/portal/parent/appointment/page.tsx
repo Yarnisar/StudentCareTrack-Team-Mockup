@@ -7,10 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { NativeSelect } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
 import { useStore } from "@/lib/store";
 import { formatThaiDate, formatThaiTime } from "@/lib/format";
 import { APPOINTMENT_STATUS_LABEL } from "@/lib/types";
+import { CARETAKER_RELATION_OPTIONS } from "@/lib/home-visit-form";
 
 const DEMO_STUDENT_ID = "30125";
 
@@ -22,6 +24,7 @@ export default function ParentAppointmentPage() {
   );
 
   const [phone, setPhone] = useState(appointment?.guardianPhone ?? "");
+  const [caretakerRelation, setCaretakerRelation] = useState(appointment?.caretakerRelation ?? "");
   const [caretaker, setCaretaker] = useState(appointment?.caretakerName ?? "");
   const [note, setNote] = useState(appointment?.guardianNote ?? "");
   const [sent, setSent] = useState(false);
@@ -105,13 +108,32 @@ export default function ParentAppointmentPage() {
                 <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="caretaker">ผู้ดูแลหลักกรณีไม่อยู่บ้าน</Label>
-                <Input
-                  id="caretaker"
-                  value={caretaker}
-                  onChange={(e) => setCaretaker(e.target.value)}
-                  placeholder="เช่น ยาย (นางบุญมา สายใจ)"
-                />
+                <Label htmlFor="caretaker-relation">ผู้ดูแลหลักกรณีไม่อยู่บ้าน</Label>
+                {/* เลือกจากรายการ ครูจึงได้ข้อ 5.3 ของแบบเยี่ยมบ้านโดยไม่ต้องเดาจากข้อความ */}
+                <NativeSelect
+                  id="caretaker-relation"
+                  value={caretakerRelation}
+                  onChange={(e) => setCaretakerRelation(e.target.value)}
+                  className="h-11"
+                >
+                  <option value="">เลือกผู้ดูแล</option>
+                  {CARETAKER_RELATION_OPTIONS.map((opt) => (
+                    <option key={opt} value={opt}>
+                      {opt}
+                    </option>
+                  ))}
+                </NativeSelect>
+                {caretakerRelation !== "" && caretakerRelation !== "นักเรียนอยู่บ้านเอง" && (
+                  <Input
+                    id="caretaker"
+                    aria-label="ชื่อผู้ดูแล"
+                    value={caretaker}
+                    onChange={(e) => setCaretaker(e.target.value)}
+                    placeholder={
+                      caretakerRelation === "อื่น ๆ" ? "ระบุว่าเป็นใคร เช่น พี่เลี้ยง" : "ชื่อผู้ดูแล (ไม่บังคับ)"
+                    }
+                  />
+                )}
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="note">สิ่งที่อยากให้ครูช่วยเหลือ</Label>
@@ -129,7 +151,8 @@ export default function ParentAppointmentPage() {
                 onClick={() => {
                   store.saveGuardianInfo(appointment.appointmentId, {
                     guardianPhone: phone,
-                    caretakerName: caretaker,
+                    caretakerRelation,
+                    caretakerName: caretakerRelation === "นักเรียนอยู่บ้านเอง" ? "" : caretaker,
                     guardianNote: note,
                   });
                   setSent(true);
