@@ -16,7 +16,6 @@ import { useStore } from "@/lib/store";
 import type { BehaviorRecord } from "@/lib/types";
 import {
   NewRecordFields,
-  RulesList,
   SEVERITY_LABEL,
   SourceBadge,
   ruleOf,
@@ -142,16 +141,6 @@ export function VariantC({ records, form }: { records: BehaviorRecord[]; form: B
           );
         })}
       </div>
-
-      <Card className="mt-5">
-        <CardContent className="p-6">
-          <div className="mb-2 flex items-center justify-between">
-            <h2 className="text-[15.5px] font-bold">กฎความประพฤติ</h2>
-            <span className="text-xs text-muted-foreground">จัดการโดยแอดมิน</span>
-          </div>
-          <RulesList />
-        </CardContent>
-      </Card>
     </div>
   );
 }
@@ -174,7 +163,7 @@ function RecordRow({ rec }: { rec: BehaviorRecord }) {
               {SEVERITY_LABEL[rule.severity]}
             </span>
           )}
-          <SourceBadge source={rec.source} />
+          <SourceBadge source={rec.source} evidence={rec.evidence} />
         </span>
         <span className="mt-1 block text-[13px] leading-relaxed text-muted-foreground">
           {rec.description}

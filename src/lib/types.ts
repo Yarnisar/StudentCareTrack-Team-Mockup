@@ -196,15 +196,10 @@ export interface BehaviorRecord {
   description: string;
   occurredAt: string;
   recordedByName: string;
-  source: "manual" | "qr_checkin";
-}
-
-export interface CheckinLog {
-  logId: string;
-  studentId: string;
-  scannedAt: string;
-  isLate: boolean;
-  scannedByName: string;
+  /** card_scan = เลือกนักเรียนจากการสแกนบัตร (UC7 Subflow A) */
+  source: "manual" | "card_scan";
+  /** รูปหลักฐาน (data URL ที่ย่อแล้ว) — PROTOTYPE: Project 2 เก็บไฟล์บน server แล้วเก็บแค่ลิงก์ */
+  evidence?: string[];
 }
 
 export type AppointmentStatus =

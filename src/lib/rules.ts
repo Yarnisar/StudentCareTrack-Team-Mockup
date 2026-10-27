@@ -220,16 +220,3 @@ export function scoreSdq(answers: Record<number, 0 | 1 | 2>) {
   return { scaleScores, totalDifficulties, level };
 }
 
-/* ------------------------------------------------------------------ */
-/* 5. เกณฑ์การมาสาย                                                    */
-/* ------------------------------------------------------------------ */
-
-/** เวลาเข้าเรียน 07:30 น. */
-export const SCHOOL_START_MINUTES = 7 * 60 + 30;
-
-/** จำนวนครั้งที่มาสายต่อเดือนที่ระบบจะแจ้งเตือนครูประจำชั้น */
-export const LATE_ALERT_THRESHOLD = 5;
-
-export function isLateArrival(date: Date): boolean {
-  return date.getHours() * 60 + date.getMinutes() > SCHOOL_START_MINUTES;
-}

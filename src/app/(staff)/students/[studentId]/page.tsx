@@ -211,9 +211,9 @@ export default function StudentDetailPage({
                           {formatThaiDateTime(rec.occurredAt)}
                         </span>
                         <span className="flex-1 text-[13.5px]">{rule?.name}</span>
-                        {rec.source === "qr_checkin" && (
+                        {rec.source === "card_scan" && (
                           <span className="rounded bg-accent px-2 py-0.5 text-[11px] font-semibold text-primary">
-                            QR อัตโนมัติ
+                            สแกนบัตร
                           </span>
                         )}
                         <span

@@ -12,7 +12,6 @@ import {
   behaviorRecords as seedBehaviorRecords,
   behaviorRules,
   careCases as seedCareCases,
-  checkinLogs as seedCheckins,
   CURRENT_TEACHER,
   CURRENT_TERM,
   dcSummaries,
@@ -27,8 +26,6 @@ import {
   DERIVED_ITEM_ID,
   evaluateNineS,
   evaluateRedFlag,
-  isLateArrival,
-  LATE_ALERT_THRESHOLD,
   scoreSdq,
 } from "./rules";
 import { nowThaiIso } from "./format";
@@ -42,7 +39,6 @@ import {
   CareCase,
   CaseUrgency,
   CareMethod,
-  CheckinLog,
   DIMENSION_ORDER,
   HomeVisitAppointment,
   HomeVisitRecord,
@@ -57,14 +53,6 @@ import {
   SupportType,
 } from "./types";
 
-export interface CheckinOutcome {
-  student: Student;
-  log: CheckinLog;
-  isLate: boolean;
-  lateCountThisMonth: number;
-  exceededThreshold: boolean;
-}
-
 interface StoreValue {
   /** บทบาทของผู้ใช้ปัจจุบัน (ต้นแบบ: เลือกจากหน้า login หรือแถบสลับบทบาท) */
   role: Role;
@@ -76,7 +64,6 @@ interface StoreValue {
   nineS: NineSAssessment[];
   sdq: SdqAssessment[];
   behaviorRecords: BehaviorRecord[];
-  checkins: CheckinLog[];
   appointments: HomeVisitAppointment[];
   careCases: CareCase[];
   homeVisitRecords: HomeVisitRecord[];
@@ -100,8 +87,16 @@ interface StoreValue {
   saveRedFlag: (studentId: string, answers: Record<string, boolean>) => AssessmentOutcome;
   saveNineS: (studentId: string, answers: Record<string, 0 | 1 | 2>) => AssessmentOutcome;
   saveSdq: (studentId: string, rater: SdqRater, answers: Record<number, 0 | 1 | 2>) => SdqAssessment;
-  addBehaviorRecord: (studentId: string, ruleId: string, description: string) => void;
-  checkIn: (studentId: string, simulatedTime?: string) => CheckinOutcome | null;
+  /** บันทึกพฤติกรรมเดียวกันให้นักเรียนหนึ่งคนหรือหลายคน (UC7 ข้อ 3) */
+  addBehaviorRecord: (input: {
+    studentIds: string[];
+    ruleId: string;
+    description: string;
+    /** วันที่เกิดเหตุ (พ.ศ. yyyy-mm-dd) ไม่ระบุ = วันนี้ */
+    occurredOn?: string;
+    evidence?: string[];
+    source?: BehaviorRecord["source"];
+  }) => void;
   setAppointmentStatus: (appointmentId: string, status: AppointmentStatus) => void;
   saveGuardianInfo: (
     appointmentId: string,
@@ -143,7 +138,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [nineS, setNineS] = useState<NineSAssessment[]>([]);
   const [sdq, setSdq] = useState<SdqAssessment[]>(seedSdq);
   const [behaviorRecords, setBehaviorRecords] = useState<BehaviorRecord[]>(seedBehaviorRecords);
-  const [checkins, setCheckins] = useState<CheckinLog[]>(seedCheckins);
   const [appointments, setAppointments] = useState<HomeVisitAppointment[]>(seedAppointments);
   const [careCases, setCareCases] = useState<CareCase[]>(seedCareCases);
   const [homeVisitRecords, setHomeVisitRecords] = useState<HomeVisitRecord[]>(seedHomeVisitRecords);
@@ -372,72 +366,28 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       );
     };
 
-    const addBehaviorRecord: StoreValue["addBehaviorRecord"] = (studentId, ruleId, description) => {
-      setBehaviorRecords((prev) => [
-        {
-          recordId: nextId("BH"),
-          studentId,
-          ruleId,
-          description,
-          occurredAt: nowThaiIso(),
-          recordedByName: CURRENT_TEACHER.name,
-          source: "manual",
-        },
-        ...prev,
-      ]);
-    };
-
-    const checkIn: StoreValue["checkIn"] = (studentId, simulatedTime) => {
-      const student = getStudent(studentId);
-      if (!student) return null;
-
-      const now = new Date();
-      // ต้นแบบ: อนุญาตให้จำลองเวลาสแกน (HH:MM) เพื่อสาธิตเงื่อนไขการมาสายได้ทุกช่วงเวลา
-      if (simulatedTime) {
-        const [h, m] = simulatedTime.split(":").map(Number);
-        now.setHours(h, m, 0, 0);
-      }
-      const late = isLateArrival(now);
-      const pad = (n: number) => String(n).padStart(2, "0");
-      const stamp = nowThaiIso(`${pad(now.getHours())}:${pad(now.getMinutes())}`);
-      const log: CheckinLog = {
-        logId: nextId("CI"),
+    const addBehaviorRecord: StoreValue["addBehaviorRecord"] = ({
+      studentIds,
+      ruleId,
+      description,
+      occurredOn,
+      evidence,
+      source = "manual",
+    }) => {
+      const now = nowThaiIso();
+      // วันที่เกิดเหตุย้อนหลังได้ ใช้เวลาที่บันทึกจริงต่อท้าย
+      const occurredAt = occurredOn ? `${occurredOn}T${now.split("T")[1]}` : now;
+      const created = studentIds.map<BehaviorRecord>((studentId) => ({
+        recordId: nextId("BH"),
         studentId,
-        scannedAt: stamp,
-        isLate: late,
-        scannedByName: CURRENT_TEACHER.name,
-      };
-
-      const month = stamp.slice(0, 7);
-      const lateCountThisMonth =
-        checkins.filter((c) => c.studentId === studentId && c.isLate && c.scannedAt.startsWith(month))
-          .length + (late ? 1 : 0);
-
-      setCheckins((prev) => [log, ...prev]);
-
-      // มาสาย -> สร้างบันทึกความประพฤติอัตโนมัติ (เชื่อมกับโมดูลความประพฤติ)
-      if (late) {
-        setBehaviorRecords((prev) => [
-          {
-            recordId: nextId("BH"),
-            studentId,
-            ruleId: "BR-01",
-            description: `บันทึกอัตโนมัติจากการสแกน QR เวลา ${stamp.split("T")[1].slice(0, 5)} น.`,
-            occurredAt: stamp,
-            recordedByName: "ระบบ (QR Check-in)",
-            source: "qr_checkin",
-          },
-          ...prev,
-        ]);
-      }
-
-      return {
-        student,
-        log,
-        isLate: late,
-        lateCountThisMonth,
-        exceededThreshold: late && lateCountThisMonth >= LATE_ALERT_THRESHOLD,
-      };
+        ruleId,
+        description,
+        occurredAt,
+        recordedByName: CURRENT_TEACHER.name,
+        source,
+        ...(evidence && evidence.length > 0 && { evidence }),
+      }));
+      setBehaviorRecords((prev) => [...created, ...prev]);
     };
 
     const setAppointmentStatus: StoreValue["setAppointmentStatus"] = (appointmentId, status) => {
@@ -535,7 +485,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       nineS,
       sdq,
       behaviorRecords,
-      checkins,
       appointments,
       careCases,
       homeVisitRecords,
@@ -555,7 +504,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       saveNineS,
       saveSdq,
       addBehaviorRecord,
-      checkIn,
       setAppointmentStatus,
       saveGuardianInfo,
       saveHomeVisit,
@@ -564,7 +512,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setCaseUrgency,
       closeCase,
     };
-  }, [role, screenings, redFlags, nineS, sdq, behaviorRecords, checkins, appointments, careCases, homeVisitRecords, assessmentWindows, drafts]);
+  }, [role, screenings, redFlags, nineS, sdq, behaviorRecords, appointments, careCases, homeVisitRecords, assessmentWindows, drafts]);
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }

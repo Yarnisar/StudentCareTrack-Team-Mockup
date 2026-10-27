@@ -56,14 +56,13 @@ const TEACHER_PAGES = [
   "/home-visits",
   "/characteristics",
   "/documents",
-  "/checkin",
   "/care-cases",
 ];
 
 const ALLOWED: Record<Role, string[]> = {
   admin: [...TEACHER_PAGES, "/settings"],
   homeroom: TEACHER_PAGES,
-  subject: ["/behavior", "/checkin", "/characteristics"],
+  subject: ["/behavior", "/characteristics"],
   student: ["/portal/student"],
   parent: ["/portal/parent"],
 };

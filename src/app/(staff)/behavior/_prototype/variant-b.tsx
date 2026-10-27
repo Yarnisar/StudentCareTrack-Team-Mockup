@@ -13,7 +13,6 @@ import { useStore } from "@/lib/store";
 import type { BehaviorRecord } from "@/lib/types";
 import {
   NewRecordFields,
-  RulesList,
   SEVERITY_LABEL,
   ScoreChip,
   SourceBadge,
@@ -26,7 +25,7 @@ export const VARIANT_B_NAME = "การ์ดรายบันทึก";
 
 export function VariantB({ records, form }: { records: BehaviorRecord[]; form: BehaviorForm }) {
   const store = useStore();
-  const qrCount = records.filter((r) => r.source === "qr_checkin").length;
+  const qrCount = records.filter((r) => r.source === "card_scan").length;
   const studentsTouched = new Set(records.map((r) => r.studentId)).size;
 
   return (
@@ -34,7 +33,7 @@ export function VariantB({ records, form }: { records: BehaviorRecord[]; form: B
       <div className="mb-5 grid grid-cols-2 gap-4 xl:grid-cols-4">
         <Stat label="บันทึกทั้งหมด" value={`${records.length} รายการ`} />
         <Stat label="นักเรียนที่ถูกบันทึก" value={`${studentsTouched} คน`} />
-        <Stat label="บันทึกอัตโนมัติจาก QR" value={`${qrCount} รายการ`} accent />
+        <Stat label="บันทึกจากการสแกนบัตร" value={`${qrCount} รายการ`} accent />
         <Stat
           label="คะแนนบวกที่บันทึก"
           value={`${records.filter((r) => (ruleOf(r.ruleId)?.scoreDelta ?? 0) > 0).length} รายการ`}
@@ -63,7 +62,7 @@ export function VariantB({ records, form }: { records: BehaviorRecord[]; form: B
                       {student?.roomName} เลขที่ {student?.classNo}
                     </span>
                     <span className="flex-1" />
-                    <SourceBadge source={rec.source} />
+                    <SourceBadge source={rec.source} evidence={rec.evidence} />
                     <ScoreChip delta={rule?.scoreDelta ?? 0} size="lg" />
                   </div>
 
@@ -99,19 +98,6 @@ export function VariantB({ records, form }: { records: BehaviorRecord[]; form: B
             <CardContent className="p-6">
               <h2 className="mb-4 text-[15.5px] font-bold">บันทึกพฤติกรรมใหม่</h2>
               <NewRecordFields form={form} />
-              <p className="mt-3 text-[11.5px] leading-relaxed text-muted-foreground">
-                ระบบจะแจ้งเตือนครูประจำชั้นของนักเรียนคนนั้นโดยอัตโนมัติ
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="mb-2 flex items-center justify-between">
-                <h2 className="text-[15.5px] font-bold">กฎความประพฤติ</h2>
-                <span className="text-xs text-muted-foreground">จัดการโดยแอดมิน</span>
-              </div>
-              <RulesList />
             </CardContent>
           </Card>
         </div>

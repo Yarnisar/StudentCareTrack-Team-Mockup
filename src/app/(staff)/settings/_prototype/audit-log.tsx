@@ -15,12 +15,6 @@ export interface AuditEntry {
 export function useAuditEntries(): AuditEntry[] {
   const store = useStore();
   return [
-    ...store.checkins.slice(0, 4).map((c) => ({
-      at: c.scannedAt,
-      action: "CHECKIN",
-      detail: `สแกน QR เช็คอินนักเรียน ${store.getStudent(c.studentId)?.fullName ?? c.studentId}`,
-      by: c.scannedByName,
-    })),
     ...store.behaviorRecords.slice(0, 4).map((b) => ({
       at: b.occurredAt,
       action: "CREATE_BEHAVIOR",

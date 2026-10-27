@@ -8,7 +8,6 @@ import {
   BehaviorRecord,
   BehaviorRule,
   CareCase,
-  CheckinLog,
   DcCriteria,
   DcSummary,
   EducationDocument,
@@ -308,19 +307,19 @@ export const behaviorRecords: BehaviorRecord[] = [
     recordId: "BH-001",
     studentId: "30118",
     ruleId: "BR-01",
-    description: "บันทึกอัตโนมัติจากการสแกน QR เวลา 07:52 น.",
+    description: "มาถึงโรงเรียน 07:52 น. หลังเวลาเข้าแถว",
     occurredAt: "2570-02-16T07:52:00",
-    recordedByName: "ระบบ (QR Check-in)",
-    source: "qr_checkin",
+    recordedByName: CURRENT_TEACHER.name,
+    source: "card_scan",
   },
   {
     recordId: "BH-002",
     studentId: "30125",
     ruleId: "BR-01",
-    description: "บันทึกอัตโนมัติจากการสแกน QR เวลา 07:55 น.",
+    description: "มาถึงโรงเรียน 07:55 น. หลังเวลาเข้าแถว",
     occurredAt: "2570-02-16T07:55:00",
-    recordedByName: "ระบบ (QR Check-in)",
-    source: "qr_checkin",
+    recordedByName: CURRENT_TEACHER.name,
+    source: "card_scan",
   },
   {
     recordId: "BH-003",
@@ -358,14 +357,6 @@ export const behaviorRecords: BehaviorRecord[] = [
     recordedByName: CURRENT_TEACHER.name,
     source: "manual",
   },
-];
-
-export const checkinLogs: CheckinLog[] = [
-  { logId: "CI-001", studentId: "30118", scannedAt: "2570-02-16T07:52:00", isLate: true, scannedByName: CURRENT_TEACHER.name },
-  { logId: "CI-002", studentId: "30125", scannedAt: "2570-02-16T07:55:00", isLate: true, scannedByName: CURRENT_TEACHER.name },
-  { logId: "CI-003", studentId: "30171", scannedAt: "2570-02-16T07:58:00", isLate: true, scannedByName: CURRENT_TEACHER.name },
-  { logId: "CI-004", studentId: "30160", scannedAt: "2570-02-16T07:28:00", isLate: false, scannedByName: CURRENT_TEACHER.name },
-  { logId: "CI-005", studentId: "30152", scannedAt: "2570-02-16T07:22:00", isLate: false, scannedByName: CURRENT_TEACHER.name },
 ];
 
 export const appointments: HomeVisitAppointment[] = [

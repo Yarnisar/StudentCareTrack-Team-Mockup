@@ -8,7 +8,7 @@
  */
 
 import { useState } from "react";
-import { ChevronDown, Plus, X } from "lucide-react";
+import { Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatThaiDate, formatThaiTime } from "@/lib/format";
@@ -16,7 +16,6 @@ import { useStore } from "@/lib/store";
 import type { BehaviorRecord } from "@/lib/types";
 import {
   NewRecordFields,
-  RulesList,
   ScoreChip,
   SourceBadge,
   Stat,
@@ -29,9 +28,8 @@ export const VARIANT_A_NAME = "ตารางเต็มความกว้�
 export function VariantA({ records, form }: { records: BehaviorRecord[]; form: BehaviorForm }) {
   const store = useStore();
   const [showForm, setShowForm] = useState(false);
-  const [showRules, setShowRules] = useState(false);
 
-  const qrCount = records.filter((r) => r.source === "qr_checkin").length;
+  const qrCount = records.filter((r) => r.source === "card_scan").length;
   const studentsTouched = new Set(records.map((r) => r.studentId)).size;
 
   return (
@@ -39,7 +37,7 @@ export function VariantA({ records, form }: { records: BehaviorRecord[]; form: B
       <div className="mb-5 grid grid-cols-2 gap-4 xl:grid-cols-4">
         <Stat label="บันทึกทั้งหมด" value={`${records.length} รายการ`} />
         <Stat label="นักเรียนที่ถูกบันทึก" value={`${studentsTouched} คน`} />
-        <Stat label="บันทึกอัตโนมัติจาก QR" value={`${qrCount} รายการ`} accent />
+        <Stat label="บันทึกจากการสแกนบัตร" value={`${qrCount} รายการ`} accent />
         <Stat
           label="คะแนนบวกที่บันทึก"
           value={`${records.filter((r) => (ruleOf(r.ruleId)?.scoreDelta ?? 0) > 0).length} รายการ`}
@@ -117,7 +115,7 @@ export function VariantA({ records, form }: { records: BehaviorRecord[]; form: B
                     <td className="py-3 pr-3">{rule?.name}</td>
                     <td className="py-3 pr-3 text-muted-foreground">{rec.description}</td>
                     <td className="py-3 pr-3">
-                      <SourceBadge source={rec.source} />
+                      <SourceBadge source={rec.source} evidence={rec.evidence} />
                     </td>
                     <td className="py-3 pr-3 text-[12.5px] text-muted-foreground">
                       {rec.recordedByName}
@@ -133,29 +131,6 @@ export function VariantA({ records, form }: { records: BehaviorRecord[]; form: B
         </CardContent>
       </Card>
 
-      <Card className="mt-4">
-        <CardContent className="p-6">
-          <button
-            type="button"
-            onClick={() => setShowRules((v) => !v)}
-            className="flex w-full items-center gap-2"
-          >
-            <h2 className="text-[15.5px] font-bold">กฎความประพฤติ</h2>
-            <span className="text-xs text-muted-foreground">จัดการโดยแอดมิน</span>
-            <span className="flex-1" />
-            <ChevronDown
-              className={`size-4 text-muted-foreground transition-transform ${
-                showRules ? "rotate-180" : ""
-              }`}
-            />
-          </button>
-          {showRules && (
-            <div className="mt-3">
-              <RulesList />
-            </div>
-          )}
-        </CardContent>
-      </Card>
     </div>
   );
 }

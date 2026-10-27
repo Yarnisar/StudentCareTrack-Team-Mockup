@@ -13,7 +13,6 @@ import {
   Home,
   LayoutGrid,
   LogOut,
-  QrCode,
   Settings,
   Star,
   Users,
@@ -54,7 +53,6 @@ const NAV: { title?: string; items: NavItem[] }[] = [
     title: "พฤติกรรมและคุณลักษณะ",
     items: [
       { href: "/behavior", label: "ความประพฤติ", icon: AlertTriangle },
-      { href: "/checkin", label: "สแกน QR เช็คอิน", icon: QrCode },
       { href: "/characteristics", label: "คุณลักษณะอันพึงประสงค์", icon: Star },
     ],
   },
@@ -87,6 +85,11 @@ export function Sidebar() {
   const { role } = useStore();
   const info = ROLE_INFO[role];
   const online = useOnline();
+  // เมนูที่ตรงกับ URL ยาวที่สุดเป็นเมนูที่เลือกอยู่ (กันเมนูแม่ถูกเลือกซ้อนเมื่อมีเมนูลูกที่ path ขึ้นต้นเหมือนกัน)
+  const activeHref = NAV.flatMap((g) => g.items)
+    .map((item) => item.href)
+    .filter((href) => pathname === href || pathname.startsWith(`${href}/`))
+    .sort((a, b) => b.length - a.length)[0];
   // แสดงเฉพาะเมนูที่บทบาทนี้เข้าได้
   const groups = NAV.map((g) => ({ ...g, items: g.items.filter((item) => canAccess(role, item.href)) })).filter(
     (g) => g.items.length > 0
@@ -138,7 +141,7 @@ export function Sidebar() {
               <div className="px-5 pt-1 pb-1.5 text-[11.5px] font-semibold text-muted-foreground">{group.title}</div>
             )}
             {group.items.map(({ href, label, icon: Icon }) => {
-              const active = pathname === href || pathname.startsWith(`${href}/`);
+              const active = href === activeHref;
               return (
                 <Link
                   key={href}
