@@ -4,12 +4,13 @@
  * ภาพรวมของครูประจำชั้น (UC1): แต่ละกระบวนการไปถึงไหน และอะไรใกล้หมดเวลา
  * ตารางสถานะ 5 กระบวนการ → กดตัวเลขเพื่อดูรายชื่อ (Subflow B) → กดรายการเพื่อไปทำต่อ
  * ตัวกรองปีการศึกษา / ภาคเรียน / สถานะ และส่งออกตามตัวกรองปัจจุบัน (Subflow C)
+ * สลับเป็นปฏิทินได้ เพื่อดูว่างานไหนต้องเสร็จเมื่อไร (homeroom-calendar.tsx)
  * ใช้ข้อมูลจริงใน store ตัวเลขจึงตรงกับหน้าอื่นและขยับตามงานที่ทำ
  * สถานะใช้สีกลาง เพราะสีเหลือง/แดงสงวนไว้สำหรับกลุ่มเสี่ยง/กลุ่มมีปัญหา
  */
 
 import { useState } from "react";
-import { ChevronRight, Download } from "lucide-react";
+import { CalendarDays, ChevronRight, Download, Table2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { LinkButton } from "@/components/ui/link-button";
@@ -31,6 +32,8 @@ import {
   type ProcessSummary,
   type Status,
 } from "./process-status";
+import { calendarEvents } from "./calendar-events";
+import { HomeroomCalendar } from "./homeroom-calendar";
 
 /** "open" = ทุกอย่างที่ยังไม่เสร็จ (ค่าเริ่มต้น เพราะครูเปิดหน้านี้เพื่อหาว่าต้องทำอะไรต่อ) */
 type StatusFilter = Status | "open" | "all";
@@ -58,12 +61,14 @@ export function HomeroomOverview() {
   const [semester, setSemester] = useState(CURRENT_TERM.semester);
   const [status, setStatus] = useState<StatusFilter>("open");
   const [process, setProcess] = useState<ProcessKey | "all">("all");
+  const [view, setView] = useState<"table" | "calendar">("table");
 
   const termId = `T${year}-${semester}`;
   const termLabel = `ภาคเรียนที่ ${semester} ปีการศึกษา ${year}`;
   const { items, summaries } = processStatus(store, termId);
   const shown = items.filter((i) => matches(i, process, status));
   const noData = summaries.length === 0;
+  const { events, periods } = calendarEvents(store, termId, summaries);
 
   const pick = (p: ProcessKey | "all", s: StatusFilter) => {
     const same = p === process && s === status;
@@ -98,6 +103,16 @@ export function HomeroomOverview() {
   return (
     <div className="flex-1 overflow-y-auto p-8">
       <div className="flex flex-wrap items-end gap-3">
+        <Filter label="มุมมอง">
+          <div className="flex h-10 rounded-lg border border-border p-1" role="group">
+            <ViewButton active={view === "table"} onClick={() => setView("table")}>
+              <Table2 className="size-4" /> ตารางสถานะ
+            </ViewButton>
+            <ViewButton active={view === "calendar"} onClick={() => setView("calendar")}>
+              <CalendarDays className="size-4" /> ปฏิทิน
+            </ViewButton>
+          </div>
+        </Filter>
         <Filter label="ปีการศึกษา">
           <NativeSelect value={year} onChange={(e) => setYear(Number(e.target.value))} className="w-32">
             {YEARS.map((y) => (
@@ -116,70 +131,78 @@ export function HomeroomOverview() {
             ))}
           </NativeSelect>
         </Filter>
-        <Filter label="สถานะ">
-          <NativeSelect
-            value={status}
-            onChange={(e) => setStatus(e.target.value as StatusFilter)}
-            className="w-48"
-          >
-            {(Object.keys(STATUS_FILTER_LABEL) as StatusFilter[]).map((s) => (
-              <option key={s} value={s}>
-                {STATUS_FILTER_LABEL[s]}
-              </option>
-            ))}
-          </NativeSelect>
-        </Filter>
+        {view === "table" && (
+          <Filter label="สถานะ">
+            <NativeSelect
+              value={status}
+              onChange={(e) => setStatus(e.target.value as StatusFilter)}
+              className="w-48"
+            >
+              {(Object.keys(STATUS_FILTER_LABEL) as StatusFilter[]).map((s) => (
+                <option key={s} value={s}>
+                  {STATUS_FILTER_LABEL[s]}
+                </option>
+              ))}
+            </NativeSelect>
+          </Filter>
+        )}
         <span className="flex-1" />
-        <Button variant="outline" onClick={exportCsv} disabled={shown.length === 0}>
-          <Download className="size-4" /> ส่งออกรายการ ({shown.length})
-        </Button>
+        {view === "table" && (
+          <Button variant="outline" onClick={exportCsv} disabled={shown.length === 0}>
+            <Download className="size-4" /> ส่งออกรายการ ({shown.length})
+          </Button>
+        )}
       </div>
 
-      <Card className="mt-5">
-        <CardContent className="p-6">
-          <h2 className="text-[15.5px] font-bold">สถานะการดำเนินงาน · {termLabel}</h2>
-          <p className="mt-0.5 text-[12.5px] text-muted-foreground">
-            กดตัวเลขเพื่อดูรายชื่อ · ใกล้ครบกำหนด = เหลือไม่เกิน {NEAR_DUE_DAYS} วันก่อนครบกำหนด
-          </p>
+      {view === "calendar" && !noData && <HomeroomCalendar events={events} periods={periods} />}
 
-          {noData ? (
-            <div className="py-12 text-center text-[13px] text-muted-foreground">
-              <p>ไม่พบข้อมูลของ{termLabel} ลองเปลี่ยนตัวกรอง</p>
-              <Button variant="outline" size="sm" className="mt-3" onClick={resetTerm}>
-                กลับไปภาคเรียนปัจจุบัน
-              </Button>
-            </div>
-          ) : (
-            <table className="mt-4 w-full text-[13.5px]">
-              <thead>
-                <tr className="border-b border-border text-left text-[12px] text-muted-foreground">
-                  <th className="py-2 font-medium">กระบวนการ</th>
-                  <th className="w-28 py-2 font-medium">ปิดรอบ</th>
-                  {STATUS_COLUMNS.map((s) => (
-                    <th key={s} className="w-28 py-2 text-center font-medium">
-                      {STATUS_LABEL[s]}
-                    </th>
+      {(view === "table" || noData) && (
+        <Card className="mt-5">
+          <CardContent className="p-6">
+            <h2 className="text-[15.5px] font-bold">สถานะการดำเนินงาน · {termLabel}</h2>
+            <p className="mt-0.5 text-[12.5px] text-muted-foreground">
+              กดตัวเลขเพื่อดูรายชื่อ · ใกล้ครบกำหนด = เหลือไม่เกิน {NEAR_DUE_DAYS} วันก่อนครบกำหนด
+            </p>
+
+            {noData ? (
+              <div className="py-12 text-center text-[13px] text-muted-foreground">
+                <p>ไม่พบข้อมูลของ{termLabel} ลองเปลี่ยนตัวกรอง</p>
+                <Button variant="outline" size="sm" className="mt-3" onClick={resetTerm}>
+                  กลับไปภาคเรียนปัจจุบัน
+                </Button>
+              </div>
+            ) : (
+              <table className="mt-4 w-full text-[13.5px]">
+                <thead>
+                  <tr className="border-b border-border text-left text-[12px] text-muted-foreground">
+                    <th className="py-2 font-medium">กระบวนการ</th>
+                    <th className="w-28 py-2 font-medium">ปิดรอบ</th>
+                    {STATUS_COLUMNS.map((s) => (
+                      <th key={s} className="w-28 py-2 text-center font-medium">
+                        {STATUS_LABEL[s]}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {summaries.map((row) => (
+                    <ProcessRow
+                      key={row.process}
+                      row={row}
+                      selected={process === row.process ? status : null}
+                      onPick={(s) => pick(row.process, s)}
+                    />
                   ))}
-                </tr>
-              </thead>
-              <tbody>
-                {summaries.map((row) => (
-                  <ProcessRow
-                    key={row.process}
-                    row={row}
-                    selected={process === row.process ? status : null}
-                    onPick={(s) => pick(row.process, s)}
-                  />
-                ))}
-              </tbody>
-            </table>
-          )}
+                </tbody>
+              </table>
+            )}
 
-          {!noData && <RiskLine />}
-        </CardContent>
-      </Card>
+            {!noData && <RiskLine />}
+          </CardContent>
+        </Card>
+      )}
 
-      {!noData && (
+      {!noData && view === "table" && (
         <Card className="mt-5">
           <CardContent className="p-6">
             <div className="flex flex-wrap items-center gap-3">
@@ -369,6 +392,31 @@ function RiskLine() {
         <RiskDot group="red" /> กลุ่มมีปัญหา {count("red")} คน
       </span>
     </div>
+  );
+}
+
+function ViewButton({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={
+        active
+          ? "flex items-center gap-1.5 rounded-md bg-accent px-3 text-[13px] font-semibold text-primary"
+          : "flex items-center gap-1.5 rounded-md px-3 text-[13px] text-muted-foreground hover:bg-muted"
+      }
+    >
+      {children}
+    </button>
   );
 }
 
