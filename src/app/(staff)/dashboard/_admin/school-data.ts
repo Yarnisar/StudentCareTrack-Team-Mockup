@@ -3,15 +3,23 @@
  *
  * ข้อมูลตัวอย่างจริงในระบบมีนักเรียนแค่ 8 คนห้องเดียว ซึ่งน้อยเกินกว่าจะเห็นปัญหาของมุมมองทั้งโรงเรียน
  * ไฟล์นี้จึงสร้างนักเรียน ~1,500 คนตามสมมติฐานโรงเรียนขนาดกลาง สุ่มแบบมีเมล็ดคงที่ ตัวเลขจึงเท่าเดิมทุกครั้ง
- * ไม่เชื่อมกับ store — ทำงานในหน้าอื่นแล้วตัวเลขตรงนี้ไม่เปลี่ยน (หน้าจอบอกผู้ใช้ไว้)
+ * นักเรียนไม่เชื่อมกับ store — ทำงานในหน้าอื่นแล้วตัวเลขตรงนี้ไม่เปลี่ยน (หน้าจอบอกผู้ใช้ไว้)
+ * แต่วันครบกำหนดคำนวณจากช่วงเวลาในหน้าตั้งค่า (store.assessmentWindows) ชุดเดียวกับภาพรวมของครู
  * Project 2: แทนด้วย API สรุปรายห้องจาก backend
  */
 
+import { DEMO_TODAY } from "@/lib/mock-data";
+import { dueStatus, KIND_LABEL, shiftDate, windowFor, type AssessmentKind, type AssessmentWindow } from "@/lib/periods";
+import type { CaseUrgency } from "@/lib/types";
+import {
+  PROCESS_KINDS,
+  PROCESS_ORDER,
+  type ProcessKey,
+  type ProcessSummary,
+  type Status,
+} from "../_homeroom/process-status";
+
 export const LEVELS = [1, 2, 3, 4, 5, 6];
-/** เป้าความคืบหน้าการคัดกรอง ใช้ไปก่อนจนกว่าจะมีวันปิดรอบจาก UC8 */
-export const SCREENING_TARGET = 0.9;
-/** case ที่ไม่มีการติดตามนานกว่านี้ถือว่าค้าง — PROTOTYPE: ยังไม่ได้ตกลงกับทีม */
-export const STALE_CASE_DAYS = 30;
 export const ROOMS_PER_LEVEL = 8;
 
 /** ห้องของครูประจำชั้นในข้อมูลตัวอย่าง (ชื่อครูให้ตรงกับบัญชี demo) */
@@ -25,27 +33,22 @@ export interface ProtoStudent {
   level: number;
   room: string;
   classNo: number;
-  screened: boolean;
+  /** ขั้นที่ทำถึงในการคัดกรอง: six = ทำ 6 มิติแล้ว เหลือ Red Flag, red_flag = Red Flag ปกติ เหลือ 9S */
+  screening: "none" | "six" | "red_flag" | "done";
   risk: Risk | null;
-  hasCase: boolean;
-  /** จำนวนวันนับจากการติดตามครั้งล่าสุด (null = ยังไม่มีเคส) */
-  daysSinceFollowup: number | null;
-  /** จำนวนฉบับ SDQ ที่เปิดไว้แล้วแต่ยังไม่มีใครทำ */
-  sdqPending: number;
+  /** SDQ ที่ระบบเปิดให้ทำ (none = ไม่ต้องทำ) */
+  sdq: "none" | "pending" | "done";
+  visited: boolean;
+  care: { status: "active" | "closed"; urgency: CaseUrgency; nextFollowupDate: string } | null;
+  behaviorRecords: number;
+  behaviorWatch: boolean;
 }
 
-export interface RoomSummary {
+export interface Room {
   room: string;
   level: number;
   teacher: string;
   total: number;
-  screened: number;
-  green: number;
-  amber: number;
-  red: number;
-  openCases: number;
-  /** คัดกรองไม่ถึง 90% — ยังไม่ใช่ "เลยกำหนด" เพราะยังไม่มีระบบช่วงเวลา (UC8) */
-  lowProgress: boolean;
 }
 
 /** สุ่มแบบมีเมล็ด (mulberry32) เพื่อให้ผลเหมือนเดิมทุกครั้งที่เปิดหน้า */
@@ -75,77 +78,62 @@ const TEACHER_LAST = ["ใจดี", "รอบรู้", "สอนดี", "
 
 function buildSchool() {
   const rnd = seeded(2569);
+  const pick = <T,>(list: T[]) => list[Math.floor(rnd() * list.length)];
   const students: ProtoStudent[] = [];
-  const rooms: RoomSummary[] = [];
-
+  const rooms: Room[] = [];
   let running = 0;
 
   for (const level of LEVELS) {
     for (let r = 1; r <= ROOMS_PER_LEVEL; r++) {
       const room = `ม.${level}/${r}`;
       const total = 28 + Math.floor(rnd() * 8); // 28–35 คนต่อห้อง
-      const teacher =
-        room === MY_ROOM
-          ? "ครูสมหญิง ใจดี"
-          : `ครู${TEACHER_FIRST[Math.floor(rnd() * TEACHER_FIRST.length)]} ${
-              TEACHER_LAST[Math.floor(rnd() * TEACHER_LAST.length)]
-            }`;
+      const teacher = room === MY_ROOM ? "ครูสมหญิง ใจดี" : `ครู${pick(TEACHER_FIRST)} ${pick(TEACHER_LAST)}`;
+      rooms.push({ room, level, teacher, total });
 
-      // ความคืบหน้าการคัดกรองของแต่ละห้องไม่เท่ากัน บางห้องยังไม่เริ่มเลย
-      const progress = rnd();
-      const screenedRatio = progress < 0.12 ? rnd() * 0.3 : 0.6 + rnd() * 0.4;
-
-      let green = 0;
-      let amber = 0;
-      let red = 0;
-      let screened = 0;
-      let openCases = 0;
+      // ความคืบหน้าของแต่ละห้องไม่เท่ากัน บางห้องแทบยังไม่เริ่ม
+      const pace = rnd() < 0.12 ? rnd() * 0.35 : 0.65 + rnd() * 0.35;
 
       for (let n = 1; n <= total; n++) {
         running += 1;
-        const isScreened = rnd() < screenedRatio;
-        let risk: Risk | null = null;
+        const roll = rnd();
+        const screening: ProtoStudent["screening"] =
+          roll < pace ? "done" : roll < pace + (1 - pace) * 0.3 ? "red_flag" : roll < pace + (1 - pace) * 0.55 ? "six" : "none";
 
-        if (isScreened) {
-          screened += 1;
-          const roll = rnd();
-          risk = roll < 0.74 ? "green" : roll < 0.92 ? "amber" : "red";
-          if (risk === "green") green += 1;
-          else if (risk === "amber") amber += 1;
-          else red += 1;
+        let risk: Risk | null = null;
+        if (screening !== "none") {
+          const r2 = rnd();
+          risk = r2 < 0.74 ? "green" : r2 < 0.92 ? "amber" : "red";
         }
 
-        const hasCase = risk === "red" ? rnd() < 0.55 : risk === "amber" ? rnd() < 0.2 : false;
-        if (hasCase) openCases += 1;
+        const needsSdq = screening === "done" && risk !== "green" && risk !== null;
+        const sdq: ProtoStudent["sdq"] = !needsSdq ? "none" : rnd() < pace * 0.8 ? "done" : "pending";
 
+        let care: ProtoStudent["care"] = null;
+        const caseRoll = rnd();
+        if ((risk === "red" && caseRoll < 0.7) || (risk === "amber" && caseRoll < 0.15)) {
+          care = {
+            status: rnd() < 0.15 ? "closed" : "active",
+            urgency: risk === "red" ? (rnd() < 0.6 ? "high" : "medium") : rnd() < 0.5 ? "medium" : "low",
+            nextFollowupDate: shiftDate(DEMO_TODAY, Math.floor(rnd() * 45) - 12),
+          };
+        }
+
+        const behaviorRecords = Math.floor(rnd() * rnd() * 6);
         students.push({
           id: String(30000 + running),
-          name: `${rnd() < 0.5 ? "ด.ช." : "ด.ญ."} ${
-            FIRST_NAMES[Math.floor(rnd() * FIRST_NAMES.length)]
-          } ${LAST_NAMES[Math.floor(rnd() * LAST_NAMES.length)]}`,
+          name: `${rnd() < 0.5 ? "ด.ช." : "ด.ญ."} ${pick(FIRST_NAMES)} ${pick(LAST_NAMES)}`,
           level,
           room,
           classNo: n,
-          screened: isScreened,
+          screening,
           risk,
-          hasCase,
-          daysSinceFollowup: hasCase ? Math.floor(rnd() * 70) : null,
-          sdqPending: risk === "red" || risk === "amber" ? Math.floor(rnd() * 4) : 0,
+          sdq,
+          visited: rnd() < 0.1 + pace * 0.55,
+          care,
+          behaviorRecords,
+          behaviorWatch: behaviorRecords >= 4 && rnd() < 0.5,
         });
       }
-
-      rooms.push({
-        room,
-        level,
-        teacher,
-        total,
-        screened,
-        green,
-        amber,
-        red,
-        openCases,
-        lowProgress: screened < total * SCREENING_TARGET,
-      });
     }
   }
 
@@ -157,53 +145,86 @@ const SCHOOL = buildSchool();
 export const allStudents = SCHOOL.students;
 export const allRooms = SCHOOL.rooms;
 
-export interface Totals {
-  total: number;
-  screened: number;
-  green: number;
-  amber: number;
-  red: number;
-  openCases: number;
-  lowProgressRooms: number;
+export interface AdminItem {
+  student: ProtoStudent;
+  process: ProcessKey;
+  status: Status;
+  detail: string;
+  due?: string;
 }
 
-export function schoolTotals(): Totals {
-  return {
-    total: allStudents.length,
-    screened: allStudents.filter((s) => s.screened).length,
-    green: allStudents.filter((s) => s.risk === "green").length,
-    amber: allStudents.filter((s) => s.risk === "amber").length,
-    red: allStudents.filter((s) => s.risk === "red").length,
-    openCases: allStudents.filter((s) => s.hasCase).length,
-    lowProgressRooms: allRooms.filter((r) => r.lowProgress).length,
+const SCREENING_STEP: Record<Exclude<ProtoStudent["screening"], "done">, { kind: AssessmentKind; detail: string }> = {
+  none: { kind: "screening", detail: "ยังไม่ได้คัดกรอง" },
+  six: { kind: "red_flag", detail: "เหลือ Red Flag" },
+  red_flag: { kind: "nine_s", detail: "เหลือ 9S" },
+};
+
+/** แปลงสถานะของนักเรียนจำลองเป็นรายการงาน เหมือน processStatus() ของครูประจำชั้น */
+export function adminItems(students: ProtoStudent[], windows: AssessmentWindow[]): AdminItem[] {
+  const items: AdminItem[] = [];
+  const open = (student: ProtoStudent, process: ProcessKey, kind: AssessmentKind, detail: string) => {
+    const due = windowFor(windows, kind)?.closeDate;
+    items.push({ student, process, status: dueStatus(due), detail, due });
   };
+
+  for (const s of students) {
+    if (s.screening === "done") items.push({ student: s, process: "screening", status: "done", detail: "คัดกรองครบ" });
+    else open(s, "screening", SCREENING_STEP[s.screening].kind, SCREENING_STEP[s.screening].detail);
+
+    if (s.sdq === "done") items.push({ student: s, process: "assessment", status: "done", detail: "SDQ ครบ" });
+    else if (s.sdq === "pending") open(s, "assessment", "sdq", "SDQ ยังไม่ครบ");
+
+    if (s.visited) items.push({ student: s, process: "home_visit", status: "done", detail: "เยี่ยมบ้านแล้ว" });
+    else open(s, "home_visit", "home_visit", "ยังไม่ได้เยี่ยมบ้าน");
+
+    if (s.care?.status === "closed") {
+      items.push({ student: s, process: "care", status: "done", detail: "ปิด case แล้ว" });
+    } else if (s.care) {
+      items.push({
+        student: s,
+        process: "care",
+        status: dueStatus(s.care.nextFollowupDate),
+        detail: "case กำลังดำเนินการ",
+        due: s.care.nextFollowupDate,
+      });
+    } else if (s.risk === "red") {
+      items.push({ student: s, process: "care", status: "pending", detail: "กลุ่มมีปัญหายังไม่มี case" });
+    }
+
+    if (s.behaviorWatch) {
+      items.push({ student: s, process: "behavior", status: "watch", detail: "ถึงเกณฑ์เฝ้าระวัง" });
+    }
+  }
+  return items;
 }
 
-/** ห้องที่แอดมินควรติดตาม — แอดมินตามเป็นรายห้องหรือรายครู ไม่ได้ตามนักเรียนทีละคน */
-export interface RoomIssue {
-  room: RoomSummary;
-  /** กลุ่มมีปัญหาที่ยังไม่มี case */
-  problemNoCase: number;
-  /** case ที่ไม่มีการติดตามเกิน STALE_CASE_DAYS วัน */
-  staleCases: number;
+/** สรุป 5 กระบวนการในรูปแบบเดียวกับภาพรวมของครู ตารางจึงใช้ส่วนแสดงผลชุดเดียวกัน */
+export function adminSummaries(
+  items: AdminItem[],
+  students: ProtoStudent[],
+  windows: AssessmentWindow[]
+): ProcessSummary[] {
+  return PROCESS_ORDER.map((process) => {
+    const own = items.filter((i) => i.process === process);
+    const counts = { done: 0, pending: 0, near_due: 0, overdue: 0, watch: 0 };
+    for (const i of own) counts[i.status]++;
+    return {
+      process,
+      closes: windows
+        .filter((w) => w.enabled && (PROCESS_KINDS[process] ?? []).includes(w.kind))
+        .map((w) => ({ label: KIND_LABEL[w.kind] + (w.round ? ` รอบ ${w.round}` : ""), date: w.closeDate })),
+      counts,
+      total: process === "behavior" ? students.length : own.length,
+      unit: process === "care" ? "รายการ" : "คน",
+      recorded: process === "behavior" ? students.reduce((sum, s) => sum + s.behaviorRecords, 0) : undefined,
+    };
+  });
 }
 
-export function roomIssues(): RoomIssue[] {
-  return allRooms
-    .map((room) => {
-      const own = allStudents.filter((s) => s.room === room.room);
-      return {
-        room,
-        problemNoCase: own.filter((s) => s.risk === "red" && !s.hasCase).length,
-        staleCases: own.filter((s) => s.hasCase && (s.daysSinceFollowup ?? 0) > STALE_CASE_DAYS).length,
-      };
-    })
-    .filter((i) => i.problemNoCase > 0 || i.staleCases > 0 || i.room.lowProgress)
-    // เรื่องของนักเรียนที่มีปัญหาก่อน แล้วจึงความคืบหน้าการคัดกรอง
-    .sort(
-      (a, b) =>
-        b.problemNoCase - a.problemNoCase ||
-        b.staleCases - a.staleCases ||
-        a.room.screened / a.room.total - b.room.screened / b.room.total
-    );
+export function riskCounts(students: ProtoStudent[]) {
+  return {
+    green: students.filter((s) => s.risk === "green").length,
+    amber: students.filter((s) => s.risk === "amber").length,
+    red: students.filter((s) => s.risk === "red").length,
+  };
 }

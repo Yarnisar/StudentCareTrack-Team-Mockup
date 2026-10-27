@@ -15,21 +15,18 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { LinkButton } from "@/components/ui/link-button";
 import { NativeSelect } from "@/components/ui/native-select";
-import { RiskDot } from "@/components/shared/risk-badge";
 import { downloadCsv } from "@/lib/csv";
 import { formatThaiDate } from "@/lib/format";
 import { CURRENT_TEACHER, CURRENT_TERM } from "@/lib/mock-data";
 import { NEAR_DUE_DAYS } from "@/lib/periods";
 import { useStore } from "@/lib/store";
+import { Filter, ProcessTable, RiskSummary, STATUS_TAG } from "../_shared/process-table";
 import {
   PROCESS_LABEL,
-  PROCESS_NOTE,
   processStatus,
-  STATUS_COLUMNS,
   STATUS_LABEL,
   type Item,
   type ProcessKey,
-  type ProcessSummary,
   type Status,
 } from "./process-status";
 import { calendarEvents } from "./calendar-events";
@@ -172,29 +169,11 @@ export function HomeroomOverview() {
                 </Button>
               </div>
             ) : (
-              <table className="mt-4 w-full text-[13.5px]">
-                <thead>
-                  <tr className="border-b border-border text-left text-[12px] text-muted-foreground">
-                    <th className="py-2 font-medium">กระบวนการ</th>
-                    <th className="w-44 py-2 font-medium">ปิดรอบ</th>
-                    {STATUS_COLUMNS.map((s) => (
-                      <th key={s} className="w-28 py-2 text-center font-medium">
-                        {STATUS_LABEL[s]}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {summaries.map((row) => (
-                    <ProcessRow
-                      key={row.process}
-                      row={row}
-                      selected={process === row.process ? status : null}
-                      onPick={(s) => pick(row.process, s)}
-                    />
-                  ))}
-                </tbody>
-              </table>
+              <ProcessTable
+                summaries={summaries}
+                selected={process === "all" ? null : { process, status }}
+                onPick={(p, st) => pick(p, st)}
+              />
             )}
 
             {!noData && <RiskLine />}
@@ -244,111 +223,6 @@ export function HomeroomOverview() {
   );
 }
 
-function ProcessRow({
-  row,
-  selected,
-  onPick,
-}: {
-  row: ProcessSummary;
-  selected: StatusFilter | null;
-  onPick: (status: StatusFilter) => void;
-}) {
-  const name = (
-    <td className="py-3 pr-4">
-      <div className="font-semibold">{PROCESS_LABEL[row.process]}</div>
-      <div className="text-[12px] text-muted-foreground">{PROCESS_NOTE[row.process]}</div>
-    </td>
-  );
-
-  if (row.process === "behavior") {
-    return (
-      <tr className="border-b border-border">
-        {name}
-        <td className="py-3 text-muted-foreground">–</td>
-        <td colSpan={STATUS_COLUMNS.length} className="py-3">
-          <div className="flex flex-wrap items-center gap-3 text-[13px] text-muted-foreground">
-            บันทึก {row.recorded} รายการในภาคเรียนนี้
-            <span aria-hidden>·</span>
-            <CountCell
-              count={row.counts.watch}
-              active={selected === "watch"}
-              onClick={() => onPick("watch")}
-              label={`ถึงเกณฑ์เฝ้าระวัง ${row.counts.watch} คน`}
-            />
-          </div>
-        </td>
-      </tr>
-    );
-  }
-
-  return (
-    <tr className="border-b border-border">
-      {name}
-      <td className="py-3 text-[12.5px] text-muted-foreground">
-        {row.process === "care"
-          ? "ตามวันติดตามของแต่ละ case"
-          : row.closes.length === 0
-            ? "ยังไม่ได้ตั้งช่วงเวลา"
-            : row.closes.map((c) => (
-                <div key={c.label}>
-                  {c.label} {formatThaiDate(c.date)}
-                </div>
-              ))}
-      </td>
-      {STATUS_COLUMNS.map((s) => (
-        <td key={s} className="py-3 text-center">
-          <CountCell
-            count={row.counts[s]}
-            active={selected === s}
-            onClick={() => onPick(s)}
-            emphasis={s === "overdue" || s === "near_due"}
-            label={s === "done" ? `${row.counts.done}/${row.total}` : undefined}
-          />
-        </td>
-      ))}
-    </tr>
-  );
-}
-
-function CountCell({
-  count,
-  active,
-  onClick,
-  emphasis,
-  label,
-}: {
-  count: number;
-  active: boolean;
-  onClick: () => void;
-  emphasis?: boolean;
-  label?: string;
-}) {
-  if (count === 0) return <span className="text-muted-foreground">{label ?? "–"}</span>;
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      className={
-        active
-          ? "min-w-12 rounded-lg border border-primary bg-accent px-2.5 py-1 font-semibold text-primary"
-          : `min-w-12 rounded-lg border border-border px-2.5 py-1 hover:bg-muted ${emphasis ? "font-bold" : ""}`
-      }
-    >
-      {label ?? count}
-    </button>
-  );
-}
-
-/** สถานะของงาน แยกจากสีกลุ่มเสี่ยง: เกินกำหนดเข้มที่สุด ใกล้ครบกำหนดรองลงมา */
-const STATUS_TAG: Record<Status, string> = {
-  overdue: "bg-foreground text-background",
-  near_due: "border border-foreground/40 text-foreground",
-  pending: "bg-muted text-muted-foreground",
-  watch: "bg-muted text-foreground",
-  done: "bg-muted text-muted-foreground",
-};
-
 function ItemRow({ item, showProcess }: { item: Item; showProcess: boolean }) {
   return (
     <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border p-3.5">
@@ -382,25 +256,11 @@ function ItemRow({ item, showProcess }: { item: Item; showProcess: boolean }) {
   );
 }
 
-/** ผลคัดกรองเป็นข้อมูลรอง ไว้ใต้ตารางสถานะงาน */
 function RiskLine() {
   const store = useStore();
   const count = (g: "green" | "amber" | "red") =>
     store.students.filter((s) => store.overallRiskOf(s.studentId) === g).length;
-  return (
-    <div className="mt-4 flex flex-wrap items-center gap-5 text-[13px] text-muted-foreground">
-      <span className="font-semibold text-foreground">ผลคัดกรอง</span>
-      <span className="flex items-center gap-1.5">
-        <RiskDot group="green" /> ปกติ {count("green")} คน
-      </span>
-      <span className="flex items-center gap-1.5">
-        <RiskDot group="amber" /> กลุ่มเสี่ยง {count("amber")} คน
-      </span>
-      <span className="flex items-center gap-1.5">
-        <RiskDot group="red" /> กลุ่มมีปัญหา {count("red")} คน
-      </span>
-    </div>
-  );
+  return <RiskSummary green={count("green")} amber={count("amber")} red={count("red")} />;
 }
 
 function ViewButton({
@@ -425,14 +285,5 @@ function ViewButton({
     >
       {children}
     </button>
-  );
-}
-
-function Filter({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <label className="flex flex-col gap-1 text-[12px] font-medium text-muted-foreground">
-      {label}
-      {children}
-    </label>
   );
 }
