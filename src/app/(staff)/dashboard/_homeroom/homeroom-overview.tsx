@@ -18,9 +18,8 @@ import { NativeSelect } from "@/components/ui/native-select";
 import { downloadCsv } from "@/lib/csv";
 import { formatThaiDate } from "@/lib/format";
 import { CURRENT_TEACHER, CURRENT_TERM } from "@/lib/mock-data";
-import { NEAR_DUE_DAYS } from "@/lib/periods";
 import { useStore } from "@/lib/store";
-import { Filter, ProcessTable, RiskSummary, STATUS_TAG } from "../_shared/process-table";
+import { Filter, ProcessTable, STATUS_TAG } from "../_shared/process-table";
 import {
   PROCESS_LABEL,
   processStatus,
@@ -145,7 +144,7 @@ export function HomeroomOverview() {
         )}
         <span className="flex-1" />
         {view === "table" && (
-          <Button variant="outline" onClick={exportCsv} disabled={shown.length === 0}>
+          <Button variant="outline" className="h-10" onClick={exportCsv} disabled={shown.length === 0}>
             <Download className="size-4" /> ส่งออกรายการ ({shown.length})
           </Button>
         )}
@@ -156,10 +155,7 @@ export function HomeroomOverview() {
       {(view === "table" || noData) && (
         <Card className="mt-5">
           <CardContent className="p-6">
-            <h2 className="text-[15.5px] font-bold">สถานะการดำเนินงาน · {termLabel}</h2>
-            <p className="mt-0.5 text-[12.5px] text-muted-foreground">
-              กดตัวเลขเพื่อดูรายชื่อ · ใกล้ครบกำหนด = เหลือไม่เกิน {NEAR_DUE_DAYS} วันก่อนครบกำหนด
-            </p>
+            <h2 className="text-[15.5px] font-bold">สถานะการดำเนินงาน</h2>
 
             {noData ? (
               <div className="py-12 text-center text-[13px] text-muted-foreground">
@@ -173,10 +169,9 @@ export function HomeroomOverview() {
                 summaries={summaries}
                 selected={process === "all" ? null : { process, status }}
                 onPick={(p, st) => pick(p, st)}
+                risk={riskOf(store)}
               />
             )}
-
-            {!noData && <RiskLine />}
           </CardContent>
         </Card>
       )}
@@ -256,11 +251,11 @@ function ItemRow({ item, showProcess }: { item: Item; showProcess: boolean }) {
   );
 }
 
-function RiskLine() {
-  const store = useStore();
+/** ผลคัดกรองเป็นข้อมูลรอง แสดงในแถบสรุปใต้ตารางสถานะงาน */
+function riskOf(store: ReturnType<typeof useStore>) {
   const count = (g: "green" | "amber" | "red") =>
     store.students.filter((s) => store.overallRiskOf(s.studentId) === g).length;
-  return <RiskSummary green={count("green")} amber={count("amber")} red={count("red")} />;
+  return { green: count("green"), amber: count("amber"), red: count("red") };
 }
 
 function ViewButton({

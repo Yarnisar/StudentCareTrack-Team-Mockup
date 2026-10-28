@@ -15,9 +15,8 @@ import { NativeSelect } from "@/components/ui/native-select";
 import { downloadCsv } from "@/lib/csv";
 import { formatThaiDate } from "@/lib/format";
 import { CURRENT_TERM } from "@/lib/mock-data";
-import { NEAR_DUE_DAYS } from "@/lib/periods";
 import { useStore } from "@/lib/store";
-import { Filter, ProcessTable, RiskSummary, STATUS_TAG } from "../_shared/process-table";
+import { Filter, ProcessTable, STATUS_TAG } from "../_shared/process-table";
 import { PROCESS_LABEL, STATUS_LABEL, type ProcessKey, type Status } from "../_homeroom/process-status";
 import { PagerNumbered, usePagination } from "./pagination";
 import {
@@ -246,7 +245,7 @@ export function AdminOverview() {
           </NativeSelect>
         </Filter>
         <span className="flex-1" />
-        <Button variant="outline" onClick={exportCsv} disabled={noData}>
+        <Button variant="outline" className="h-10" onClick={exportCsv} disabled={noData}>
           <Download className="size-4" /> {selectedRoom ? `ส่งออกรายการ (${n(shown.length)})` : "ส่งออกสรุปรายห้อง"}
         </Button>
       </div>
@@ -268,9 +267,6 @@ export function AdminOverview() {
               <span className="ml-2 text-[13px] font-normal text-muted-foreground">{n(students.length)} คน</span>
             )}
           </h2>
-          <p className="mt-0.5 text-[12.5px] text-muted-foreground">
-            {termLabel} · กดตัวเลขเพื่อกรองตารางด้านล่าง · ใกล้ครบกำหนด = เหลือไม่เกิน {NEAR_DUE_DAYS} วันก่อนครบกำหนด
-          </p>
 
           {noData ? (
             <div className="py-12 text-center text-[13px] text-muted-foreground">
@@ -280,14 +276,12 @@ export function AdminOverview() {
               </Button>
             </div>
           ) : (
-            <>
-              <ProcessTable
-                summaries={summaries}
-                selected={process === "all" ? null : { process, status }}
-                onPick={pick}
-              />
-              <RiskSummary {...riskCounts(students)} />
-            </>
+            <ProcessTable
+              summaries={summaries}
+              selected={process === "all" ? null : { process, status }}
+              onPick={pick}
+              risk={riskCounts(students)}
+            />
           )}
         </CardContent>
       </Card>

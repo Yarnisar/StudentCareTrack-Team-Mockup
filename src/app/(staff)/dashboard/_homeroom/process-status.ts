@@ -25,14 +25,6 @@ export const PROCESS_LABEL: Record<ProcessKey, string> = {
   behavior: "ความประพฤติ",
 };
 
-export const PROCESS_NOTE: Record<ProcessKey, string> = {
-  screening: "6 มิติ + Red Flag ทุกคน, 9S เมื่อ Red Flag ปกติ",
-  assessment: "SDQ เฉพาะคนที่ระบบเปิดให้ทำ (ยังไม่มี EQ)",
-  home_visit: "ทุกคน",
-  care: "case และกลุ่มมีปัญหาที่ยังไม่มี case",
-  behavior: "ไม่มีรอบกำหนด",
-};
-
 export const PROCESS_ORDER = Object.keys(PROCESS_LABEL) as ProcessKey[];
 
 export const STATUS_LABEL: Record<Status, string> = {
