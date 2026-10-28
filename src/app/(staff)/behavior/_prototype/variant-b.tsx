@@ -7,25 +7,22 @@
  * แลกด้วยความสูงที่มากขึ้น เห็นได้น้อยรายการต่อหนึ่งหน้าจอ
  */
 
-import { Card, CardContent } from "@/components/ui/card";
 import { formatThaiDate, formatThaiTime } from "@/lib/format";
+import { DEMO_TODAY } from "@/lib/mock-data";
 import { useStore } from "@/lib/store";
 import type { BehaviorRecord } from "@/lib/types";
 import {
-  NewRecordFields,
   SEVERITY_LABEL,
   ScoreChip,
   SourceBadge,
   Stat,
   ruleOf,
-  type BehaviorForm,
 } from "./shared";
 
 export const VARIANT_B_NAME = "การ์ดรายบันทึก";
 
-export function VariantB({ records, form }: { records: BehaviorRecord[]; form: BehaviorForm }) {
+export function VariantB({ records }: { records: BehaviorRecord[] }) {
   const store = useStore();
-  const qrCount = records.filter((r) => r.source === "card_scan").length;
   const studentsTouched = new Set(records.map((r) => r.studentId)).size;
 
   return (
@@ -33,14 +30,14 @@ export function VariantB({ records, form }: { records: BehaviorRecord[]; form: B
       <div className="mb-5 grid grid-cols-2 gap-4 xl:grid-cols-4">
         <Stat label="บันทึกทั้งหมด" value={`${records.length} รายการ`} />
         <Stat label="นักเรียนที่ถูกบันทึก" value={`${studentsTouched} คน`} />
-        <Stat label="บันทึกจากการสแกนบัตร" value={`${qrCount} รายการ`} accent />
+        <Stat label="บันทึกวันนี้" value={`${records.filter((r) => r.occurredAt.startsWith(DEMO_TODAY)).length} รายการ`} accent />
         <Stat
           label="คะแนนบวกที่บันทึก"
           value={`${records.filter((r) => (ruleOf(r.ruleId)?.scoreDelta ?? 0) > 0).length} รายการ`}
         />
       </div>
 
-      <div className="grid gap-5 xl:grid-cols-[1.8fr_1fr]">
+      <div>
         <div>
           <h2 className="text-[15.5px] font-bold">ประวัติการบันทึกความประพฤติ</h2>
           <p className="mt-1 mb-3 text-xs text-muted-foreground">
@@ -91,15 +88,6 @@ export function VariantB({ records, form }: { records: BehaviorRecord[]; form: B
               );
             })}
           </div>
-        </div>
-
-        <div className="space-y-5">
-          <Card>
-            <CardContent className="p-6">
-              <h2 className="mb-4 text-[15.5px] font-bold">บันทึกพฤติกรรมใหม่</h2>
-              <NewRecordFields form={form} />
-            </CardContent>
-          </Card>
         </div>
       </div>
     </div>

@@ -8,26 +8,22 @@
  */
 
 import { useState } from "react";
-import { ChevronDown, Plus, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { ChevronDown } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatThaiDate, formatThaiTime } from "@/lib/format";
 import { useStore } from "@/lib/store";
 import type { BehaviorRecord } from "@/lib/types";
 import {
-  NewRecordFields,
   SEVERITY_LABEL,
   SourceBadge,
   ruleOf,
-  type BehaviorForm,
 } from "./shared";
 
 export const VARIANT_C_NAME = "จัดกลุ่มตามนักเรียน";
 
-export function VariantC({ records, form }: { records: BehaviorRecord[]; form: BehaviorForm }) {
+export function VariantC({ records }: { records: BehaviorRecord[] }) {
   const store = useStore();
   const [expanded, setExpanded] = useState<string[]>([]);
-  const [showForm, setShowForm] = useState(false);
 
   /** ยุบบันทึกทั้งหมดเป็นรายนักเรียน เรียงจากคะแนนติดลบมากที่สุด */
   const groups = Array.from(new Set(records.map((r) => r.studentId)))
@@ -58,33 +54,7 @@ export function VariantC({ records, form }: { records: BehaviorRecord[]; form: B
           </p>
         </div>
         <span className="flex-1" />
-        {!showForm && (
-          <Button size="lg" onClick={() => setShowForm(true)}>
-            <Plus className="size-4" /> บันทึกพฤติกรรมใหม่
-          </Button>
-        )}
       </div>
-
-      {showForm && (
-        <Card className="mb-4">
-          <CardContent className="p-6">
-            <div className="mb-4 flex items-center">
-              <h2 className="flex-1 text-[15.5px] font-bold">บันทึกพฤติกรรมใหม่</h2>
-              <button
-                type="button"
-                aria-label="ปิดฟอร์ม"
-                onClick={() => setShowForm(false)}
-                className="flex size-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted"
-              >
-                <X className="size-4" />
-              </button>
-            </div>
-            <div className="max-w-xl">
-              <NewRecordFields form={form} />
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       <div className="space-y-2.5">
         {groups.map((g) => {

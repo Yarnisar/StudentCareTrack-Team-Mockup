@@ -7,29 +7,23 @@
  * คอลัมน์รายละเอียดกว้างที่สุดและตัดบรรทัดได้เอง ไม่มีการ truncate เลย
  */
 
-import { useState } from "react";
-import { Plus, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatThaiDate, formatThaiTime } from "@/lib/format";
+import { DEMO_TODAY } from "@/lib/mock-data";
 import { useStore } from "@/lib/store";
 import type { BehaviorRecord } from "@/lib/types";
 import {
-  NewRecordFields,
   ScoreChip,
   SourceBadge,
   Stat,
   ruleOf,
-  type BehaviorForm,
 } from "./shared";
 
 export const VARIANT_A_NAME = "ตารางเต็มความกว้าง";
 
-export function VariantA({ records, form }: { records: BehaviorRecord[]; form: BehaviorForm }) {
+export function VariantA({ records }: { records: BehaviorRecord[] }) {
   const store = useStore();
-  const [showForm, setShowForm] = useState(false);
 
-  const qrCount = records.filter((r) => r.source === "card_scan").length;
   const studentsTouched = new Set(records.map((r) => r.studentId)).size;
 
   return (
@@ -37,33 +31,12 @@ export function VariantA({ records, form }: { records: BehaviorRecord[]; form: B
       <div className="mb-5 grid grid-cols-2 gap-4 xl:grid-cols-4">
         <Stat label="บันทึกทั้งหมด" value={`${records.length} รายการ`} />
         <Stat label="นักเรียนที่ถูกบันทึก" value={`${studentsTouched} คน`} />
-        <Stat label="บันทึกจากการสแกนบัตร" value={`${qrCount} รายการ`} accent />
+        <Stat label="บันทึกวันนี้" value={`${records.filter((r) => r.occurredAt.startsWith(DEMO_TODAY)).length} รายการ`} accent />
         <Stat
           label="คะแนนบวกที่บันทึก"
           value={`${records.filter((r) => (ruleOf(r.ruleId)?.scoreDelta ?? 0) > 0).length} รายการ`}
         />
       </div>
-
-      {showForm && (
-        <Card className="mb-4">
-          <CardContent className="p-6">
-            <div className="mb-4 flex items-center">
-              <h2 className="flex-1 text-[15.5px] font-bold">บันทึกพฤติกรรมใหม่</h2>
-              <button
-                type="button"
-                aria-label="ปิดฟอร์ม"
-                onClick={() => setShowForm(false)}
-                className="flex size-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted"
-              >
-                <X className="size-4" />
-              </button>
-            </div>
-            <div className="max-w-xl">
-              <NewRecordFields form={form} />
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       <Card>
         <CardContent className="p-6">
@@ -75,11 +48,6 @@ export function VariantA({ records, form }: { records: BehaviorRecord[]; form: B
               </p>
             </div>
             <span className="flex-1" />
-            {!showForm && (
-              <Button size="lg" onClick={() => setShowForm(true)}>
-                <Plus className="size-4" /> บันทึกพฤติกรรมใหม่
-              </Button>
-            )}
           </div>
 
           <table className="w-full text-[13.5px]">

@@ -1,6 +1,5 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "cn";
@@ -21,6 +20,7 @@ import {
 import { SCHOOL_NAME } from "@/lib/mock-data";
 import { canAccess, ROLE_INFO } from "@/lib/roles";
 import { useStore } from "@/lib/store";
+import { useOnline } from "@/lib/use-online";
 
 interface NavItem {
   href: string;
@@ -65,20 +65,6 @@ const NAV: { title?: string; items: NavItem[] }[] = [
     items: [{ href: "/settings", label: "ตั้งค่าระบบ", icon: Settings }],
   },
 ];
-
-/** สถานะการเชื่อมต่อของเบราว์เซอร์ — ต้นแบบยังไม่มี server จึงบอกได้แค่ว่าเครื่องต่ออินเทอร์เน็ตอยู่หรือไม่ */
-function subscribeOnline(callback: () => void) {
-  window.addEventListener("online", callback);
-  window.addEventListener("offline", callback);
-  return () => {
-    window.removeEventListener("online", callback);
-    window.removeEventListener("offline", callback);
-  };
-}
-
-function useOnline() {
-  return useSyncExternalStore(subscribeOnline, () => navigator.onLine, () => true);
-}
 
 export function Sidebar() {
   const pathname = usePathname();
