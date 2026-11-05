@@ -1,8 +1,8 @@
 "use client";
 
-import { use } from "react";
+import { use, useState } from "react";
 import Link from "next/link";
-import { ChevronLeft, Download } from "lucide-react";
+import { ChevronLeft, Download, Eye, EyeOff, Lock } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { RiskBadge } from "@/components/shared/risk-badge";
 import { Button } from "@/components/ui/button";
@@ -10,14 +10,43 @@ import { LinkButton } from "@/components/ui/link-button";
 import { Card, CardContent } from "@/components/ui/card";
 import { behaviorRules, useStore } from "@/lib/store";
 import { dcCriteria, dcSummaries, CURRENT_TERM } from "@/lib/mock-data";
-import { formatThaiDate, formatThaiDateTime } from "@/lib/format";
+import { downloadCsv } from "@/lib/csv";
+import { formatThaiDate, formatThaiDateTime, maskCitizenId } from "@/lib/format";
+import { canRevealCitizenId, canViewStudent } from "@/lib/roles";
 import {
+  APPOINTMENT_STATUS_LABEL,
+  AssessmentOutcome,
+  CARE_METHOD_LABEL,
+  CASE_URGENCY_LABEL,
   DC_LEVEL_LABEL,
   DIMENSION_LABEL,
+  NINE_S_CLUSTER_LABEL,
+  NineSCluster,
+  RISK_LABEL,
   SDQ_LEVEL_LABEL,
   SDQ_RATER_LABEL,
+  SUPPORT_TYPE_LABEL,
   SdqRater,
 } from "@/lib/types";
+
+const OUTCOME_LABEL: Record<AssessmentOutcome, string> = {
+  normal: "ปกติ",
+  needs_care: "ควรดูแล",
+};
+
+function OutcomeChip({ outcome }: { outcome: AssessmentOutcome }) {
+  return (
+    <span
+      className={
+        outcome === "normal"
+          ? "rounded-full bg-risk-green-bg px-2.5 py-1 text-xs font-semibold text-risk-green"
+          : "rounded-full bg-risk-amber-bg px-2.5 py-1 text-xs font-semibold text-risk-amber"
+      }
+    >
+      {OUTCOME_LABEL[outcome]}
+    </span>
+  );
+}
 
 export default function StudentDetailPage({
   params,
@@ -27,8 +56,34 @@ export default function StudentDetailPage({
   const { studentId } = use(params);
   const store = useStore();
   const student = store.getStudent(studentId);
+  // เปิดดูเลขบัตรเต็มเป็นรายครั้ง (ออกจากหน้านี้แล้วกลับมาจะซ่อนอีก)
+  const [citizenIdRevealed, setCitizenIdRevealed] = useState(false);
 
   if (!student) return <p className="p-8 text-sm text-muted-foreground">ไม่พบข้อมูลนักเรียน</p>;
+
+  // UC2 Alternate: ไม่มีสิทธิ์ → ไม่แสดงข้อมูลใด ๆ ของนักเรียน
+  if (!canViewStudent(store.role, student.roomName)) {
+    return (
+      <>
+        <PageHeader title="ข้อมูลนักเรียนรายบุคคล" subtitle={CURRENT_TERM.label} />
+        <div className="flex flex-1 items-center justify-center p-8">
+          <div className="max-w-sm text-center">
+            <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-full bg-muted">
+              <Lock className="size-5 text-muted-foreground" />
+            </div>
+            <h1 className="text-lg font-bold">ไม่มีสิทธิ์เข้าถึงข้อมูลนักเรียนคนนี้</h1>
+            <p className="mt-2 text-[13.5px] leading-relaxed text-muted-foreground">
+              ดูได้เฉพาะนักเรียนในห้องที่รับผิดชอบ หากต้องการสิทธิ์เพิ่มเติม
+              กรุณาติดต่อผู้ดูแลระบบของโรงเรียน
+            </p>
+            <LinkButton href="/students" variant="outline" className="mt-5">
+              กลับไปรายชื่อนักเรียน
+            </LinkButton>
+          </div>
+        </div>
+      </>
+    );
+  }
 
   const risk = store.overallRiskOf(studentId);
   const screening = store.latestScreening(studentId);
@@ -37,15 +92,91 @@ export default function StudentDetailPage({
   const behaviorScore = store.behaviorScoreOf(studentId);
   const careCase = store.caseOf(studentId);
   const dc = dcSummaries.find((d) => d.studentId === studentId);
+  // store เก็บรายการใหม่ไว้หน้าสุด
+  const redFlag = store.redFlags.find((r) => r.studentId === studentId);
+  const nineS = store.nineS.find((r) => r.studentId === studentId);
+  const visits = store.appointments
+    .filter((a) => a.studentId === studentId)
+    .sort((a, b) => b.proposedDate.localeCompare(a.proposedDate))
+    .map((appointment) => ({
+      appointment,
+      record: store.homeVisitRecords.find((r) => r.appointmentId === appointment.appointmentId),
+    }));
+  const latestFollowups = careCase ? careCase.followups.slice(-3).reverse() : [];
+
+  // เลขบัตรประชาชนซ่อนเป็นค่าเริ่มต้น เปิดดูเต็มได้เฉพาะบทบาทที่มีสิทธิ์ และทุกครั้งมีบันทึก (ข้อ 2.1.10)
+  const maskedCitizenId = maskCitizenId(student.citizenId);
+  const canReveal = canRevealCitizenId(store.role);
+  const showFull = canReveal && citizenIdRevealed;
+  const accessLogs = store.accessLogs.filter((l) => l.studentId === studentId);
+
+  const toggleCitizenId = () => {
+    if (citizenIdRevealed) {
+      setCitizenIdRevealed(false);
+    } else if (store.logCitizenIdView(studentId)) {
+      setCitizenIdRevealed(true);
+    }
+  };
 
   const info: [string, string][] = [
     ["เลขประจำตัวนักเรียน", student.studentId],
-    ["เลขบัตรประชาชน", student.citizenId],
+    ["เลขบัตรประชาชน", showFull ? student.citizenId : maskedCitizenId],
     ["ชั้น / ห้อง", `${student.roomName} เลขที่ ${student.classNo}`],
     ["ผู้ปกครอง", `${student.guardianName} (${student.guardianRelation})`],
     ["เบอร์ติดต่อ", student.guardianPhone],
     ["ที่อยู่", student.address],
   ];
+
+  /** ส่งออกรายงานรายบุคคล (Subflow: Export) ข้อมูลเท่ากับที่หน้านี้แสดงให้บทบาทนี้เห็น */
+  const exportReport = () => {
+    // ไฟล์ส่งออกไม่ใส่เลขบัตรเต็มเสมอ แม้กำลังเปิดดูอยู่ เพราะไฟล์หลุดออกนอกระบบได้
+    const rows: (string | number)[][] = info.map(([label, value]) => [
+      "ข้อมูลพื้นฐาน",
+      label,
+      label === "เลขบัตรประชาชน" ? maskedCitizenId : value,
+    ]);
+    screening?.results.forEach((r) =>
+      rows.push(["ผลคัดกรอง 6 มิติ", DIMENSION_LABEL[r.dimension], RISK_LABEL[r.group]]),
+    );
+    if (redFlag) rows.push(["Red Flag", formatThaiDate(redFlag.assessedAt), OUTCOME_LABEL[redFlag.result]]);
+    if (nineS) {
+      (Object.keys(nineS.clusterResults) as NineSCluster[]).forEach((c) =>
+        rows.push([
+          "9S",
+          NINE_S_CLUSTER_LABEL[c],
+          `${nineS.clusterScores[c]} คะแนน · ${OUTCOME_LABEL[nineS.clusterResults[c]]}`,
+        ]),
+      );
+    }
+    (["teacher", "student", "parent"] as SdqRater[]).forEach((rater) => {
+      const rec = sdqSet.find((s) => s.rater === rater);
+      rows.push([
+        "SDQ",
+        SDQ_RATER_LABEL[rater],
+        rec?.status === "completed" && rec.level
+          ? `${rec.totalDifficulties} คะแนน · ${SDQ_LEVEL_LABEL[rec.level]}`
+          : "ยังไม่ได้ทำ",
+      ]);
+    });
+    visits.forEach(({ appointment, record }) =>
+      rows.push([
+        "เยี่ยมบ้าน",
+        formatThaiDate(appointment.proposedDate),
+        record
+          ? `${APPOINTMENT_STATUS_LABEL[appointment.status]} · พบความเสี่ยง ${record.riskFindings.length} ข้อ`
+          : APPOINTMENT_STATUS_LABEL[appointment.status],
+      ]),
+    );
+    if (careCase) {
+      rows.push([
+        "case ช่วยเหลือ",
+        careCase.caseId,
+        `${careCase.status === "active" ? "กำลังดำเนินการ" : "ปิดแล้ว"} · ${SUPPORT_TYPE_LABEL[careCase.supportType]} · ${CASE_URGENCY_LABEL[careCase.urgency]}`,
+      ]);
+    }
+    rows.push(["ความประพฤติ", "คะแนนสะสม", behaviorScore]);
+    downloadCsv(`รายงานนักเรียน-${student.studentId}.csv`, ["หมวด", "รายการ", "ผล"], rows);
+  };
 
   return (
     <>
@@ -59,7 +190,7 @@ export default function StudentDetailPage({
           >
             <ChevronLeft className="size-4" /> กลับไปรายชื่อนักเรียน
           </Link>
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={exportReport}>
             <Download className="size-4" /> ส่งออกรายงานรายบุคคล
           </Button>
         </div>
@@ -101,10 +232,61 @@ export default function StudentDetailPage({
                 {info.map(([label, value]) => (
                   <div key={label} className="flex gap-3 py-2.5">
                     <dt className="w-36 shrink-0 text-[13px] text-muted-foreground">{label}</dt>
-                    <dd className="flex-1 text-[13.5px] font-medium">{value}</dd>
+                    <dd className="flex flex-1 items-center gap-2 text-[13.5px] font-medium">
+                      {value}
+                      {label === "เลขบัตรประชาชน" && (
+                        <button
+                          type="button"
+                          onClick={toggleCitizenId}
+                          disabled={!canReveal}
+                          aria-label={
+                            !canReveal
+                              ? "เลขบัตรประชาชนเปิดดูได้เฉพาะแอดมิน"
+                              : citizenIdRevealed
+                                ? "ซ่อนเลขบัตรประชาชน"
+                                : "แสดงเลขบัตรประชาชน"
+                          }
+                          title={
+                            !canReveal
+                              ? "เปิดดูเลขเต็มได้เฉพาะแอดมิน"
+                              : citizenIdRevealed
+                                ? "ซ่อนเลขบัตรประชาชน"
+                                : "แสดงเลขบัตรประชาชน (ระบบจะบันทึกว่าคุณเปิดดู)"
+                          }
+                          className="rounded-md p-1 text-muted-foreground enabled:hover:bg-muted enabled:hover:text-foreground disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {!canReveal ? (
+                            <Lock className="size-4" />
+                          ) : citizenIdRevealed ? (
+                            <EyeOff className="size-4" />
+                          ) : (
+                            <Eye className="size-4" />
+                          )}
+                        </button>
+                      )}
+                    </dd>
                   </div>
                 ))}
               </dl>
+              {canReveal && (
+                <div className="mt-3 rounded-lg bg-surface px-3.5 py-3">
+                  <div className="mb-1 text-[12.5px] font-semibold">ประวัติการเปิดดูเลขบัตร</div>
+                  {accessLogs.length > 0 ? (
+                    <ul className="space-y-1">
+                      {accessLogs.slice(0, 5).map((log) => (
+                        <li key={log.logId} className="text-[12px] text-muted-foreground">
+                          {formatThaiDateTime(log.at)} · {log.actorName} ({log.actorRole})
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-[12px] text-muted-foreground">ยังไม่มีการเปิดดูในรอบนี้</p>
+                  )}
+                  <p className="mt-1.5 text-[11px] text-muted-foreground">
+                    ต้นแบบเก็บประวัติในหน่วยความจำ รีเฟรชแล้วหาย
+                  </p>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -135,6 +317,63 @@ export default function StudentDetailPage({
                   </div>
                 ) : (
                   <p className="py-4 text-sm text-muted-foreground">ยังไม่มีข้อมูลการคัดกรอง</p>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-6">
+                <h3 className="mb-3 text-[15.5px] font-bold">สุขภาพจิต: Red Flag และ 9S</h3>
+                {redFlag || nineS ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between rounded-lg bg-surface px-3.5 py-2.5">
+                      <div>
+                        <div className="text-[13.5px] font-medium">Red Flag</div>
+                        <div className="text-[12px] text-muted-foreground">
+                          {redFlag ? formatThaiDate(redFlag.assessedAt) : ""}
+                        </div>
+                      </div>
+                      {redFlag ? (
+                        <OutcomeChip outcome={redFlag.result} />
+                      ) : (
+                        <span className="text-[12.5px] font-semibold text-muted-foreground">
+                          ยังไม่ได้ประเมิน
+                        </span>
+                      )}
+                    </div>
+                    {nineS ? (
+                      <div className="rounded-lg bg-surface px-3.5 py-2.5">
+                        <div className="mb-2 flex items-center justify-between">
+                          <div>
+                            <div className="text-[13.5px] font-medium">9S</div>
+                            <div className="text-[12px] text-muted-foreground">
+                              {formatThaiDate(nineS.assessedAt)}
+                            </div>
+                          </div>
+                          <OutcomeChip outcome={nineS.result} />
+                        </div>
+                        <div className="divide-y divide-border">
+                          {(Object.keys(nineS.clusterResults) as NineSCluster[]).map((c) => (
+                            <div key={c} className="flex items-center justify-between py-1.5">
+                              <span className="text-[13px]">{NINE_S_CLUSTER_LABEL[c]}</span>
+                              <span className="flex items-center gap-2.5 text-[12.5px] text-muted-foreground">
+                                {nineS.clusterScores[c]} คะแนน
+                                <OutcomeChip outcome={nineS.clusterResults[c]} />
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="px-1 text-[12.5px] text-muted-foreground">
+                        9S: ยังไม่ได้ประเมิน (ทำเมื่อ Red Flag ปกติ)
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <p className="py-4 text-sm text-muted-foreground">
+                    ยังไม่มีผล Red Flag และ 9S
+                  </p>
                 )}
               </CardContent>
             </Card>
@@ -187,6 +426,101 @@ export default function StudentDetailPage({
                     );
                   })}
                 </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-6">
+                <h3 className="mb-3 text-[15.5px] font-bold">การเยี่ยมบ้าน</h3>
+                {visits.length > 0 ? (
+                  <div className="divide-y divide-border">
+                    {visits.map(({ appointment, record }) => (
+                      <div key={appointment.appointmentId} className="flex items-center gap-3 py-2.5">
+                        <div className="flex-1">
+                          <div className="text-[13.5px] font-medium">
+                            {formatThaiDate(appointment.proposedDate)} ·{" "}
+                            {APPOINTMENT_STATUS_LABEL[appointment.status]}
+                          </div>
+                          {record && (
+                            <div className="text-[12px] text-muted-foreground">
+                              บันทึกโดย {record.signedBy} · ผู้ให้ข้อมูล {record.informantName} · พบความเสี่ยง{" "}
+                              {record.riskFindings.length} ข้อ
+                            </div>
+                          )}
+                        </div>
+                        {record && (
+                          <LinkButton
+                            variant="outline"
+                            href={`/home-visits/${appointment.appointmentId}/record`}
+                          >
+                            ดูผลการเยี่ยม
+                          </LinkButton>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="py-4 text-sm text-muted-foreground">ยังไม่มีนัดเยี่ยมบ้าน</p>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-6">
+                <div className="mb-3 flex items-center justify-between">
+                  <h3 className="text-[15.5px] font-bold">การดูแลช่วยเหลือ (case)</h3>
+                  {careCase && (
+                    <LinkButton variant="outline" href={`/care-cases?student=${studentId}`}>
+                      เปิดหน้า case
+                    </LinkButton>
+                  )}
+                </div>
+                {careCase ? (
+                  <div className="space-y-3">
+                    <div className="flex flex-wrap items-center gap-2 text-[13px]">
+                      <span className="font-semibold">{careCase.caseId}</span>
+                      <span className="rounded-full bg-accent px-2.5 py-1 text-xs font-semibold text-primary">
+                        {careCase.status === "active" ? "กำลังดำเนินการ" : "ปิดแล้ว"}
+                      </span>
+                      <span className="rounded-full bg-surface px-2.5 py-1 text-xs font-semibold">
+                        {CASE_URGENCY_LABEL[careCase.urgency]}
+                      </span>
+                    </div>
+                    <dl className="divide-y divide-border text-[13.5px]">
+                      {(
+                        [
+                          ["ประเภท", SUPPORT_TYPE_LABEL[careCase.supportType]],
+                          ["วิธีการดูแล", careCase.careMethods.map((m) => CARE_METHOD_LABEL[m]).join(", ")],
+                          ["เป้าหมาย", careCase.goal],
+                          [
+                            "ติดตามครั้งถัดไป",
+                            careCase.nextFollowupDate ? formatThaiDate(careCase.nextFollowupDate) : "ยังไม่กำหนด",
+                          ],
+                        ] as [string, string][]
+                      ).map(([label, value]) => (
+                        <div key={label} className="flex gap-3 py-2">
+                          <dt className="w-32 shrink-0 text-[13px] text-muted-foreground">{label}</dt>
+                          <dd className="flex-1 font-medium">{value}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                    {latestFollowups.length > 0 && (
+                      <div>
+                        <div className="mb-1 text-[12.5px] font-semibold text-muted-foreground">
+                          ผลติดตามล่าสุด
+                        </div>
+                        {latestFollowups.map((f) => (
+                          <div key={f.followupId} className="py-1.5 text-[13px]">
+                            <span className="text-muted-foreground">{formatThaiDate(f.followupDate)} · </span>
+                            {f.actionTaken}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <p className="py-4 text-sm text-muted-foreground">ยังไม่มี case ช่วยเหลือ</p>
+                )}
               </CardContent>
             </Card>
 

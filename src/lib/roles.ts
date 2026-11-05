@@ -76,6 +76,25 @@ export function defaultRoleFor(pathname: string): Role {
   return preference.find((r) => canAccess(r, pathname)) ?? "homeroom";
 }
 
+/**
+ * ดูข้อมูลรายบุคคลของนักเรียนได้หรือไม่ (UC2 Alternate: ไม่มีสิทธิ์)
+ * แอดมินดูได้ทั้งโรงเรียน ครูประจำชั้นดูได้เฉพาะห้องที่รับผิดชอบ
+ * PROTOTYPE: เทียบจากชื่อห้อง · Project 2 ใช้ Assignment จริงและตรวจซ้ำที่ backend
+ */
+export function canViewStudent(role: Role, roomName: string): boolean {
+  if (role === "admin") return true;
+  if (role === "homeroom") return roomName === ROLE_INFO.homeroom.user.scope;
+  return false;
+}
+
+/**
+ * เปิดดูเลขบัตรประชาชนเต็มได้หรือไม่ (ข้อ 2.1.10) ค่าเริ่มต้นซ่อนทุกบทบาท
+ * PROTOTYPE: ให้เฉพาะแอดมิน (ข้อเสนอ ยังไม่ได้ตกลงกับทีม) ทุกครั้งที่เปิดดูต้องบันทึกประวัติ
+ */
+export function canRevealCitizenId(role: Role): boolean {
+  return role === "admin";
+}
+
 export function canAccess(role: Role, pathname: string): boolean {
   if (pathname === "/login") return true;
   return ALLOWED[role].some((p) => pathname === p || pathname.startsWith(`${p}/`));

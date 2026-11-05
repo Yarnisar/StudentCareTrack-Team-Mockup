@@ -45,7 +45,7 @@ export const students: Student[] = [
   {
     studentId: "30125",
     fullName: "ด.ญ. แพรวา สายใจ",
-    citizenId: "1-1037-xxxxx-xx-1",
+    citizenId: "1-1037-00481-27-1",
     roomName: "ม.3/1",
     classNo: 12,
     guardianName: "นางสาวรัตนา สายใจ",
@@ -57,7 +57,7 @@ export const students: Student[] = [
   {
     studentId: "30118",
     fullName: "ด.ช. ภูมิ ตั้งใจเรียน",
-    citizenId: "1-1037-xxxxx-xx-2",
+    citizenId: "1-1037-00493-61-2",
     roomName: "ม.3/1",
     classNo: 5,
     guardianName: "นายสมชาย ตั้งใจเรียน",
@@ -69,7 +69,7 @@ export const students: Student[] = [
   {
     studentId: "30131",
     fullName: "ด.ช. อนันต์ มุ่งมั่น",
-    citizenId: "1-1037-xxxxx-xx-3",
+    citizenId: "1-1037-00507-35-3",
     roomName: "ม.3/1",
     classNo: 18,
     guardianName: "นางพิมพ์ใจ มุ่งมั่น",
@@ -81,7 +81,7 @@ export const students: Student[] = [
   {
     studentId: "30140",
     fullName: "ด.ญ. ปาริชาติ ใฝ่ดี",
-    citizenId: "1-1037-xxxxx-xx-4",
+    citizenId: "1-1037-00512-84-4",
     roomName: "ม.3/1",
     classNo: 22,
     guardianName: "นายวิรัตน์ ใฝ่ดี",
@@ -93,7 +93,7 @@ export const students: Student[] = [
   {
     studentId: "30152",
     fullName: "ด.ช. กิตติ ขยันดี",
-    citizenId: "1-1037-xxxxx-xx-5",
+    citizenId: "1-1037-00526-19-5",
     roomName: "ม.3/1",
     classNo: 30,
     guardianName: "นางสมศรี ขยันดี",
@@ -105,7 +105,7 @@ export const students: Student[] = [
   {
     studentId: "30160",
     fullName: "ด.ญ. ชลิดา พากเพียร",
-    citizenId: "1-1037-xxxxx-xx-6",
+    citizenId: "1-1037-00538-72-6",
     roomName: "ม.3/1",
     classNo: 15,
     guardianName: "นางอรทัย พากเพียร",
@@ -117,7 +117,7 @@ export const students: Student[] = [
   {
     studentId: "30171",
     fullName: "ด.ช. ธนากร รักเรียน",
-    citizenId: "1-1037-xxxxx-xx-7",
+    citizenId: "1-1037-00549-06-7",
     roomName: "ม.3/1",
     classNo: 8,
     guardianName: "นายประเสริฐ รักเรียน",
@@ -129,7 +129,7 @@ export const students: Student[] = [
   {
     studentId: "30183",
     fullName: "ด.ญ. มณีรัตน์ ตั้งมั่น",
-    citizenId: "1-1037-xxxxx-xx-8",
+    citizenId: "1-1037-00553-48-8",
     roomName: "ม.3/1",
     classNo: 25,
     guardianName: "นางกาญจนา ตั้งมั่น",

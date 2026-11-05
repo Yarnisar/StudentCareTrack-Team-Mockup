@@ -30,9 +30,10 @@ import {
 } from "./rules";
 import { nowThaiIso } from "./format";
 import { usePathname } from "next/navigation";
-import { defaultRoleFor, type Role } from "./roles";
+import { canRevealCitizenId, defaultRoleFor, ROLE_INFO, type Role } from "./roles";
 import { INITIAL_WINDOWS, type AssessmentWindow } from "./periods";
 import {
+  AccessLog,
   AppointmentStatus,
   AssessmentOutcome,
   BehaviorRecord,
@@ -67,6 +68,8 @@ interface StoreValue {
   appointments: HomeVisitAppointment[];
   careCases: CareCase[];
   homeVisitRecords: HomeVisitRecord[];
+  /** ประวัติการเปิดดูเลขบัตรประชาชน เรียงใหม่สุดก่อน */
+  accessLogs: AccessLog[];
   /** ช่วงเวลาดำเนินงานที่แอดมินตั้งในหน้าตั้งค่า (UC3 Subflow A, UC8) */
   assessmentWindows: AssessmentWindow[];
   setAssessmentWindows: React.Dispatch<React.SetStateAction<AssessmentWindow[]>>;
@@ -117,6 +120,8 @@ interface StoreValue {
   addFollowup: (caseId: string, actionTaken: string, result: string, nextFollowupDate: string) => void;
   setCaseUrgency: (caseId: string, urgency: CaseUrgency) => void;
   closeCase: (caseId: string) => void;
+  /** บันทึกว่าบทบาทปัจจุบันเปิดดูเลขบัตรของนักเรียน คืน false ถ้าบทบาทนี้ไม่มีสิทธิ์ */
+  logCitizenIdView: (studentId: string) => boolean;
 }
 
 const StoreContext = createContext<StoreValue | null>(null);
@@ -141,6 +146,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [appointments, setAppointments] = useState<HomeVisitAppointment[]>(seedAppointments);
   const [careCases, setCareCases] = useState<CareCase[]>(seedCareCases);
   const [homeVisitRecords, setHomeVisitRecords] = useState<HomeVisitRecord[]>(seedHomeVisitRecords);
+  const [accessLogs, setAccessLogs] = useState<AccessLog[]>([]);
   const [assessmentWindows, setAssessmentWindows] = useState<AssessmentWindow[]>(INITIAL_WINDOWS);
   const [drafts, setDrafts] = useState<Record<string, unknown>>({});
 
@@ -476,6 +482,22 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       );
     };
 
+    const logCitizenIdView = (studentId: string) => {
+      if (!canRevealCitizenId(role)) return false;
+      setAccessLogs((prev) => [
+        {
+          logId: nextId("LOG"),
+          studentId,
+          field: "citizen_id",
+          actorName: ROLE_INFO[role].user.name,
+          actorRole: ROLE_INFO[role].label,
+          at: nowThaiIso(),
+        },
+        ...prev,
+      ]);
+      return true;
+    };
+
     return {
       role,
       setRole,
@@ -488,6 +510,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       appointments,
       careCases,
       homeVisitRecords,
+      accessLogs,
       assessmentWindows,
       setAssessmentWindows,
       getStudent,
@@ -511,8 +534,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       addFollowup,
       setCaseUrgency,
       closeCase,
+      logCitizenIdView,
     };
-  }, [role, screenings, redFlags, nineS, sdq, behaviorRecords, appointments, careCases, homeVisitRecords, assessmentWindows, drafts]);
+  }, [role, screenings, redFlags, nineS, sdq, behaviorRecords, appointments, careCases, homeVisitRecords, accessLogs, assessmentWindows, drafts]);
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }

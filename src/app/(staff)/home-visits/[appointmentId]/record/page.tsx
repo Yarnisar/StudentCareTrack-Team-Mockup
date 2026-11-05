@@ -51,7 +51,7 @@ import { previousVisitForms, SCHOOL_NAME } from "@/lib/mock-data";
 import { ROLE_INFO } from "@/lib/roles";
 import { resizeImage } from "@/lib/image";
 import { draftKey, useStore } from "@/lib/store";
-import { formatBaht, formatThaiDate } from "@/lib/format";
+import { formatBaht, formatThaiDate, maskCitizenId } from "@/lib/format";
 import {
   CARETAKER_OPTIONS,
   caretakerOptionFrom,
@@ -431,7 +431,7 @@ export default function HomeVisitRecordPage({
                   <ReadOnly value={`${student.roomName} เลขที่ ${student.classNo}`} />
                 </Field>
                 <Field label="เลขที่บัตรประชาชนนักเรียน" source="registry">
-                  <ReadOnly value={student.citizenId} />
+                  <ReadOnly value={maskCitizenId(student.citizenId)} />
                 </Field>
                 <Field label="ชื่อผู้ปกครอง" source="registry">
                   <ReadOnly value={student.guardianName} />

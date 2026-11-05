@@ -356,3 +356,16 @@ export interface EducationDocument {
   generatedByName: string;
   generatedAt: string;
 }
+
+/**
+ * บันทึกการเปิดดูข้อมูลส่วนบุคคลที่ซ่อนไว้ (ข้อ 2.1.10)
+ * PROTOTYPE: เก็บในหน่วยความจำ · Project 2 ต้องเขียนที่ backend ให้แก้หรือลบไม่ได้
+ */
+export interface AccessLog {
+  logId: string;
+  studentId: string;
+  field: "citizen_id";
+  actorName: string;
+  actorRole: string;
+  at: string;
+}
