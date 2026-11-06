@@ -108,6 +108,15 @@ export function useSettingsPrototype() {
     return ruleId;
   }, [setRules]);
 
+  /** ยกเลิกกฎพร้อมเหตุผล ย้อนกลับไม่ได้ (UC7 Scenario C) */
+  const cancelRule = useCallback((ruleId: string, reason: string) => {
+    setRules((prev) =>
+      prev.map((r) =>
+        r.ruleId === ruleId ? { ...r, isActive: false, cancelled: { reason, at: DEMO_TODAY } } : r
+      )
+    );
+  }, [setRules]);
+
   const removeRule = useCallback((ruleId: string) => {
     setRules((prev) => prev.filter((r) => r.ruleId !== ruleId));
   }, [setRules]);
@@ -133,6 +142,7 @@ export function useSettingsPrototype() {
     removeWindow,
     updateRule,
     addRule,
+    cancelRule,
     removeRule,
     reset,
   };

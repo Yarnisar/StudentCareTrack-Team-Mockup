@@ -9,7 +9,7 @@
  * PROTOTYPE: ค่าที่แก้เก็บใน store มีผลทันทีกับทุกหน้า ยังไม่มีฉบับร่างและการเผยแพร่พร้อมวันเริ่มใช้ (UC7 Scenario E)
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { CalendarClock, Gavel, Gauge, History, Minus, Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -28,7 +28,7 @@ import type { BehaviorRule, SdqRater } from "@/lib/types";
 import { AuditLogList, useAuditEntries } from "./audit-log";
 import { BehaviorScoreCard } from "./behavior-score-card";
 import { useConfirm } from "./confirm";
-import { ruleActiveConfirm, windowEnabledConfirm, windowLockConfirm, type ImpactContext } from "./confirm-text";
+import { windowEnabledConfirm, windowLockConfirm, type ImpactContext } from "./confirm-text";
 import { RuleRecorderPicker } from "./rule-recorder-picker";
 import { RATER_LABEL, STATUS_META, type SettingsPrototype, windowStatus } from "./state";
 
@@ -74,6 +74,27 @@ export function SettingsWorkspace({
     setSelectedWindow(null);
     setSelectedRule(null);
   };
+  /** ข้อมูลไม่ถูกต้องของแผงที่เปิดอยู่ (UC7 Alt-B, UC9 Alt-A) */
+  const panelError =
+    win && win.openDate > win.closeDate
+      ? "วันเปิดให้ทำต้องไม่หลังวันปิดรับ"
+      : win && win.label.trim() === ""
+        ? "ต้องระบุชื่อที่แสดง"
+        : rule && !rule.cancelled && rule.name.trim() === ""
+          ? "ต้องระบุชื่อพฤติกรรม"
+          : "";
+  /** ปิดแผง: กฎใหม่ที่ยังไม่ตั้งชื่อและไม่เคยใช้ ถือว่ายกเลิกการเพิ่ม ส่วนข้อมูลผิดอื่นต้องแก้ก่อน */
+  const requestClose = () => {
+    if (rule && !rule.cancelled && rule.name.trim() === "" && !(ruleUsage[rule.ruleId] ?? 0)) {
+      proto.removeRule(rule.ruleId);
+      closePanel();
+      return;
+    }
+    if (panelError) return;
+    closePanel();
+  };
+  const [cancelReason, setCancelReason] = useState("");
+  const [cancelling, setCancelling] = useState(false);
 
   const goTab = (key: Tab) => {
     closePanel();
@@ -82,13 +103,14 @@ export function SettingsWorkspace({
     router.replace(`${pathname}?${sp.toString()}`, { scroll: false });
   };
 
+  const requestCloseRef = useRef(requestClose);
+  useEffect(() => {
+    requestCloseRef.current = requestClose;
+  });
   useEffect(() => {
     if (!win && !rule) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        setSelectedWindow(null);
-        setSelectedRule(null);
-      }
+      if (e.key === "Escape") requestCloseRef.current();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -169,7 +191,7 @@ export function SettingsWorkspace({
           <section>
             <SectionHead
               title="กฎความประพฤติ"
-              hint="รายการที่ครูเลือกตอนบันทึกพฤติกรรม กฎที่ปิดใช้งานไม่อยู่ในตัวเลือกของครู แต่บันทึกเดิมยังอยู่ · กดแถวเพื่อแก้ไข"
+              hint="รายการที่ครูเลือกตอนบันทึกพฤติกรรม กฎที่ยกเลิกแล้วไม่อยู่ในตัวเลือกของครู และรายการเดิมไม่นับคะแนน · กดแถวเพื่อแก้ไข"
               action={
                 <Button onClick={() => setSelectedRule(proto.addRule())}>
                   <Plus className="size-4" /> เพิ่มกฎ
@@ -177,21 +199,27 @@ export function SettingsWorkspace({
               }
             />
             <div className="space-y-4">
-              {KIND_ORDER.map((kind) => {
-                const list = proto.rules.filter((r) => ruleKind(r) === kind);
+              {[...KIND_ORDER, "cancelled" as const].map((kind) => {
+                const list =
+                  kind === "cancelled"
+                    ? proto.rules.filter((r) => r.cancelled)
+                    : proto.rules.filter((r) => !r.cancelled && ruleKind(r) === kind);
+                if (kind === "cancelled" && list.length === 0) return null;
                 return (
                   <div key={kind}>
                     <div className="mb-1.5 flex items-center gap-2">
-                      <h3 className="text-[13px] font-bold">{RULE_KIND_LABEL[kind]}</h3>
+                      <h3 className="text-[13px] font-bold">{kind === "cancelled" ? "ยกเลิกแล้ว" : RULE_KIND_LABEL[kind]}</h3>
                       <span className="text-[12px] text-muted-foreground">{list.length} ข้อ</span>
                       <span className="flex-1" />
+                      {kind !== "cancelled" && (
                       <button
                         type="button"
-                        onClick={() => setSelectedRule(proto.addRule(LEVELS_OF[kind][0]))}
+                        onClick={() => setSelectedRule(proto.addRule(LEVELS_OF[kind as RuleKind][0]))}
                         className="flex items-center gap-1 rounded-md px-2 py-1 text-[12px] text-muted-foreground hover:bg-muted"
                       >
                         <Plus className="size-3.5" /> เพิ่มในกลุ่มนี้
                       </button>
+                      )}
                     </div>
                     <div className="divide-y divide-border rounded-xl border border-border bg-card">
                       {list.length === 0 && <p className="px-4 py-3 text-[12.5px] text-muted-foreground">ยังไม่มีกฎในกลุ่มนี้</p>}
@@ -199,7 +227,11 @@ export function SettingsWorkspace({
                         <button
                           key={r.ruleId}
                           type="button"
-                          onClick={() => setSelectedRule(r.ruleId)}
+                          onClick={() => {
+                            setSelectedRule(r.ruleId);
+                            setCancelling(false);
+                            setCancelReason("");
+                          }}
                           className={`flex w-full flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3 text-left hover:bg-muted/50 ${
                             selectedRule === r.ruleId ? "bg-accent" : ""
                           } ${r.isActive ? "" : "text-muted-foreground"}`}
@@ -207,7 +239,7 @@ export function SettingsWorkspace({
                           <span className="min-w-0 flex-1 text-[13.5px] font-medium">
                             {r.name || <span className="text-muted-foreground">(ยังไม่ตั้งชื่อ)</span>}
                           </span>
-                          {kind === "deduct" && (
+                          {ruleKind(r) === "deduct" && (
                             <span className="text-[12px] text-muted-foreground">{RULE_LEVEL_LABEL[r.severity]}</span>
                           )}
                           <span className="w-14 text-right text-[13.5px] font-bold tabular-nums">{ruleScoreText(r)}</span>
@@ -218,7 +250,7 @@ export function SettingsWorkspace({
                               r.isActive ? "bg-accent text-primary" : "bg-muted text-muted-foreground"
                             }`}
                           >
-                            {r.isActive ? "ใช้งาน" : "ปิดใช้งาน"}
+                            {r.cancelled ? "ยกเลิกแล้ว" : r.isActive ? "ใช้งาน" : "ปิดใช้งาน"}
                           </span>
                         </button>
                       ))}
@@ -244,7 +276,7 @@ export function SettingsWorkspace({
 
       {(win || rule) && (
         <>
-          <div aria-hidden className="fixed inset-0 z-40 bg-foreground/10" onClick={closePanel} />
+          <div aria-hidden className="fixed inset-0 z-40 bg-foreground/10" onClick={requestClose} />
           <aside
             role="dialog"
             aria-label={win ? "แก้ไขช่วงเวลา" : "แก้ไขกฎความประพฤติ"}
@@ -255,7 +287,7 @@ export function SettingsWorkspace({
               <button
                 type="button"
                 aria-label="ปิดแผง"
-                onClick={closePanel}
+                onClick={requestClose}
                 className="flex size-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted"
               >
                 <X className="size-4" />
@@ -331,8 +363,17 @@ export function SettingsWorkspace({
                 </>
               )}
 
+              {rule?.cancelled && (
+                <p className="rounded-lg bg-surface px-3 py-2.5 text-[13px] leading-relaxed">
+                  ยกเลิกกฎนี้แล้วเมื่อ {formatThaiDate(rule.cancelled.at)} · เหตุผล: {rule.cancelled.reason}
+                  <br />
+                  <span className="text-[12px] text-muted-foreground">
+                    รายการเดิม {ruleUsage[rule.ruleId] ?? 0} รายการไม่นับคะแนน และแสดงในประวัติว่า “กฎถูกยกเลิก”
+                  </span>
+                </p>
+              )}
               {rule && (
-                <>
+                <fieldset disabled={!!rule.cancelled} className="space-y-4 disabled:opacity-60">
                   <Field label="ชื่อพฤติกรรม">
                     <Input
                       value={rule.name}
@@ -388,30 +429,56 @@ export function SettingsWorkspace({
                       onChange={(recordableBy) => proto.updateRule(rule.ruleId, { recordableBy })}
                     />
                   </Field>
-                  <CheckRow
-                    checked={rule.isActive}
-                    label="เปิดใช้งาน (ครูเลือกกฎนี้ได้)"
-                    onChange={() =>
-                      confirm.request({
-                        id: `rule-${rule.ruleId}-active`,
-                        ...ruleActiveConfirm(rule, ruleUsage[rule.ruleId] ?? 0),
-                        apply: () => proto.updateRule(rule.ruleId, { isActive: !rule.isActive }),
-                        undo: () => proto.updateRule(rule.ruleId, { isActive: rule.isActive }),
-                      })
-                    }
-                  />
-                  {confirm.inlineFor(`rule-${rule.ruleId}-active`)}
-                  <p className="rounded-lg bg-surface px-3 py-2.5 text-[12px] leading-relaxed text-muted-foreground">
-                    ถูกใช้บันทึกแล้ว <b>{ruleUsage[rule.ruleId] ?? 0}</b> ครั้ง
-                    {(ruleUsage[rule.ruleId] ?? 0) > 0
-                      ? " · ลบไม่ได้ ให้ปิดใช้งานแทน บันทึกเดิมยังอ่านได้"
-                      : " · ยังไม่มีบันทึกอ้างอิง ลบได้"}
-                  </p>
-                </>
+                </fieldset>
               )}
+              {rule && !rule.cancelled && (
+                <div className="rounded-lg border border-border p-3">
+                  {!cancelling ? (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="flex-1 text-[12.5px] text-muted-foreground">
+                        ถูกใช้บันทึกแล้ว <b className="text-foreground">{ruleUsage[rule.ruleId] ?? 0}</b> ครั้ง
+                      </span>
+                      <Button size="sm" variant="outline" onClick={() => setCancelling(true)}>
+                        ยกเลิกกฎนี้
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <p className="text-[13px] font-semibold">ยกเลิกกฎ “{rule.name}”</p>
+                      <p className="text-[12px] leading-relaxed text-muted-foreground">
+                        ครูจะเลือกกฎนี้ไม่ได้อีก รายการเดิม {ruleUsage[rule.ruleId] ?? 0} รายการไม่นับคะแนน
+                        คะแนนนักเรียนคำนวณใหม่ และเก็บรายการไว้ในประวัติพร้อมระบุว่า “กฎถูกยกเลิก” ย้อนกลับไม่ได้
+                      </p>
+                      <Input
+                        aria-label="เหตุผลในการยกเลิก"
+                        value={cancelReason}
+                        onChange={(e) => setCancelReason(e.target.value)}
+                        placeholder="เหตุผลในการยกเลิก (จำเป็น)"
+                      />
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="outline" onClick={() => setCancelling(false)}>
+                          ไม่ยกเลิก
+                        </Button>
+                        <Button
+                          size="sm"
+                          disabled={cancelReason.trim() === ""}
+                          onClick={() => {
+                            proto.cancelRule(rule.ruleId, cancelReason.trim());
+                            setCancelling(false);
+                            setCancelReason("");
+                          }}
+                        >
+                          ยืนยันยกเลิกกฎ
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+              {panelError && <p className="text-[12.5px] text-destructive">{panelError}</p>}
             </div>
             <div className="flex gap-2 border-t border-border px-5 py-3.5">
-              <Button size="lg" className="flex-1" onClick={closePanel}>
+              <Button size="lg" className="flex-1" disabled={!!panelError} onClick={closePanel}>
                 เสร็จ
               </Button>
               {win && (
@@ -427,11 +494,10 @@ export function SettingsWorkspace({
                   ลบ
                 </Button>
               )}
-              {rule && (
+              {rule && !rule.cancelled && !(ruleUsage[rule.ruleId] ?? 0) && (
                 <Button
                   size="lg"
                   variant="outline"
-                  disabled={(ruleUsage[rule.ruleId] ?? 0) > 0}
                   onClick={() => {
                     if (!window.confirm(`ลบกฎ "${rule.name || "ที่ยังไม่ตั้งชื่อ"}" ไหม`)) return;
                     proto.removeRule(rule.ruleId);

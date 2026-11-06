@@ -44,7 +44,8 @@ export function ruleKind(rule: Pick<BehaviorRule, "severity">): RuleKind {
 }
 
 /** ข้อความคะแนนของกฎ เช่น -5, +10 หรือ "ส่งต่อ" */
-export function ruleScoreText(rule: Pick<BehaviorRule, "severity" | "scoreDelta">): string {
+export function ruleScoreText(rule: Pick<BehaviorRule, "severity" | "scoreDelta" | "cancelled">): string {
+  if (rule.cancelled) return "ไม่นับ";
   if (ruleKind(rule) === "refer") return "ส่งต่อ";
   return rule.scoreDelta > 0 ? `+${rule.scoreDelta}` : String(rule.scoreDelta);
 }

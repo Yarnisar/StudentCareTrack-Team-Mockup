@@ -1,9 +1,9 @@
 "use client";
 
-import { use, useMemo } from "react";
+import { use, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, Info } from "lucide-react";
+import { CheckCircle2, ChevronLeft, Info } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { RiskBadge } from "@/components/shared/risk-badge";
 import { AutosaveStatus } from "@/components/assessment/autosave-status";
@@ -12,6 +12,7 @@ import { useDraft } from "@/components/assessment/use-draft";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CURRENT_TEACHER, CURRENT_TERM } from "@/lib/mock-data";
 import { classifyDimension, overallRisk, SCREENING_ITEMS } from "@/lib/rules";
@@ -21,6 +22,20 @@ import { DIMENSION_LABEL, DIMENSION_ORDER, ScreeningDimension } from "@/lib/type
 /** รายการที่ครูติ๊กเองได้ (ไม่รวมรายการที่ระบบกรอกจากผลแบบประเมิน) */
 const teacherItemIds = (dimension: ScreeningDimension) =>
   SCREENING_ITEMS.filter((i) => i.dimension === dimension && !i.derivedFrom).map((i) => i.id);
+
+/** เหตุผลที่ไม่เปิด case สำหรับกลุ่มเสี่ยง (UC6 Alt-G) เลือกแทนการพิมพ์ — PROTOTYPE: รายการเป็นข้อเสนอ */
+const SKIP_REASONS = [
+  "ติดตามในชั้นเรียนก่อน",
+  "ทราบสาเหตุแล้ว แก้ไขได้ในครอบครัว",
+  "ได้รับความช่วยเหลือจากหน่วยงานอื่นอยู่แล้ว",
+];
+
+/** ผลหลังบันทึก: มิติที่มีปัญหาเปิด case อัตโนมัติ มิติที่เสี่ยงให้ครูเลือก (UC6 ข้อ 13–15) */
+interface Outcome {
+  red: string[];
+  amber: string[];
+  caseLinked: boolean;
+}
 
 interface ScreeningDraft {
   checked: string[];
@@ -51,6 +66,7 @@ export default function ScreeningFormPage({
   });
   const { checked, noneFound } = draft.value;
   const missing = useMissingAnswers();
+  const [outcome, setOutcome] = useState<Outcome | null>(null);
 
   const isReviewed = (d: ScreeningDimension) =>
     noneFound.includes(d) || teacherItemIds(d).some((id) => checked.includes(id));
@@ -112,11 +128,16 @@ export default function ScreeningFormPage({
       ])
     ) as Record<ScreeningDimension, string[]>;
 
-    store.saveScreening(studentId, byDimension);
-
-    // Red Flag เป็นส่วนหนึ่งของมิติสุขภาพจิต ต้องทำทุกคน (ตาราง 3.6 ข้อ 6)
-    router.push(`/assessment/red-flag/${studentId}`);
+    const hadCase = store.caseOf(studentId)?.status === "active";
+    const saved = store.saveScreening(studentId, byDimension);
+    const red = saved.results.filter((r) => r.group === "red").map((r) => DIMENSION_LABEL[r.dimension]);
+    const amber = saved.results.filter((r) => r.group === "amber").map((r) => DIMENSION_LABEL[r.dimension]);
+    if (red.length === 0 && amber.length === 0) goRedFlag();
+    else setOutcome({ red, amber, caseLinked: hadCase });
   };
+
+  // Red Flag เป็นส่วนหนึ่งของมิติสุขภาพจิต ต้องทำทุกคน (สถานการณ์ B)
+  const goRedFlag = () => router.push(`/assessment/red-flag/${studentId}`);
 
   return (
     <>
@@ -269,6 +290,125 @@ export default function ScreeningFormPage({
           </div>
         </div>
       </div>
+
+      {outcome && (
+        <ScreeningOutcome
+          outcome={outcome}
+          studentName={student.fullName}
+          onOpenCase={() => {
+            store.openOrLinkCase(studentId, `ผลคัดกรอง 6 มิติ: ${outcome.amber.join(" / ")} เสี่ยง`);
+            goRedFlag();
+          }}
+          onSkip={(reason) => {
+            store.setScreeningWatch(studentId, reason);
+            goRedFlag();
+          }}
+          onContinue={goRedFlag}
+        />
+      )}
     </>
+  );
+}
+
+function ScreeningOutcome({
+  outcome,
+  studentName,
+  onOpenCase,
+  onSkip,
+  onContinue,
+}: {
+  outcome: Outcome;
+  studentName: string;
+  onOpenCase: () => void;
+  onSkip: (reason: string) => void;
+  onContinue: () => void;
+}) {
+  const [skipping, setSkipping] = useState(false);
+  const [reason, setReason] = useState("");
+  const [other, setOther] = useState("");
+  const finalReason = reason === "อื่น ๆ" ? other.trim() : reason;
+  const hasRed = outcome.red.length > 0;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-foreground/20 sm:items-center" role="dialog" aria-modal="true" aria-label="ผลการคัดกรอง">
+      <div className="w-full max-w-lg rounded-t-2xl bg-card p-6 shadow-lg sm:rounded-2xl">
+        <h2 className="text-[16px] font-bold">บันทึกผลคัดกรองแล้ว · {studentName}</h2>
+        <div className="mt-3 space-y-1.5 text-[13.5px]">
+          {hasRed && (
+            <p>
+              <span className="font-semibold text-risk-red">กลุ่มมีปัญหา:</span> {outcome.red.join(", ")}
+            </p>
+          )}
+          {outcome.amber.length > 0 && (
+            <p>
+              <span className="font-semibold text-risk-amber">กลุ่มเสี่ยง:</span> {outcome.amber.join(", ")}
+            </p>
+          )}
+        </div>
+
+        {hasRed ? (
+          <>
+            <p className="mt-4 flex gap-2 rounded-lg bg-surface px-3 py-2.5 text-[13px]">
+              <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-primary" />
+              {outcome.caseLinked
+                ? "ระบบเชื่อมผลนี้กับ case ติดตามช่วยเหลือที่เปิดอยู่แล้ว"
+                : "ระบบเปิด case ติดตามช่วยเหลือให้แล้ว วางแผนช่วยเหลือได้ที่หน้าติดตามช่วยเหลือ"}
+            </p>
+            <Button className="mt-5 w-full" onClick={onContinue}>
+              ทำแบบคัดกรอง Red Flag ต่อ
+            </Button>
+          </>
+        ) : !skipping ? (
+          <>
+            <p className="mt-4 text-[13.5px]">จะเปิด case ติดตามช่วยเหลือให้นักเรียนคนนี้ไหม</p>
+            <div className="mt-4 grid gap-2 sm:grid-cols-2">
+              <Button variant="outline" onClick={() => setSkipping(true)}>
+                ไม่เปิด case
+              </Button>
+              <Button onClick={onOpenCase}>{outcome.caseLinked ? "เชื่อมกับ case ที่เปิดอยู่" : "เปิด case"}</Button>
+            </div>
+          </>
+        ) : (
+          <>
+            <p className="mt-4 text-[13.5px] font-semibold">เหตุผลที่ไม่เปิด case</p>
+            <p className="text-[12px] text-muted-foreground">นักเรียนจะอยู่ในสถานะ “เฝ้าดูผลคัดกรอง” และเก็บเหตุผลไว้ในประวัติ</p>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {[...SKIP_REASONS, "อื่น ๆ"].map((r) => (
+                <button
+                  key={r}
+                  type="button"
+                  aria-pressed={reason === r}
+                  onClick={() => setReason(r)}
+                  className={
+                    reason === r
+                      ? "rounded-lg border border-primary bg-accent px-3 py-1.5 text-[13px] font-semibold text-primary"
+                      : "rounded-lg border border-border px-3 py-1.5 text-[13px] hover:bg-muted"
+                  }
+                >
+                  {r}
+                </button>
+              ))}
+            </div>
+            {reason === "อื่น ๆ" && (
+              <Input
+                aria-label="เหตุผลอื่น"
+                value={other}
+                onChange={(e) => setOther(e.target.value)}
+                placeholder="ระบุเหตุผลสั้น ๆ"
+                className="mt-2"
+              />
+            )}
+            <div className="mt-4 grid gap-2 sm:grid-cols-2">
+              <Button variant="outline" onClick={() => setSkipping(false)}>
+                ย้อนกลับ
+              </Button>
+              <Button disabled={finalReason === ""} onClick={() => onSkip(finalReason)}>
+                บันทึกแล้วทำ Red Flag ต่อ
+              </Button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
   );
 }

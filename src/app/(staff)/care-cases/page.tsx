@@ -21,6 +21,7 @@ import {
   CASE_URGENCY_LABEL,
   CareMethod,
   CaseUrgency,
+  REFERRAL_STATUS_LABEL,
   SDQ_LEVEL_LABEL,
   SUPPORT_TYPE_LABEL,
   SupportType,
@@ -114,7 +115,12 @@ function CareCasesContent() {
                         {c.caseId} · {c.status === "active" ? "กำลังดำเนินการ" : "ปิดแล้ว"} ·
                         ติดตาม {c.followups.length} ครั้ง
                       </div>
-                      {c.status === "active" && (
+                      {c.status === "active" && c.goal === "" && (
+                        <div className="mt-1.5 text-[11.5px] font-semibold text-foreground">
+                          ระบบเปิดให้ · ยังไม่วางแผนช่วยเหลือ
+                        </div>
+                      )}
+                      {c.status === "active" && c.goal !== "" && (
                         <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11.5px]">
                           <UrgencyTag urgency={c.urgency} />
                           <span className="text-muted-foreground">
@@ -141,6 +147,15 @@ function CareCasesContent() {
                 setSelectedCaseId(caseId);
                 setNewCaseFor(null);
               }}
+            />
+          ) : activeCase && student && activeCase.status === "active" && activeCase.goal === "" ? (
+            <NewCaseForm
+              key={activeCase.caseId}
+              studentId={activeCase.studentId}
+              planCaseId={activeCase.caseId}
+              triggerSource={activeCase.triggerSource}
+              onCancel={() => setSelectedCaseId(null)}
+              onCreated={(caseId) => setSelectedCaseId(caseId)}
             />
           ) : activeCase && student ? (
             <div className="space-y-5">
@@ -315,20 +330,21 @@ function CareCasesContent() {
                 </Card>
               </div>
 
+              {activeCase.referral && (
+                <p className="rounded-lg bg-surface px-4 py-3 text-[13px]">
+                  <FileText className="mr-1.5 inline size-4" />
+                  เอกสารส่งต่อ {activeCase.referral.referralId} ส่งให้แอดมินเมื่อ {formatThaiDate(activeCase.referral.preparedAt)} ·{" "}
+                  <b>{REFERRAL_STATUS_LABEL[activeCase.referral.status]}</b>
+                  {activeCase.status === "active" && " · case ยังเปิดอยู่ ติดตามต่อได้"}
+                </p>
+              )}
+              {activeCase.status === "closed" && activeCase.closingSummary && (
+                <p className="rounded-lg bg-surface px-4 py-3 text-[13px]">
+                  ปิด case เมื่อ {formatThaiDate(activeCase.closedAt ?? "")} · ผลสรุป: {activeCase.closingSummary}
+                </p>
+              )}
               {activeCase.status === "active" && (
-                <div className="flex items-center justify-between pb-4">
-                  <p className="text-[13px] text-muted-foreground">
-                    การเปลี่ยนแปลงทั้งหมดถูกบันทึกใน audit log ของระบบ
-                  </p>
-                  <div className="flex gap-3">
-                    <Button variant="outline">
-                      <FileText className="size-4" /> จัดทำเอกสารส่งต่อภายนอก
-                    </Button>
-                    <Button onClick={() => store.closeCase(activeCase.caseId)}>
-                      <CheckCircle2 className="size-4" /> ปิด case (ผลดีขึ้น)
-                    </Button>
-                  </div>
-                </div>
+                <CaseActions key={activeCase.caseId} caseId={activeCase.caseId} hasReferral={!!activeCase.referral} />
               )}
             </div>
           ) : (
@@ -344,13 +360,139 @@ function CareCasesContent() {
   );
 }
 
+/** ผลสรุปตอนปิด case ให้เลือกแทนการพิมพ์ — PROTOTYPE: รายการเป็นข้อเสนอ */
+const CLOSE_SUMMARIES = ["บรรลุเป้าหมาย พฤติกรรมดีขึ้นต่อเนื่อง", "ปัญหาคลี่คลายแล้ว", "ย้ายสถานศึกษา"];
+
+/**
+ * ปุ่มท้าย case: เตรียมส่งต่อ (Scenario D) และปิด case พร้อมผลสรุป (Scenario C)
+ * เตรียมส่งต่อ: ระบบรวบรวมข้อมูลเป็นเอกสารให้ครูตรวจ แล้วส่งให้แอดมินเก็บรักษา การแจ้งแอดมินไม่ระบุชื่อนักเรียน
+ */
+function CaseActions({ caseId, hasReferral }: { caseId: string; hasReferral: boolean }) {
+  const store = useStore();
+  const careCase = store.careCases.find((c) => c.caseId === caseId);
+  const student = careCase ? store.getStudent(careCase.studentId) : undefined;
+  const [mode, setMode] = useState<"none" | "referral" | "close">("none");
+  const [summary, setSummary] = useState("");
+  const [other, setOther] = useState("");
+  const finalSummary = summary === "อื่น ๆ" ? other.trim() : summary;
+  if (!careCase || !student) return null;
+
+  return (
+    <div className="space-y-3 pb-4">
+      {mode === "none" && (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-[13px] text-muted-foreground">การเปลี่ยนแปลงทั้งหมดถูกบันทึกใน audit log ของระบบ</p>
+          <div className="flex flex-wrap gap-2">
+            {!hasReferral && (
+              <Button variant="outline" onClick={() => setMode("referral")}>
+                <FileText className="size-4" /> เตรียมเอกสารส่งต่อ
+              </Button>
+            )}
+            <Button onClick={() => setMode("close")}>
+              <CheckCircle2 className="size-4" /> ปิด case
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {mode === "referral" && (
+        <Card>
+          <CardContent className="p-6">
+            <h3 className="text-[15.5px] font-bold">ตรวจเอกสารส่งต่อก่อนส่งให้แอดมินเก็บรักษา</h3>
+            <p className="mt-0.5 mb-3 text-[12px] text-muted-foreground">
+              ระบบรวบรวมจากข้อมูลใน case นี้ ครูนำไปดำเนินการส่งต่อภายนอกเอง ระบบไม่ส่งข้อมูลออกให้หน่วยงานภายนอกโดยตรง
+            </p>
+            <dl className="divide-y divide-border rounded-lg border border-border text-[13px]">
+              {[
+                ["นักเรียน", `${student.fullName} · ${student.roomName} เลขที่ ${student.classNo}`],
+                ["ที่มาของ case", careCase.triggerSource],
+                ["ประเภทการช่วยเหลือ", SUPPORT_TYPE_LABEL[careCase.supportType]],
+                ["วิธีการดูแล", careCase.careMethods.map((m) => CARE_METHOD_LABEL[m]).join(", ") || "-"],
+                ["เป้าหมาย", careCase.goal || "-"],
+                ["การติดตาม", `${careCase.followups.length} ครั้ง${careCase.followups[0] ? ` · ล่าสุด: ${careCase.followups[0].actionTaken}` : ""}`],
+              ].map(([k, v]) => (
+                <div key={k} className="flex gap-3 px-3 py-2">
+                  <dt className="w-32 shrink-0 text-muted-foreground">{k}</dt>
+                  <dd className="min-w-0 flex-1">{v}</dd>
+                </div>
+              ))}
+            </dl>
+            <p className="mt-3 text-[12px] text-muted-foreground">
+              แอดมินจะเห็นเฉพาะเลขเอกสาร ผู้ส่ง วันที่ และสถานะ ไม่เห็นชื่อนักเรียนหรือเนื้อหา
+            </p>
+            <div className="mt-4 flex flex-wrap justify-end gap-2">
+              <Button variant="outline" onClick={() => setMode("none")}>
+                ยกเลิก
+              </Button>
+              <Button
+                onClick={() => {
+                  store.sendReferral(caseId);
+                  setMode("none");
+                }}
+              >
+                ตรวจแล้ว ส่งให้แอดมินเก็บรักษา
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {mode === "close" && (
+        <Card>
+          <CardContent className="p-6">
+            <h3 className="text-[15.5px] font-bold">ปิด case · บันทึกผลสรุป</h3>
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {[...CLOSE_SUMMARIES, "อื่น ๆ"].map((r) => (
+                <button
+                  key={r}
+                  type="button"
+                  aria-pressed={summary === r}
+                  onClick={() => setSummary(r)}
+                  className={
+                    summary === r
+                      ? "rounded-lg border border-primary bg-accent px-3 py-1.5 text-[13px] font-semibold text-primary"
+                      : "rounded-lg border border-border px-3 py-1.5 text-[13px] hover:bg-muted"
+                  }
+                >
+                  {r}
+                </button>
+              ))}
+            </div>
+            {summary === "อื่น ๆ" && (
+              <Textarea
+                aria-label="ผลสรุป"
+                value={other}
+                onChange={(e) => setOther(e.target.value)}
+                placeholder="ผลสรุปของการช่วยเหลือ"
+                rows={2}
+                className="mt-2"
+              />
+            )}
+            <div className="mt-4 flex flex-wrap justify-end gap-2">
+              <Button variant="outline" onClick={() => setMode("none")}>
+                ยกเลิก
+              </Button>
+              <Button disabled={finalSummary === ""} onClick={() => store.closeCase(caseId, finalSummary)}>
+                ยืนยันปิด case
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
 function NewCaseForm({
   studentId,
+  planCaseId,
   triggerSource,
   onCancel,
   onCreated,
 }: {
   studentId: string;
+  /** case ที่ระบบเปิดให้แล้วแต่ยังไม่มีแผน (UC6 ข้อ 13 -> UC11 Scenario A ข้อ 5) */
+  planCaseId?: string;
   triggerSource?: string;
   onCancel: () => void;
   onCreated: (caseId: string) => void;
@@ -376,6 +518,18 @@ function NewCaseForm({
 
   const handleSubmit = () => {
     if (!urgency) return;
+    if (planCaseId) {
+      store.planCase(planCaseId, {
+        supportType,
+        careMethods: methods,
+        goal: goal.trim(),
+        urgency,
+        nextFollowupDate: nextDate,
+        targetDate: targetDate || undefined,
+      });
+      onCreated(planCaseId);
+      return;
+    }
     const record = store.openCase(studentId, supportType, methods, goal.trim(), {
       urgency,
       nextFollowupDate: nextDate,
@@ -389,12 +543,19 @@ function NewCaseForm({
     <Card>
       <CardContent className="p-6">
         <div className="mb-5 flex flex-wrap items-center gap-2.5">
-          <h2 className="text-lg font-bold">เปิด case ช่วยเหลือ · {student.fullName}</h2>
+          <h2 className="text-lg font-bold">
+            {planCaseId ? "วางแผนช่วยเหลือ" : "เปิด case ช่วยเหลือ"} · {student.fullName}
+          </h2>
           {risk && <RiskBadge group={risk} short />}
         </div>
         <p className="-mt-3 mb-5 text-[13.5px] text-muted-foreground">
           {student.roomName} เลขที่ {student.classNo} · ที่มา: {triggerSource ?? "เปิดโดยครูประจำชั้น"}
         </p>
+        {planCaseId && (
+          <p className="-mt-2 mb-5 rounded-lg bg-surface px-3 py-2.5 text-[13px]">
+            ระบบเปิด case นี้ให้จากผลคัดกรอง ระบุแผนช่วยเหลือ ความเร่งด่วน และวันติดตามเพื่อเริ่มติดตาม
+          </p>
+        )}
 
         <h3 className="mb-2 text-[15px] font-bold">ประเภทการช่วยเหลือ</h3>
         <RadioGroup
@@ -469,7 +630,7 @@ function NewCaseForm({
             ยกเลิก
           </Button>
           <Button disabled={!canSubmit} onClick={handleSubmit}>
-            <Plus className="size-4" /> เปิด case
+            <Plus className="size-4" /> {planCaseId ? "บันทึกแผนช่วยเหลือ" : "เปิด case"}
           </Button>
         </div>
       </CardContent>

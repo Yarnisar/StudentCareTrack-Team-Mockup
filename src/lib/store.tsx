@@ -42,6 +42,13 @@ import {
   CareCase,
   CaseUrgency,
   CareMethod,
+  DcAssessment,
+  DcLevel,
+  DcSummary,
+  DocumentRequest,
+  EducationDocument,
+  ReferralStatus,
+  DIMENSION_LABEL,
   DIMENSION_ORDER,
   HomeVisitAppointment,
   HomeVisitRecord,
@@ -114,6 +121,8 @@ interface StoreValue {
     source?: BehaviorRecord["source"];
   }) => void;
   setAppointmentStatus: (appointmentId: string, status: AppointmentStatus) => void;
+  /** ครูประจำชั้นนัดหมายเยี่ยมบ้าน (UC4 Scenario B) สถานะเริ่มที่ "รอการยืนยัน" */
+  createAppointment: (studentId: string, proposedDate: string) => HomeVisitAppointment;
   saveGuardianInfo: (
     appointmentId: string,
     info: { guardianPhone: string; caretakerRelation: string; caretakerName: string; guardianNote: string }
@@ -130,9 +139,50 @@ interface StoreValue {
     goal: string,
     options: { urgency: CaseUrgency; nextFollowupDate: string; targetDate?: string; triggerSource?: string }
   ) => CareCase;
+  /**
+   * เปิด case ติดตามช่วยเหลือ หรือเชื่อมกับ case ที่เปิดอยู่ของนักเรียน (UC6 ข้อ 13, Alt-B/C ข้อ 3)
+   * case ที่ระบบเปิดเองยังไม่มีแผน ครูที่ปรึกษาวางแผนต่อใน UC11 (goal ว่าง = ยังไม่วางแผน)
+   */
+  openOrLinkCase: (studentId: string, trigger: string) => { caseId: string; linked: boolean };
+  /** วางแผนช่วยเหลือให้ case ที่ยังไม่มีแผน (UC11 Scenario A ข้อ 5) */
+  planCase: (
+    caseId: string,
+    plan: {
+      supportType: SupportType;
+      careMethods: CareMethod[];
+      goal: string;
+      urgency: CaseUrgency;
+      nextFollowupDate: string;
+      targetDate?: string;
+    }
+  ) => void;
+  /** กลุ่มเสี่ยงที่ครูเลือกไม่เปิด case พร้อมเหตุผล แยกจากสถานะเฝ้าระวังด้านความประพฤติ (UC6 Alt-G) */
+  screeningWatch: Record<string, { reason: string; at: string; by: string }>;
+  setScreeningWatch: (studentId: string, reason: string) => void;
   addFollowup: (caseId: string, actionTaken: string, result: string, nextFollowupDate: string) => void;
   setCaseUrgency: (caseId: string, urgency: CaseUrgency) => void;
-  closeCase: (caseId: string) => void;
+  /** ปิด case พร้อมผลสรุป (UC11 Scenario C) */
+  closeCase: (caseId: string, summary: string) => void;
+  /** ครูตรวจเอกสารส่งต่อแล้วส่งให้แอดมินเก็บรักษา case ยังเปิดอยู่ (UC11 Scenario D) */
+  sendReferral: (caseId: string) => void;
+  /** แอดมินเปลี่ยนสถานะเอกสารส่งต่อ โดยไม่เปิดอ่านเนื้อหา (Scenario D ข้อ 6) */
+  setReferralStatus: (caseId: string, status: ReferralStatus) => void;
+  /** ผลประเมินคุณลักษณะทุกรอบ (UC13) */
+  dcAssessments: DcAssessment[];
+  /** ผลล่าสุดที่ส่งแล้วของนักเรียน ใช้ทำ ปพ.4 / ปพ.6 / ปพ.3 */
+  dcResultOf: (studentId: string) => DcSummary | undefined;
+  /** รอบล่าสุดของนักเรียน (รวมร่าง) */
+  latestDc: (studentId: string) => DcAssessment | undefined;
+  /** บันทึกร่างหรือส่งผลของรอบล่าสุดที่ยังไม่ส่ง ถ้าไม่มีรอบที่เปิดอยู่จะเปิดรอบใหม่ */
+  saveDcAssessment: (studentId: string, levels: Record<number, DcLevel | null>, note: string, submit: boolean) => void;
+  /** เริ่มประเมินซ้ำ เปิดรอบใหม่ที่ว่างอยู่ (ข้อ 2, 9) */
+  startDcReassessment: (studentId: string) => void;
+  /** เอกสาร ปพ. ที่จัดทำแล้ว (UC15) */
+  educationDocuments: EducationDocument[];
+  generateDocument: (docType: EducationDocument["docType"], target: string) => EducationDocument;
+  documentRequests: DocumentRequest[];
+  requestDocument: (studentId: string) => void;
+  fulfillRequest: (requestId: string) => void;
   /** บันทึกว่าบทบาทปัจจุบันเปิดดูเลขบัตรของนักเรียน คืน false ถ้าบทบาทนี้ไม่มีสิทธิ์ */
   logCitizenIdView: (studentId: string) => boolean;
 }
@@ -164,6 +214,22 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [behaviorRules, setBehaviorRules] = useState<BehaviorRule[]>(seedBehaviorRules);
   const [behaviorScoreConfig, setBehaviorScoreConfig] = useState<BehaviorScoreConfig>(DEFAULT_BEHAVIOR_SCORE);
   const [drafts, setDrafts] = useState<Record<string, unknown>>({});
+  const [dcAssessments, setDcAssessments] = useState<DcAssessment[]>(() =>
+    // ข้อมูลตัวอย่าง: คนที่ประเมินครบ 8 ข้อถือว่าส่งแล้ว ที่ยังขาดเป็นร่าง
+    dcSummaries.map((d, i) => ({
+      id: `DC-SEED-${i}`,
+      studentId: d.studentId,
+      round: 1,
+      levels: d.levels,
+      note: "",
+      status: Object.values(d.levels).some((l) => l === null) ? "draft" : "submitted",
+      assessedAt: "2570-02-10",
+      assessedBy: CURRENT_TEACHER.name,
+    }))
+  );
+  const [educationDocuments, setEducationDocuments] = useState<EducationDocument[]>(seedDocuments);
+  const [documentRequests, setDocumentRequests] = useState<DocumentRequest[]>([]);
+  const [screeningWatch, setScreeningWatchState] = useState<StoreValue["screeningWatch"]>({});
 
   const value = useMemo<StoreValue>(() => {
     const getStudent = (studentId: string) => students.find((s) => s.studentId === studentId);
@@ -191,7 +257,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
     const behaviorScoreOf = (studentId: string, extra?: { delta: number; at: string }) => {
       const items = behaviorOf(studentId).map((rec) => ({
-        delta: behaviorRules.find((r) => r.ruleId === rec.ruleId)?.scoreDelta ?? 0,
+        // กฎที่ถูกยกเลิกไม่นับคะแนนรายการเดิม (UC7 Scenario C ข้อ 9)
+        delta: (() => {
+          const rule = behaviorRules.find((r) => r.ruleId === rec.ruleId);
+          return !rule || rule.cancelled ? 0 : rule.scoreDelta;
+        })(),
         at: rec.occurredAt,
       }));
       return runningScore(extra ? [...items, extra] : items, behaviorScoreConfig);
@@ -237,6 +307,58 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       );
     };
 
+    const openOrLinkCase: StoreValue["openOrLinkCase"] = (studentId, trigger) => {
+      const existing = careCases.find((c) => c.studentId === studentId && c.status === "active");
+      if (existing) {
+        // เชื่อมกับ case เดิม: เพิ่มที่มาใหม่ต่อท้าย ไม่เปิดซ้ำ
+        setCareCases((prev) =>
+          prev.map((c) =>
+            c.caseId === existing.caseId && !c.triggerSource.includes(trigger)
+              ? { ...c, triggerSource: `${c.triggerSource} · ${trigger}` }
+              : c
+          )
+        );
+        return { caseId: existing.caseId, linked: true };
+      }
+      const record: CareCase = {
+        caseId: nextId("CASE"),
+        studentId,
+        triggerSource: trigger,
+        status: "active",
+        openedAt: nowThaiIso().split("T")[0],
+        closedAt: null,
+        supportType: "prevent",
+        careMethods: [],
+        goal: "",
+        targetDate: "",
+        urgency: "medium",
+        nextFollowupDate: "",
+        followups: [],
+      };
+      setCareCases((prev) => [record, ...prev]);
+      // เปิด case แล้ว ไม่ต้องอยู่ในสถานะเฝ้าดูผลคัดกรองอีก
+      setScreeningWatchState((prev) => {
+        if (!prev[studentId]) return prev;
+        const next = { ...prev };
+        delete next[studentId];
+        return next;
+      });
+      return { caseId: record.caseId, linked: false };
+    };
+
+    const planCase: StoreValue["planCase"] = (caseId, plan) => {
+      setCareCases((prev) =>
+        prev.map((c) => (c.caseId === caseId ? { ...c, ...plan, targetDate: plan.targetDate ?? "" } : c))
+      );
+    };
+
+    const setScreeningWatch: StoreValue["setScreeningWatch"] = (studentId, reason) => {
+      setScreeningWatchState((prev) => ({
+        ...prev,
+        [studentId]: { reason, at: nowThaiIso().split("T")[0], by: CURRENT_TEACHER.name },
+      }));
+    };
+
     const saveScreening: StoreValue["saveScreening"] = (studentId, checked) => {
       const record: Screening = {
         screeningId: nextId("SC"),
@@ -252,6 +374,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       };
       setScreenings((prev) => [record, ...prev.filter((s) => s.studentId !== studentId)]);
       clearDraft(draftKey("screening", studentId));
+      // มีมิติที่มีปัญหา (แดง) -> ระบบเปิดหรือเชื่อม case เอง (UC6 ข้อ 13)
+      const red = record.results.filter((r) => r.group === "red").map((r) => DIMENSION_LABEL[r.dimension]);
+      if (red.length > 0) openOrLinkCase(studentId, `ผลคัดกรอง 6 มิติ: ${red.join(" / ")} มีปัญหา`);
       return record;
     };
 
@@ -269,7 +394,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setRedFlags((prev) => [record, ...prev]);
       applyToMentalDimension(studentId, DERIVED_ITEM_ID.red_flag, result === "needs_care");
       clearDraft(draftKey("red_flag", studentId));
-      if (result === "needs_care") createSdqSet(studentId);
+      if (result === "needs_care") {
+        createSdqSet(studentId);
+        openOrLinkCase(studentId, "ผล Red Flag อยู่ในเกณฑ์ควรดูแล"); // Alt-B ข้อ 3
+      }
       return result;
     };
 
@@ -288,7 +416,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setNineS((prev) => [record, ...prev]);
       applyToMentalDimension(studentId, DERIVED_ITEM_ID.nine_s, result === "needs_care");
       clearDraft(draftKey("nine_s", studentId));
-      if (result === "needs_care") createSdqSet(studentId);
+      if (result === "needs_care") {
+        createSdqSet(studentId);
+        openOrLinkCase(studentId, "ผล 9S อยู่ในเกณฑ์ควรดูแล"); // Alt-C ข้อ 3
+      }
       return result;
     };
 
@@ -418,6 +549,18 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setBehaviorRecords((prev) => [...created, ...prev]);
     };
 
+    const createAppointment: StoreValue["createAppointment"] = (studentId, proposedDate) => {
+      const record: HomeVisitAppointment = {
+        appointmentId: nextId("HV"),
+        studentId,
+        teacherName: CURRENT_TEACHER.name,
+        proposedDate,
+        status: "pending",
+      };
+      setAppointments((prev) => [record, ...prev]);
+      return record;
+    };
+
     const setAppointmentStatus: StoreValue["setAppointmentStatus"] = (appointmentId, status) => {
       setAppointments((prev) =>
         prev.map((a) => (a.appointmentId === appointmentId ? { ...a, status } : a))
@@ -494,13 +637,133 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setCareCases((prev) => prev.map((c) => (c.caseId === caseId ? { ...c, urgency } : c)));
     };
 
-    const closeCase: StoreValue["closeCase"] = (caseId) => {
+    const closeCase: StoreValue["closeCase"] = (caseId, summary) => {
       setCareCases((prev) =>
         prev.map((c) =>
           c.caseId === caseId
-            ? { ...c, status: "closed", closedAt: nowThaiIso().split("T")[0] }
+            ? { ...c, status: "closed", closedAt: nowThaiIso().split("T")[0], closingSummary: summary }
             : c
         )
+      );
+    };
+
+    const today = () => nowThaiIso().split("T")[0];
+
+    const sendReferral: StoreValue["sendReferral"] = (caseId) => {
+      setCareCases((prev) =>
+        prev.map((c) =>
+          c.caseId === caseId
+            ? {
+                ...c,
+                referral: {
+                  referralId: nextId("REF"),
+                  preparedAt: today(),
+                  sentByName: CURRENT_TEACHER.name,
+                  status: "awaiting_admin",
+                  statusAt: today(),
+                },
+              }
+            : c
+        )
+      );
+    };
+
+    const setReferralStatus: StoreValue["setReferralStatus"] = (caseId, status) => {
+      setCareCases((prev) =>
+        prev.map((c) =>
+          c.caseId === caseId && c.referral ? { ...c, referral: { ...c.referral, status, statusAt: today() } } : c
+        )
+      );
+    };
+
+    const latestDc = (studentId: string) =>
+      dcAssessments.filter((a) => a.studentId === studentId).sort((a, b) => b.round - a.round)[0];
+
+    const dcResultOf = (studentId: string) => {
+      const done = dcAssessments
+        .filter((a) => a.studentId === studentId && a.status === "submitted")
+        .sort((a, b) => b.round - a.round)[0];
+      return done ? { studentId, levels: done.levels } : undefined;
+    };
+
+    const saveDcAssessment: StoreValue["saveDcAssessment"] = (studentId, levels, note, submit) => {
+      const current = latestDc(studentId);
+      const base =
+        current && current.status === "draft"
+          ? current
+          : {
+              id: nextId("DC"),
+              studentId,
+              round: (current?.round ?? 0) + 1,
+              levels: {},
+              note: "",
+              status: "draft" as const,
+              assessedAt: "",
+              assessedBy: CURRENT_TEACHER.name,
+            };
+      const updated: DcAssessment = {
+        ...base,
+        levels,
+        note,
+        status: submit ? "submitted" : "draft",
+        assessedAt: today(),
+        assessedBy: CURRENT_TEACHER.name,
+      };
+      setDcAssessments((prev) => [updated, ...prev.filter((a) => a.id !== updated.id)]);
+    };
+
+    const startDcReassessment: StoreValue["startDcReassessment"] = (studentId) => {
+      const current = latestDc(studentId);
+      if (current?.status === "draft") return;
+      setDcAssessments((prev) => [
+        {
+          id: nextId("DC"),
+          studentId,
+          round: (current?.round ?? 0) + 1,
+          levels: {},
+          note: "",
+          status: "draft",
+          assessedAt: today(),
+          assessedBy: CURRENT_TEACHER.name,
+        },
+        ...prev,
+      ]);
+    };
+
+    const generateDocument: StoreValue["generateDocument"] = (docType, target) => {
+      const version = educationDocuments.filter((d) => d.docType === docType && d.target === target).length + 1;
+      const doc: EducationDocument = {
+        docId: nextId("DOC"),
+        docType,
+        target,
+        generatedByName: ROLE_INFO[role].user.name,
+        generatedAt: today(),
+        version,
+      };
+      setEducationDocuments((prev) => [doc, ...prev]);
+      return doc;
+    };
+
+    const requestDocument: StoreValue["requestDocument"] = (studentId) => {
+      setDocumentRequests((prev) => [
+        {
+          requestId: nextId("REQ"),
+          docType: "ปพ.7",
+          studentId,
+          requestedByName: ROLE_INFO[role].user.name,
+          requestedAt: today(),
+          status: "pending",
+        },
+        ...prev,
+      ]);
+    };
+
+    const fulfillRequest: StoreValue["fulfillRequest"] = (requestId) => {
+      const req = documentRequests.find((r) => r.requestId === requestId);
+      if (!req) return;
+      const doc = generateDocument("ปพ.7", getStudent(req.studentId)?.fullName ?? req.studentId);
+      setDocumentRequests((prev) =>
+        prev.map((r) => (r.requestId === requestId ? { ...r, status: "done", docId: doc.docId } : r))
       );
     };
 
@@ -556,15 +819,32 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       saveSdq,
       addBehaviorRecord,
       setAppointmentStatus,
+      createAppointment,
       saveGuardianInfo,
       saveHomeVisit,
       openCase,
+      openOrLinkCase,
+      planCase,
+      screeningWatch,
+      setScreeningWatch,
       addFollowup,
       setCaseUrgency,
       closeCase,
+      sendReferral,
+      setReferralStatus,
+      dcAssessments,
+      dcResultOf,
+      latestDc,
+      saveDcAssessment,
+      startDcReassessment,
+      educationDocuments,
+      generateDocument,
+      documentRequests,
+      requestDocument,
+      fulfillRequest,
       logCitizenIdView,
     };
-  }, [role, screenings, redFlags, nineS, sdq, behaviorRecords, appointments, careCases, homeVisitRecords, accessLogs, assessmentWindows, behaviorRules, behaviorScoreConfig, drafts]);
+  }, [role, screenings, redFlags, nineS, sdq, behaviorRecords, appointments, careCases, homeVisitRecords, accessLogs, assessmentWindows, behaviorRules, behaviorScoreConfig, drafts, screeningWatch, educationDocuments, documentRequests, dcAssessments]);
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }
@@ -575,4 +855,4 @@ export function useStore() {
   return ctx;
 }
 
-export { seedBehaviorRules as behaviorRules, dcSummaries, seedDocuments as educationDocuments };
+export { seedBehaviorRules as behaviorRules, dcSummaries };

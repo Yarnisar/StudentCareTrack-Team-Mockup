@@ -61,12 +61,12 @@ export function VariantB({ records }: { records: BehaviorRecord[] }) {
                     </span>
                     <span className="flex-1" />
                     <SourceBadge source={rec.source} evidence={rec.evidence} />
-                    <ScoreChip delta={rule?.scoreDelta ?? 0} size="lg" />
+                    <ScoreChip delta={rule?.scoreDelta ?? 0} size="lg" cancelled={!!rule?.cancelled} />
                   </div>
 
                   <div className="mt-2.5 flex flex-wrap items-baseline gap-x-2 gap-y-1">
                     <span className="text-[13.5px] font-semibold text-foreground">
-                      {rule?.name}
+                      {rule?.name}{rule?.cancelled && <span className="ml-1.5 rounded bg-muted px-1.5 py-0.5 text-[11px] font-normal text-muted-foreground">กฎถูกยกเลิก</span>}
                     </span>
                     {rule && (
                       <span className="rounded bg-surface px-1.5 py-0.5 text-[11px] text-muted-foreground">

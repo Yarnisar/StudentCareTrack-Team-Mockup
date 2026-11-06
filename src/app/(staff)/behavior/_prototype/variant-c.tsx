@@ -133,7 +133,7 @@ function RecordRow({ rec }: { rec: BehaviorRecord }) {
       </span>
       <span className="min-w-0 flex-1">
         <span className="flex flex-wrap items-center gap-2">
-          <span className="text-[13.5px] font-semibold">{rule?.name}</span>
+          <span className="text-[13.5px] font-semibold">{rule?.name}{rule?.cancelled && <span className="ml-1.5 rounded bg-muted px-1.5 py-0.5 text-[11px] font-normal text-muted-foreground">กฎถูกยกเลิก</span>}</span>
           {rule && (
             <span className="rounded bg-card px-1.5 py-0.5 text-[11px] text-muted-foreground">
               {SEVERITY_LABEL[rule.severity]}

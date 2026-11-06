@@ -7,23 +7,27 @@ import { Button } from "@/components/ui/button";
 import { LinkButton } from "@/components/ui/link-button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { NewAppointmentDialog } from "./new-appointment";
 import { draftKey, useStore } from "@/lib/store";
 import { formatBaht, formatThaiDate, formatThaiTime } from "@/lib/format";
 import { APPOINTMENT_STATUS_LABEL, AppointmentStatus } from "@/lib/types";
 import { formatCaretaker } from "@/lib/home-visit-form";
 
+/** สถานะใช้สีกลาง สีแดง/เหลือง/เขียวสงวนไว้สำหรับกลุ่มเสี่ยง */
 const STATUS_STYLE: Record<AppointmentStatus, string> = {
-  pending: "bg-risk-amber-bg text-risk-amber",
-  confirmed: "bg-risk-green-bg text-risk-green",
-  reschedule_requested: "bg-risk-amber-bg text-risk-amber",
+  pending: "border border-border text-foreground",
+  confirmed: "bg-accent text-primary",
+  reschedule_requested: "border border-dashed border-foreground/40 text-foreground",
   completed: "bg-muted text-muted-foreground",
-  cancelled: "bg-risk-red-bg text-risk-red",
+  cancelled: "bg-muted text-muted-foreground line-through",
 };
 
 export default function HomeVisitsPage() {
   const store = useStore();
   const [selected, setSelected] = useState(store.appointments[0]?.appointmentId ?? "");
   const detailRef = useRef<HTMLDivElement>(null);
+  const [creating, setCreating] = useState(false);
+  const [notice, setNotice] = useState("");
 
   const appointment = store.appointments.find((a) => a.appointmentId === selected);
   const student = appointment ? store.getStudent(appointment.studentId) : undefined;
@@ -40,13 +44,29 @@ export default function HomeVisitsPage() {
         title="จัดการการเยี่ยมบ้าน"
         subtitle="นัดหมาย ยืนยัน และบันทึกผลตามแบบฟอร์มการเยี่ยมบ้านนักเรียน"
         action={
-          <Button size="sm" variant="outline">
+          <Button size="sm" variant="outline" onClick={() => setCreating(true)}>
             <Plus className="size-4" /> สร้างนัดหมาย
           </Button>
         }
       />
 
+      {creating && (
+        <NewAppointmentDialog
+          onClose={() => setCreating(false)}
+          onCreated={(appointmentId, text) => {
+            setCreating(false);
+            setSelected(appointmentId);
+            setNotice(text);
+          }}
+        />
+      )}
+
       <div className="flex-1 overflow-y-auto p-4 sm:p-8">
+        {notice && (
+          <p role="status" className="mb-4 rounded-lg bg-accent px-4 py-2.5 text-[13px] text-primary">
+            {notice}
+          </p>
+        )}
         <div className="grid gap-5 xl:grid-cols-[320px_1fr]">
           <Card className="h-fit">
             <CardContent className="p-5">

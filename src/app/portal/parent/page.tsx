@@ -5,7 +5,6 @@ import { ChevronRight, ClipboardList, Home } from "lucide-react";
 import { MobileShell } from "@/components/layout/mobile-shell";
 import { Card, CardContent } from "@/components/ui/card";
 import { useStore } from "@/lib/store";
-import { dcSummaries } from "@/lib/store";
 import { formatThaiDate, formatThaiTime } from "@/lib/format";
 import { dcCriteria } from "@/lib/mock-data";
 import { dcSummaryForParent, sdqSummaryForParent } from "@/lib/portal";
@@ -26,7 +25,7 @@ export default function ParentHomePage() {
     store.sdqOf(DEMO_STUDENT_ID).filter((s) => s.round === 1)
   );
   const dc = dcSummaryForParent(
-    dcSummaries.find((d) => d.studentId === DEMO_STUDENT_ID),
+    store.dcResultOf(DEMO_STUDENT_ID),
     dcCriteria.length
   );
 

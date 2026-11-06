@@ -116,7 +116,7 @@ export default function NineSPage({ params }: { params: Promise<{ studentId: str
               </div>
               <p className="mt-3 text-[11.5px] text-muted-foreground">
                 เกณฑ์: คะแนนรวมในกลุ่มใดตั้งแต่ 3 คะแนนขึ้นไป ถือว่าควรดูแล
-                และระบบจะเปิดแบบประเมิน SDQ ให้โดยอัตโนมัติ
+                และระบบจะเปิดแบบประเมิน SDQ และ case ติดตามช่วยเหลือให้โดยอัตโนมัติ
               </p>
             </CardContent>
           </Card>

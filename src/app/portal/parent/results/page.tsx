@@ -6,7 +6,7 @@ import { SdqForm } from "@/components/assessment/sdq-form";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ruleKind, ruleScoreText } from "@/lib/behavior-rules";
-import { dcSummaries, useStore } from "@/lib/store";
+import { useStore } from "@/lib/store";
 import { dcCriteria, CURRENT_TERM } from "@/lib/mock-data";
 import { formatThaiDate } from "@/lib/format";
 import { sdqSummaryForParent } from "@/lib/portal";
@@ -22,7 +22,7 @@ export default function ParentResultsPage() {
   const student = store.getStudent(DEMO_STUDENT_ID);
   const sdqSet = store.sdqOf(DEMO_STUDENT_ID).filter((s) => s.round === 1);
   const parentSdq = sdqSet.find((s) => s.rater === "parent");
-  const dc = dcSummaries.find((d) => d.studentId === DEMO_STUDENT_ID);
+  const dc = store.dcResultOf(DEMO_STUDENT_ID);
   const behaviors = store.behaviorOf(DEMO_STUDENT_ID).slice(0, 4);
   const summary = sdqSummaryForParent(sdqSet);
 
@@ -167,7 +167,7 @@ export default function ParentResultsPage() {
                     <span className="w-20 shrink-0 text-[11.5px] text-muted-foreground">
                       {formatThaiDate(rec.occurredAt)}
                     </span>
-                    <span className="flex-1 text-[13px]">{rule?.name}</span>
+                    <span className="flex-1 text-[13px]">{rule?.name}{rule?.cancelled && <span className="ml-1.5 rounded bg-muted px-1.5 py-0.5 text-[11px] font-normal text-muted-foreground">กฎถูกยกเลิก</span>}</span>
                     <span
                       className={
                         refer

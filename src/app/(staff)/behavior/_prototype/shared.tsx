@@ -59,8 +59,27 @@ export function SourceBadge({ source, evidence }: { source: BehaviorRecord["sour
   );
 }
 
-export function ScoreChip({ delta, size = "md" }: { delta: number; size?: "md" | "lg" }) {
+export function ScoreChip({
+  delta,
+  size = "md",
+  cancelled = false,
+}: {
+  delta: number;
+  size?: "md" | "lg";
+  /** กฎถูกยกเลิก: รายการนี้ไม่นับคะแนน (UC7 Scenario C) */
+  cancelled?: boolean;
+}) {
   const positive = delta > 0;
+  if (cancelled)
+    return (
+      <span
+        className={`shrink-0 rounded-md bg-muted text-center font-semibold text-muted-foreground line-through ${
+          size === "lg" ? "px-3 py-1.5 text-base" : "w-12 py-1 text-xs"
+        }`}
+      >
+        {delta > 0 ? `+${delta}` : delta || "ส่งต่อ"}
+      </span>
+    );
   // กฎส่งต่อไม่มีคะแนน (UC8 Alt-G) จึงแสดงเป็นสถานะสีกลาง
   if (delta === 0)
     return (

@@ -65,7 +65,7 @@ export function VariantA({ records }: { records: BehaviorRecord[] }) {
                         {student?.roomName} เลขที่ {student?.classNo}
                       </span>
                     </div>
-                    <div className="mt-0.5 text-[13.5px]">{rule?.name}</div>
+                    <div className="mt-0.5 text-[13.5px]">{rule?.name}{rule?.cancelled && <span className="ml-1.5 rounded bg-muted px-1.5 py-0.5 text-[11px] font-normal text-muted-foreground">กฎถูกยกเลิก</span>}</div>
                     {rec.description !== "-" && (
                       <div className="mt-0.5 text-[12.5px] text-muted-foreground">{rec.description}</div>
                     )}
@@ -78,7 +78,7 @@ export function VariantA({ records }: { records: BehaviorRecord[] }) {
                     </div>
                   </div>
                   <div className="flex self-start">
-                    <ScoreChip delta={rule?.scoreDelta ?? 0} />
+                    <ScoreChip delta={rule?.scoreDelta ?? 0} cancelled={!!rule?.cancelled} />
                   </div>
                 </div>
               );
@@ -115,7 +115,7 @@ export function VariantA({ records }: { records: BehaviorRecord[] }) {
                         {student?.roomName} เลขที่ {student?.classNo}
                       </div>
                     </td>
-                    <td className="py-3 pr-3">{rule?.name}</td>
+                    <td className="py-3 pr-3">{rule?.name}{rule?.cancelled && <span className="ml-1.5 rounded bg-muted px-1.5 py-0.5 text-[11px] font-normal text-muted-foreground">กฎถูกยกเลิก</span>}</td>
                     <td className="py-3 pr-3 text-muted-foreground">{rec.description}</td>
                     <td className="py-3 pr-3">
                       <SourceBadge source={rec.source} evidence={rec.evidence} />
@@ -124,7 +124,7 @@ export function VariantA({ records }: { records: BehaviorRecord[] }) {
                       {rec.recordedByName}
                     </td>
                     <td className="py-3">
-                      <ScoreChip delta={rule?.scoreDelta ?? 0} />
+                      <ScoreChip delta={rule?.scoreDelta ?? 0} cancelled={!!rule?.cancelled} />
                     </td>
                   </tr>
                 );

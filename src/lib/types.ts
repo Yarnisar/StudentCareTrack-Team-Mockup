@@ -192,6 +192,8 @@ export interface BehaviorRule {
   scoreDelta: number;
   isActive: boolean;
   recordableBy: RuleRecorder[];
+  /** ยกเลิกกฎพร้อมเหตุผล: รายการเดิมไม่นับคะแนนแต่ยังอยู่ในประวัติ (UC7 Scenario C) */
+  cancelled?: { reason: string; at: string };
 }
 
 export interface BehaviorRecord {
@@ -322,6 +324,27 @@ export interface CareCase {
   /** วันติดตามครั้งถัดไป ("" = ยังไม่กำหนด) ใช้คำนวณใกล้ครบกำหนด / เกินกำหนดในหน้าภาพรวม */
   nextFollowupDate: string;
   followups: CareFollowup[];
+  /** ผลสรุปเมื่อปิด case (UC11 Scenario C) */
+  closingSummary?: string;
+  /** เอกสารส่งต่อที่ครูส่งให้แอดมินเก็บรักษา (UC11 Scenario D) */
+  referral?: Referral;
+}
+
+export type ReferralStatus = "awaiting_admin" | "stored" | "forwarded";
+
+export const REFERRAL_STATUS_LABEL: Record<ReferralStatus, string> = {
+  awaiting_admin: "รอแอดมินรับเก็บรักษา",
+  stored: "รับเก็บรักษาแล้ว",
+  forwarded: "ส่งต่อแล้ว",
+};
+
+/** แอดมินเห็นเฉพาะเลขเอกสาร ผู้ส่ง วันที่ และสถานะ ไม่เห็นชื่อนักเรียนหรือเนื้อหา (ตาราง 3.4) */
+export interface Referral {
+  referralId: string;
+  preparedAt: string;
+  sentByName: string;
+  status: ReferralStatus;
+  statusAt: string;
 }
 
 /** คุณลักษณะอันพึงประสงค์ 8 ประการ ตามหลักสูตรแกนกลางฯ 2551 */
@@ -340,6 +363,21 @@ export const DC_LEVEL_LABEL: Record<DcLevel, string> = {
   2: "ดี",
   3: "ดีเยี่ยม",
 };
+
+/**
+ * ผลประเมินคุณลักษณะอันพึงประสงค์ 8 ข้อโดยครูที่ปรึกษา (UC13)
+ * ประเมินซ้ำเก็บเป็นรอบใหม่ แยกจากผลเดิม (ข้อ 9)
+ */
+export interface DcAssessment {
+  id: string;
+  studentId: string;
+  round: number;
+  levels: Record<number, DcLevel | null>;
+  note: string;
+  status: "draft" | "submitted";
+  assessedAt: string;
+  assessedBy: string;
+}
 
 export interface DcSummary {
   studentId: string;
@@ -360,6 +398,19 @@ export interface EducationDocument {
   target: string;
   generatedByName: string;
   generatedAt: string;
+  /** ฉบับที่ ออกใหม่แล้วเก็บฉบับเดิมไว้ (UC15 Scenario A ข้อ 10) */
+  version?: number;
+}
+
+/** ครูขอจัดทำ ปพ.7 แล้วแอดมินจัดทำและส่งกลับ (UC15 Scenario B) */
+export interface DocumentRequest {
+  requestId: string;
+  docType: "ปพ.7";
+  studentId: string;
+  requestedByName: string;
+  requestedAt: string;
+  status: "pending" | "done";
+  docId?: string;
 }
 
 /**

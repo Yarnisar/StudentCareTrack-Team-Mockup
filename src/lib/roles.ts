@@ -70,7 +70,8 @@ const ADMIN_PAGES = ["/dashboard", "/documents", "/settings"];
 const ALLOWED: Record<Role, string[]> = {
   admin: ADMIN_PAGES,
   homeroom: TEACHER_PAGES,
-  subject: ["/behavior", "/characteristics"],
+  // ครูผู้สอนบันทึกพฤติกรรมและขอจัดทำ ปพ.7 ได้ ส่วนการประเมินคุณลักษณะเป็นของครูที่ปรึกษา (ตาราง 3.4, UC13)
+  subject: ["/behavior", "/documents"],
   student: ["/portal/student"],
   parent: ["/portal/parent"],
 };

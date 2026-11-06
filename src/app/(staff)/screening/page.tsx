@@ -51,7 +51,15 @@ export default function ScreeningListPage() {
                           : " · ยังไม่เคยคัดกรอง"}
                       </div>
                     </div>
-                    <div className="shrink-0">
+                    <div className="flex shrink-0 flex-col items-end gap-1">
+                      {store.screeningWatch[student.studentId] && (
+                        <span
+                          title={`ไม่เปิด case: ${store.screeningWatch[student.studentId].reason}`}
+                          className="rounded-md bg-muted px-2 py-0.5 text-[11px] font-semibold"
+                        >
+                          เฝ้าดูผลคัดกรอง
+                        </span>
+                      )}
                       {risk ? (
                         <RiskBadge group={risk} />
                       ) : (

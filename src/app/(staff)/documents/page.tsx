@@ -1,25 +1,35 @@
 "use client";
 
+/**
+ * จัดทำเอกสารประเมินผลทางการศึกษา ปพ.3–7 (UC15)
+ * - สถานการณ์ A: เลือกประเภทและนักเรียน ระบบตรวจความครบถ้วนรายคน แยกคนที่ข้อมูลไม่ครบไว้ทำภายหลัง
+ *   ดูตัวอย่างแล้วยืนยัน ระบบสร้างไฟล์และเก็บฉบับเดิมไว้ ผลที่ได้เป็นร่างเอกสาร การลงนามอยู่นอกระบบ (ข้อ 12)
+ * - สถานการณ์ B: ครูขอ ปพ.7 แอดมินจัดทำแล้วส่งกลับ
+ * - สถานการณ์ C: ประวัติการจัดทำ กรองตามประเภทได้
+ * - UC11 Scenario D: แอดมินจัดการสถานะเอกสารส่งต่อ เห็นเฉพาะเลขเอกสาร ผู้ส่ง วันที่ ไม่เห็นชื่อนักเรียนหรือเนื้อหา
+ * PROTOTYPE: ยังไม่สร้าง PDF จริง ยังไม่มีการตั้งค่ารูปแบบเอกสาร (สถานการณ์ D) และผลการเรียนจาก Team A ถือว่าปิดภาคแล้ว
+ */
+
 import { useState } from "react";
-import { Check, Download, FileText, Info } from "lucide-react";
+import { Check, Download, FileText, Info, X } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { educationDocuments } from "@/lib/store";
-import { CURRENT_TERM, subjectSubmissions } from "@/lib/mock-data";
 import { formatThaiDate } from "@/lib/format";
-import { DocumentType } from "@/lib/types";
+import { CURRENT_TERM, subjectSubmissions } from "@/lib/mock-data";
+import { useStore } from "@/lib/store";
+import { REFERRAL_STATUS_LABEL, type DcSummary, type DocumentType, type ReferralStatus, type Student } from "@/lib/types";
 
 interface DocSpec {
   code: DocumentType;
   name: string;
   purpose: string;
-  /** ข้อมูลที่ระบบดึงมาสร้างเอกสาร */
   dataSources: string[];
-  issuedBy: string;
-  issuedWhen: string;
-  /** เอกสารที่กระทรวงศึกษาธิการกำหนดรูปแบบตายตัว */
-  officialFormat: boolean;
+  /** ผู้ที่จัดทำได้ในระบบ */
+  makers: ("admin" | "homeroom")[];
+  /** กลุ่มเป้าหมาย: นักเรียนรายคน หรือรายวิชา (ปพ.5) */
+  per: "student" | "subject";
+  officialFormat?: boolean;
   note?: string;
 }
 
@@ -27,287 +37,418 @@ const DOCS: DocSpec[] = [
   {
     code: "ปพ.4",
     name: "แบบแสดงผลการพัฒนาคุณลักษณะอันพึงประสงค์",
-    purpose:
-      "แสดงผลการประเมินคุณลักษณะอันพึงประสงค์ 8 ประการ ของนักเรียนรายบุคคล เพื่อรายงานต่อผู้ปกครองและใช้ประกอบการจบช่วงชั้น",
-    dataSources: [
-      "ผลการประเมินคุณลักษณะอันพึงประสงค์ 8 ด้าน (สรุปจาก ปพ.5 ทุกรายวิชา)",
-      "ข้อมูลพื้นฐานนักเรียนจากงานทะเบียน",
-    ],
-    issuedBy: "ครูประจำชั้น",
-    issuedWhen: "ปลายภาคเรียน",
-    officialFormat: false,
+    purpose: "แสดงผลการพัฒนาคุณลักษณะอันพึงประสงค์ 8 ประการของนักเรียนรายบุคคล",
+    dataSources: ["ผลประเมินคุณลักษณะอันพึงประสงค์ในระบบนี้ (UC13)", "ข้อมูลพื้นฐานนักเรียนจากงานทะเบียน"],
+    makers: ["admin", "homeroom"],
+    per: "student",
   },
   {
     code: "ปพ.5",
     name: "แบบบันทึกผลการพัฒนาคุณภาพผู้เรียน",
-    purpose:
-      "บันทึกผลการประเมินของครูผู้สอนแต่ละรายวิชา ทั้งด้านผลการเรียน การอ่านคิดวิเคราะห์ และคุณลักษณะอันพึงประสงค์",
-    dataSources: [
-      "คะแนนคุณลักษณะอันพึงประสงค์ที่ครูประจำวิชาบันทึกในระบบ",
-      "รายชื่อนักเรียนในรายวิชาจากงานทะเบียน",
-    ],
-    issuedBy: "ครูผู้สอนรายวิชา",
-    issuedWhen: "ระหว่างและปลายภาคเรียน",
-    officialFormat: false,
+    purpose: "รายงานเวลาเรียนและผลการวัดและประเมินผลที่ผู้สอนบันทึกในระบบวิชาการ ระบบนี้จัดทำเป็นแบบรายงานเท่านั้น",
+    dataSources: ["เวลาเรียนและผลการเรียนรายวิชาจากระบบวิชาการ (Team A)", "รายชื่อนักเรียนในรายวิชาจากงานทะเบียน"],
+    makers: ["admin"],
+    per: "subject",
   },
   {
     code: "ปพ.6",
     name: "แบบรายงานผลการพัฒนาคุณภาพผู้เรียนรายบุคคล",
-    purpose:
-      "รายงานพัฒนาการของนักเรียนรายบุคคลต่อผู้ปกครอง ครอบคลุมผลการเรียน คุณลักษณะอันพึงประสงค์ และพฤติกรรม",
-    dataSources: [
-      "ผลสรุปคุณลักษณะอันพึงประสงค์ (ปพ.5 ทุกรายวิชา)",
-      "ประวัติความประพฤติและการเข้าเรียนในระบบ",
-      "ผลการคัดกรอง 6 มิติ และผลการประเมิน SDQ (เฉพาะส่วนที่เปิดเผยต่อผู้ปกครองได้)",
-    ],
-    issuedBy: "ครูประจำชั้น",
-    issuedWhen: "ปลายภาคเรียนและปลายปีการศึกษา",
-    officialFormat: false,
+    purpose: "รายงานผลการเรียนและพัฒนาการของนักเรียนรายบุคคลให้ผู้ปกครองทราบ",
+    // ไม่ใช้ผลคัดกรองและผล SDQ เพราะเป็นข้อมูลอ่อนไหวที่แอดมินไม่เห็น (3.4.1)
+    dataSources: ["ผลการเรียนจากระบบวิชาการ (Team A)", "ผลประเมินคุณลักษณะอันพึงประสงค์ในระบบนี้", "ข้อมูลพื้นฐานนักเรียนจากงานทะเบียน"],
+    makers: ["admin", "homeroom"],
+    per: "student",
   },
   {
     code: "ปพ.3",
     name: "แบบรายงานผู้สำเร็จการศึกษา",
-    purpose:
-      "เอกสารอนุมัติการจบหลักสูตร บันทึกรายชื่อผู้จบการศึกษาระดับประถมศึกษา ภาคบังคับ และการศึกษาขั้นพื้นฐาน",
-    dataSources: [
-      "ทะเบียนนักเรียนและผลการเรียนสะสมจากงานทะเบียน",
-      "ผลการประเมินคุณลักษณะอันพึงประสงค์ (ต้องผ่านทุกด้าน)",
-    ],
-    issuedBy: "งานทะเบียน และผู้อำนวยการสถานศึกษาลงนาม",
-    issuedWhen: "เมื่อสิ้นปีการศึกษาที่นักเรียนจบหลักสูตร",
+    purpose: "อนุมัติและบันทึกรายชื่อผู้จบการศึกษา",
+    dataSources: ["ทะเบียนนักเรียนและผลการเรียนสะสมจากงานทะเบียนและระบบวิชาการ", "ผลประเมินคุณลักษณะอันพึงประสงค์ (ต้องผ่านทุกด้าน)"],
+    makers: ["admin"],
+    per: "student",
     officialFormat: true,
-    note: "กระทรวงศึกษาธิการกำหนดรูปแบบตายตัว ต้องใช้แบบพิมพ์ของกระทรวงเท่านั้น",
+    note: "กระทรวงศึกษาธิการกำหนดรูปแบบ ระบบจัดทำเป็นร่าง การอนุมัติและลงนามเป็นไปตามระเบียบของสถานศึกษา",
   },
   {
     code: "ปพ.7",
     name: "ใบรับรองผลการศึกษา",
-    purpose:
-      "เอกสารรับรองสถานภาพการเป็นนักเรียนและผลการศึกษาเบื้องต้น ใช้ชั่วคราวระหว่างรอออกระเบียนแสดงผลการเรียน (ปพ.1)",
-    dataSources: ["ทะเบียนนักเรียนและผลการเรียนปัจจุบันจากงานทะเบียน"],
-    issuedBy: "งานทะเบียน",
-    issuedWhen: "เมื่อนักเรียนหรือผู้ปกครองยื่นคำร้อง",
-    officialFormat: false,
+    purpose: "รับรองสถานภาพหรือผลการเรียนชั่วคราวตามที่ร้องขอ ครูส่งคำขอแล้วแอดมินจัดทำ",
+    dataSources: ["ทะเบียนนักเรียนจากงานทะเบียน", "ผลการเรียนปัจจุบันจากระบบวิชาการ"],
+    makers: ["admin"],
+    per: "student",
     note: "มีอายุการใช้งาน 120 วันนับจากวันที่ออกเอกสาร",
   },
 ];
 
+/** ข้อมูลที่ขาดของนักเรียนแต่ละคนสำหรับเอกสารประเภทนั้น (ว่าง = พร้อมจัดทำ) */
+function missingFor(code: DocumentType, s: Student, dc: DcSummary | undefined): string[] {
+  const levels = dc ? Object.values(dc.levels) : [];
+  const dcIncomplete = !dc || levels.some((l) => l === null);
+  const missing: string[] = [];
+  if (!s.address || !s.guardianName) missing.push("ข้อมูลทะเบียนไม่ครบ");
+  if ((code === "ปพ.4" || code === "ปพ.6" || code === "ปพ.3") && dcIncomplete) missing.push("ครูที่ปรึกษายังไม่ส่งผลคุณลักษณะครบ 8 ด้าน");
+  if (code === "ปพ.3" && !dcIncomplete && levels.some((l) => l === 0)) missing.push("ผลคุณลักษณะไม่ผ่านบางด้าน");
+  return missing;
+}
+
 export default function DocumentsPage() {
-  const [selected, setSelected] = useState<DocumentType>("ปพ.6");
-  const doc = DOCS.find((d) => d.code === selected)!;
-  const pendingSubjects = subjectSubmissions.filter((s) => !s.submitted);
-
-  /** เงื่อนไขความครบถ้วนของข้อมูลก่อนออกเอกสารแต่ละประเภท */
-  const checksFor = (code: DocumentType) => {
-    const dcComplete = pendingSubjects.length === 0;
-    switch (code) {
-      case "ปพ.4":
-      case "ปพ.6":
-        return [
-          { label: "ครูประจำวิชาส่งผลคุณลักษณะอันพึงประสงค์ครบทุกรายวิชา", ok: dcComplete },
-          { label: "มีผลการคัดกรอง 6 มิติ ของภาคเรียนปัจจุบัน", ok: true },
-          { label: "ข้อมูลพื้นฐานนักเรียนจากงานทะเบียนครบถ้วน", ok: true },
-        ];
-      case "ปพ.5":
-        return [
-          { label: "มีรายชื่อนักเรียนในรายวิชา", ok: true },
-          { label: "ครูผู้สอนบันทึกคะแนนคุณลักษณะอันพึงประสงค์แล้ว", ok: true },
-        ];
-      case "ปพ.3":
-        return [
-          { label: "นักเรียนมีผลการเรียนครบตามโครงสร้างหลักสูตร", ok: true },
-          { label: "ผลคุณลักษณะอันพึงประสงค์ผ่านเกณฑ์ทุกด้าน", ok: dcComplete },
-          { label: "ผู้อำนวยการสถานศึกษาอนุมัติการจบหลักสูตร", ok: false },
-        ];
-      case "ปพ.7":
-        return [{ label: "มีคำร้องขอเอกสารจากนักเรียนหรือผู้ปกครอง", ok: true }];
-      default:
-        return [];
-    }
-  };
-
-  const checks = checksFor(selected);
-  const ready = checks.every((c) => c.ok);
+  const store = useStore();
+  const isAdmin = store.role === "admin";
+  const canMake = (d: DocSpec) => (isAdmin ? d.makers.includes("admin") : store.role === "homeroom" && d.makers.includes("homeroom"));
+  const docs = DOCS.filter(canMake);
+  const [selected, setSelected] = useState<DocumentType | null>(docs[0]?.code ?? null);
+  const doc = docs.find((d) => d.code === selected);
+  const [historyFilter, setHistoryFilter] = useState<DocumentType | "all">("all");
+  const history = store.educationDocuments.filter((d) => historyFilter === "all" || d.docType === historyFilter);
 
   return (
     <>
-      <PageHeader
-        title="เอกสารประเมินผลทางการศึกษา"
-        subtitle={`จัดทำเอกสาร ปพ. จากข้อมูลที่บันทึกไว้ในระบบ · ${CURRENT_TERM.label}`}
-      />
+      <PageHeader title="เอกสารประเมินผลทางการศึกษา" subtitle={`จัดทำร่างเอกสาร ปพ. จากข้อมูลในระบบ · ${CURRENT_TERM.label}`} />
 
       <div className="flex-1 overflow-y-auto p-4 sm:p-8">
-        <div className="mb-5 flex items-start gap-3 rounded-xl border border-blue-200 bg-accent px-4 py-3.5">
+        <div className="mb-5 flex items-start gap-3 rounded-xl border border-border bg-card px-4 py-3.5">
           <Info className="size-5 shrink-0 text-primary" />
-          <p className="text-[13.5px] leading-relaxed text-accent-foreground">
-            เอกสารหลักฐานการศึกษาแบ่งเป็น 2 กลุ่ม — <b>ปพ.1 ปพ.2 และ ปพ.3</b>{" "}
-            เป็นเอกสารที่กระทรวงศึกษาธิการกำหนดรูปแบบตายตัว ส่วน <b>ปพ.4 ถึง ปพ.9</b>{" "}
-            สถานศึกษากำหนดรูปแบบเองได้ ระบบนี้สร้างเอกสารจากข้อมูลที่บันทึกไว้แล้ว
-            จึงไม่ต้องคัดลอกข้อมูลซ้ำจากหลายแหล่ง
+          <p className="text-[13px] leading-relaxed text-muted-foreground">
+            ระบบนี้จัดทำ ปพ.3–7 เป็นร่างเอกสารจากข้อมูลทะเบียน (Team B) ผลการเรียน (Team A) และผลประเมินคุณลักษณะในระบบนี้
+            การตรวจรับรองและลงนามเป็นไปตามระเบียบของสถานศึกษา ส่วน ปพ.1 และ ปพ.2 อยู่ในระบบงานทะเบียน
           </p>
         </div>
 
-        <div className="grid gap-5 xl:grid-cols-[1.5fr_1fr]">
+        <div className="grid gap-5 lg:grid-cols-[1fr_1.3fr]">
           <div className="space-y-5">
-            <Card>
-              <CardContent className="p-6">
-                <h2 className="mb-1 text-[15.5px] font-bold">เลือกประเภทเอกสาร</h2>
-                <p className="mb-4 text-xs text-muted-foreground">
-                  เลือกเพื่อดูว่าเอกสารแต่ละประเภทใช้ข้อมูลจากส่วนใดของระบบ
-                </p>
-
-                <div className="space-y-2.5">
-                  {DOCS.map((d) => {
-                    const active = d.code === selected;
-                    return (
-                      <button
-                        key={d.code}
-                        onClick={() => setSelected(d.code)}
-                        className={
-                          active
-                            ? "flex w-full items-center gap-3 rounded-xl border border-primary bg-accent p-4 text-left"
-                            : "flex w-full items-center gap-3 rounded-xl border border-border p-4 text-left hover:bg-muted/50"
-                        }
-                      >
-                        <span
-                          className={
-                            active
-                              ? "flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary text-[13px] font-bold text-primary-foreground"
-                              : "flex size-11 shrink-0 items-center justify-center rounded-xl bg-surface text-[13px] font-bold text-muted-foreground"
-                          }
+            {docs.length > 0 && (
+              <Card>
+                <CardContent className="p-5">
+                  <h2 className="mb-3 text-[15.5px] font-bold">เลือกประเภทเอกสาร</h2>
+                  <div className="space-y-2">
+                    {docs.map((d) => {
+                      const active = d.code === selected;
+                      return (
+                        <button
+                          key={d.code}
+                          type="button"
+                          onClick={() => setSelected(d.code)}
+                          className={`flex w-full items-center gap-3 rounded-xl border p-3 text-left ${active ? "border-primary bg-accent" : "border-border hover:bg-muted/50"}`}
                         >
-                          {d.code}
-                        </span>
-                        <span className="min-w-0 flex-1">
-                          <span className="block text-sm font-bold">{d.name}</span>
-                          <span className="mt-0.5 block text-xs text-muted-foreground">
-                            ออกโดย {d.issuedBy} · {d.issuedWhen}
+                          <span className={`flex size-10 shrink-0 items-center justify-center rounded-lg text-[12.5px] font-bold ${active ? "bg-primary text-primary-foreground" : "bg-surface text-muted-foreground"}`}>
+                            {d.code}
                           </span>
-                        </span>
-                        {d.officialFormat && (
-                          <span className="shrink-0 rounded-full bg-risk-amber-bg px-2.5 py-1 text-[11px] font-semibold text-risk-amber">
-                            แบบพิมพ์ของกระทรวง
-                          </span>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
+                          <span className="min-w-0 flex-1 text-[13.5px] font-semibold">{d.name}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {!isAdmin && <RequestPp7 />}
+            {isAdmin && <RequestQueue />}
+            {isAdmin && <ReferralQueue />}
 
             <Card>
-              <CardContent className="p-6">
-                <div className="mb-3 flex items-center justify-between">
-                  <h2 className="text-[15.5px] font-bold">ประวัติการจัดทำเอกสาร</h2>
-                  <span className="text-[12.5px] text-muted-foreground">
-                    บันทึกใน audit log ทุกครั้ง
-                  </span>
+              <CardContent className="p-5">
+                <h2 className="text-[15.5px] font-bold">ประวัติการจัดทำ</h2>
+                <div className="mt-2 mb-2 flex flex-wrap gap-1.5">
+                  {(["all", ...DOCS.map((d) => d.code)] as const).map((t) => (
+                    <button
+                      key={t}
+                      type="button"
+                      aria-pressed={historyFilter === t}
+                      onClick={() => setHistoryFilter(t)}
+                      className={`rounded-md border px-2.5 py-1 text-[12px] ${historyFilter === t ? "border-primary bg-accent font-semibold text-primary" : "border-border hover:bg-muted"}`}
+                    >
+                      {t === "all" ? "ทั้งหมด" : t}
+                    </button>
+                  ))}
                 </div>
                 <div className="divide-y divide-border">
-                  {educationDocuments.map((d) => (
-                    <div key={d.docId} className="flex items-center gap-3 py-3">
-                      <span className="w-28 shrink-0 text-[12.5px] text-muted-foreground">
-                        {formatThaiDate(d.generatedAt)}
-                      </span>
-                      <span className="w-16 shrink-0 rounded-md bg-surface px-2 py-1 text-center text-[12px] font-bold">
-                        {d.docType}
-                      </span>
-                      <span className="min-w-0 flex-1 truncate text-[13.5px] font-medium">
+                  {history.map((d) => (
+                    <div key={d.docId} className="flex flex-wrap items-center gap-x-3 gap-y-0.5 py-2.5">
+                      <span className="w-14 shrink-0 rounded-md bg-surface px-2 py-0.5 text-center text-[12px] font-bold">{d.docType}</span>
+                      <span className="min-w-0 flex-1 truncate text-[13px] font-medium">
                         {d.target}
+                        {d.version && d.version > 1 && <span className="ml-1 text-[11.5px] text-muted-foreground">ฉบับที่ {d.version}</span>}
                       </span>
-                      <span className="w-40 shrink-0 text-[12.5px] text-muted-foreground">
-                        {d.generatedByName}
+                      <span className="text-[12px] text-muted-foreground">
+                        {formatThaiDate(d.generatedAt)} · {d.generatedByName}
                       </span>
-                      <Download className="size-4 shrink-0 text-primary" />
+                      <Download className="size-4 shrink-0 text-primary" aria-label="ดาวน์โหลด" />
                     </div>
                   ))}
+                  {history.length === 0 && <p className="py-3 text-[12.5px] text-muted-foreground">ยังไม่มีเอกสารประเภทนี้</p>}
                 </div>
               </CardContent>
             </Card>
           </div>
 
-          {/* รายละเอียดเอกสารที่เลือก */}
-          <div className="space-y-5">
+          {doc ? <Generator key={doc.code} doc={doc} /> : (
             <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center gap-3">
-                  <span className="flex size-12 items-center justify-center rounded-xl bg-accent text-sm font-bold text-primary">
-                    {doc.code}
-                  </span>
-                  <div>
-                    <h2 className="text-[15.5px] font-bold">{doc.name}</h2>
-                    <p className="text-xs text-muted-foreground">
-                      ออกโดย {doc.issuedBy} · {doc.issuedWhen}
-                    </p>
-                  </div>
-                </div>
-
-                <p className="mt-4 text-[13.5px] leading-relaxed">{doc.purpose}</p>
-
-                {doc.note && (
-                  <p className="mt-3 rounded-lg bg-risk-amber-bg px-3.5 py-2.5 text-[12.5px] leading-relaxed text-risk-amber">
-                    {doc.note}
-                  </p>
-                )}
-
-                <h3 className="mt-5 mb-2 text-[13.5px] font-bold">ข้อมูลที่ระบบดึงมาสร้างเอกสาร</h3>
-                <ul className="space-y-2">
-                  {doc.dataSources.map((src) => (
-                    <li key={src} className="flex gap-2.5 text-[13px] leading-relaxed">
-                      <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-primary" />
-                      {src}
-                    </li>
-                  ))}
-                </ul>
+              <CardContent className="p-8 text-center text-[13px] text-muted-foreground">
+                บทบาทนี้ขอจัดทำ ปพ.7 ได้จากแบบฟอร์มด้านซ้าย
               </CardContent>
             </Card>
-
-            <Card>
-              <CardContent className="p-6">
-                <h3 className="text-[15px] font-bold">ตรวจสอบความครบถ้วนก่อนออกเอกสาร</h3>
-                <p className="mt-0.5 mb-3 text-[11.5px] text-muted-foreground">
-                  เงื่อนไขของ {doc.code}
-                </p>
-                <div className="space-y-2">
-                  {checks.map((c) => (
-                    <div key={c.label} className="flex items-start gap-2.5">
-                      <span
-                        className={
-                          c.ok
-                            ? "mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-risk-green"
-                            : "mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-risk-amber"
-                        }
-                      >
-                        {c.ok ? (
-                          <Check className="size-3 text-white" strokeWidth={3} />
-                        ) : (
-                          <span className="text-[11px] font-bold text-white">!</span>
-                        )}
-                      </span>
-                      <span className="text-[13px] leading-relaxed">{c.label}</span>
-                    </div>
-                  ))}
-                </div>
-
-                {!ready && (
-                  <p className="mt-3 flex gap-2 rounded-lg bg-risk-amber-bg px-3 py-2.5 text-[12px] leading-relaxed text-risk-amber">
-                    <FileText className="size-4 shrink-0" />
-                    {selected === "ปพ.3"
-                      ? "รอผู้อำนวยการสถานศึกษาอนุมัติการจบหลักสูตรก่อนจึงจะออกเอกสารได้"
-                      : `รอครูประจำวิชาส่งผลคุณลักษณะอันพึงประสงค์อีก ${pendingSubjects.length} รายวิชา (${pendingSubjects
-                          .map((s) => s.subject)
-                          .join(", ")})`}
-                  </p>
-                )}
-
-                <Button className="mt-4 w-full" disabled={!ready}>
-                  {ready ? `จัดทำเอกสาร ${doc.code}` : `ยังออก ${doc.code} ไม่ได้`}
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
+          )}
         </div>
       </div>
     </>
+  );
+}
+
+/** สถานการณ์ A */
+function Generator({ doc }: { doc: DocSpec }) {
+  const store = useStore();
+  const [picked, setPicked] = useState<string[]>([]);
+  const [preview, setPreview] = useState(false);
+  const [done, setDone] = useState("");
+
+  const targets =
+    doc.per === "subject"
+      ? subjectSubmissions.map((s) => ({ id: s.subject, label: s.subject, missing: s.submitted ? [] : [`${s.teacherName} ยังไม่ส่งผลในระบบวิชาการ`] }))
+      : store.students.map((s) => ({ id: s.studentId, label: `${s.fullName} · เลขที่ ${s.classNo}`, missing: missingFor(doc.code, s, store.dcResultOf(s.studentId)) }));
+  const ready = targets.filter((t) => t.missing.length === 0);
+  const notReady = targets.filter((t) => t.missing.length > 0);
+  const chosen = ready.filter((t) => picked.includes(t.id));
+
+  const toggle = (id: string) => setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
+
+  const confirm = () => {
+    for (const t of chosen) {
+      const name = doc.per === "subject" ? `รายวิชา${t.label}` : (store.getStudent(t.id)?.fullName ?? t.label);
+      store.generateDocument(doc.code, name);
+    }
+    setDone(`สร้างร่าง ${doc.code} แล้ว ${chosen.length} ฉบับ · ลิงก์ดาวน์โหลดหมดอายุใน 24 ชั่วโมง`);
+    setPicked([]);
+    setPreview(false);
+  };
+
+  return (
+    <div className="space-y-5">
+      <Card>
+        <CardContent className="p-6">
+          <div className="flex items-center gap-3">
+            <span className="flex size-11 items-center justify-center rounded-xl bg-accent text-[13px] font-bold text-primary">{doc.code}</span>
+            <h2 className="text-[15.5px] font-bold">{doc.name}</h2>
+          </div>
+          <p className="mt-3 text-[13px] leading-relaxed">{doc.purpose}</p>
+          <h3 className="mt-4 mb-1.5 text-[13px] font-bold">ข้อมูลที่ใช้</h3>
+          <ul className="space-y-1">
+            {doc.dataSources.map((d) => (
+              <li key={d} className="flex gap-2 text-[12.5px] text-muted-foreground">
+                <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-primary" />
+                {d}
+              </li>
+            ))}
+          </ul>
+          {doc.note && <p className="mt-3 rounded-lg bg-surface px-3 py-2 text-[12px] text-muted-foreground">{doc.note}</p>}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="p-6">
+          <div className="mb-2 flex flex-wrap items-center gap-2">
+            <h3 className="flex-1 text-[15px] font-bold">
+              เลือก{doc.per === "subject" ? "รายวิชา" : "นักเรียน"} · พร้อมจัดทำ {ready.length} จาก {targets.length}
+            </h3>
+            {ready.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setPicked(picked.length === ready.length ? [] : ready.map((t) => t.id))}
+                className="text-[12.5px] font-semibold text-primary"
+              >
+                {picked.length === ready.length ? "ล้างที่เลือก" : "เลือกทั้งหมดที่พร้อม"}
+              </button>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {ready.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                aria-pressed={picked.includes(t.id)}
+                onClick={() => toggle(t.id)}
+                className={`rounded-lg border px-2.5 py-1.5 text-[12.5px] ${picked.includes(t.id) ? "border-primary bg-accent font-semibold text-primary" : "border-border hover:bg-muted"}`}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+
+          {notReady.length > 0 && (
+            <div className="mt-4 rounded-lg border border-dashed border-border p-3">
+              <div className="text-[12.5px] font-semibold">ข้อมูลไม่ครบ แยกไว้จัดทำภายหลัง · {notReady.length}</div>
+              <ul className="mt-1 space-y-0.5 text-[12px] text-muted-foreground">
+                {notReady.map((t) => (
+                  <li key={t.id}>
+                    {t.label}: {t.missing.join(", ")}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {ready.length === 0 && (
+            <p className="mt-3 text-[12.5px] text-muted-foreground">ยังไม่มีข้อมูลที่พร้อมจัดทำ ตรวจสอบหรือแก้ไขในระบบต้นทางก่อน (Alt-B)</p>
+          )}
+
+          {done && (
+            <p role="status" className="mt-4 flex items-center gap-2 rounded-lg bg-accent px-3 py-2 text-[13px] text-primary">
+              <Check className="size-4" /> {done}
+            </p>
+          )}
+          <Button className="mt-4 w-full" disabled={chosen.length === 0} onClick={() => setPreview(true)}>
+            <FileText className="size-4" /> ดูตัวอย่างก่อนจัดทำ {chosen.length > 0 && `(${chosen.length})`}
+          </Button>
+        </CardContent>
+      </Card>
+
+      {preview && chosen[0] && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-foreground/20 sm:items-center" role="dialog" aria-modal="true" aria-label="ตัวอย่างเอกสาร">
+          <div className="flex max-h-[92vh] w-full max-w-lg flex-col rounded-t-2xl bg-card shadow-lg sm:rounded-2xl">
+            <div className="flex items-center gap-2 border-b border-border px-5 py-3.5">
+              <h2 className="flex-1 text-[15.5px] font-bold">ตัวอย่าง {doc.code}</h2>
+              <button type="button" aria-label="ปิด" onClick={() => setPreview(false)} className="flex size-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted">
+                <X className="size-4" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-5">
+              <div className="rounded-lg border border-border bg-surface p-5 text-center">
+                <div className="text-[12px] text-muted-foreground">ร่างเอกสาร · ยังไม่ได้ลงนาม</div>
+                <div className="mt-1 text-[15px] font-bold">{doc.name}</div>
+                <div className="mt-3 text-[13px]">{chosen[0].label}</div>
+                <div className="mt-1 text-[12px] text-muted-foreground">{CURRENT_TERM.label}</div>
+                <div className="mt-4 h-24 rounded bg-card" />
+              </div>
+              <p className="mt-3 text-[12.5px] text-muted-foreground">
+                จะสร้างไฟล์ PDF {chosen.length} ฉบับ ถ้าเคยจัดทำแล้วระบบเก็บฉบับเดิมไว้และนับเป็นฉบับใหม่
+              </p>
+            </div>
+            <div className="flex gap-2 border-t border-border px-5 py-3.5">
+              <Button variant="outline" onClick={() => setPreview(false)}>
+                กลับไปแก้
+              </Button>
+              <Button className="flex-1" onClick={confirm}>
+                ยืนยันจัดทำ {chosen.length} ฉบับ
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** สถานการณ์ B (ฝั่งครู): ขอจัดทำ ปพ.7 */
+function RequestPp7() {
+  const store = useStore();
+  const [studentId, setStudentId] = useState("");
+  const mine = store.documentRequests;
+  return (
+    <Card>
+      <CardContent className="p-5">
+        <h2 className="text-[15.5px] font-bold">ขอจัดทำ ปพ.7 (ใบรับรองผลการศึกษา)</h2>
+        <p className="mb-2 text-[12px] text-muted-foreground">เลือกนักเรียนแล้วส่งคำขอ แอดมินจัดทำและส่งกลับ</p>
+        <div className="flex flex-wrap gap-1.5">
+          {store.students.map((s) => (
+            <button
+              key={s.studentId}
+              type="button"
+              aria-pressed={studentId === s.studentId}
+              onClick={() => setStudentId(s.studentId)}
+              className={`rounded-lg border px-2.5 py-1.5 text-[12.5px] ${studentId === s.studentId ? "border-primary bg-accent font-semibold text-primary" : "border-border hover:bg-muted"}`}
+            >
+              {s.fullName}
+            </button>
+          ))}
+        </div>
+        <Button
+          className="mt-3"
+          size="sm"
+          disabled={!studentId}
+          onClick={() => {
+            store.requestDocument(studentId);
+            setStudentId("");
+          }}
+        >
+          ส่งคำขอ
+        </Button>
+        {mine.length > 0 && (
+          <div className="mt-3 divide-y divide-border">
+            {mine.map((r) => (
+              <div key={r.requestId} className="flex items-center gap-2 py-2 text-[12.5px]">
+                <span className="flex-1">{store.getStudent(r.studentId)?.fullName}</span>
+                <span className="text-muted-foreground">{r.status === "done" ? "แอดมินส่งกลับแล้ว" : "รอแอดมินจัดทำ"}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+/** สถานการณ์ B (ฝั่งแอดมิน): คำขอ ปพ.7 ที่รอจัดทำ */
+function RequestQueue() {
+  const store = useStore();
+  const pending = store.documentRequests.filter((r) => r.status === "pending");
+  return (
+    <Card>
+      <CardContent className="p-5">
+        <h2 className="text-[15.5px] font-bold">คำขอ ปพ.7 จากครู · {pending.length}</h2>
+        <div className="mt-2 divide-y divide-border">
+          {pending.map((r) => (
+            <div key={r.requestId} className="flex flex-wrap items-center gap-2 py-2.5 text-[13px]">
+              <span className="min-w-0 flex-1">
+                {store.getStudent(r.studentId)?.fullName}
+                <span className="block text-[11.5px] text-muted-foreground">
+                  ขอโดย {r.requestedByName} · {formatThaiDate(r.requestedAt)}
+                </span>
+              </span>
+              <Button size="sm" onClick={() => store.fulfillRequest(r.requestId)}>
+                จัดทำและส่งกลับ
+              </Button>
+            </div>
+          ))}
+          {pending.length === 0 && <p className="py-2 text-[12.5px] text-muted-foreground">ไม่มีคำขอที่รอจัดทำ</p>}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+/** UC11 Scenario D: แอดมินเก็บรักษาเอกสารส่งต่อ โดยไม่เห็นชื่อนักเรียนหรือเนื้อหา */
+function ReferralQueue() {
+  const store = useStore();
+  const items = store.careCases.filter((c) => c.referral);
+  const next: Record<ReferralStatus, ReferralStatus | null> = { awaiting_admin: "stored", stored: "forwarded", forwarded: null };
+  const action: Record<ReferralStatus, string> = { awaiting_admin: "รับเก็บรักษา", stored: "บันทึกว่าส่งต่อแล้ว", forwarded: "" };
+  return (
+    <Card>
+      <CardContent className="p-5">
+        <h2 className="text-[15.5px] font-bold">เอกสารส่งต่อ · {items.length}</h2>
+        <p className="mb-2 text-[12px] text-muted-foreground">เห็นเฉพาะเลขเอกสาร ผู้ส่ง วันที่ และสถานะ เนื้อหาเปิดได้เฉพาะครูที่รับผิดชอบ</p>
+        <div className="divide-y divide-border">
+          {items.map((c) => {
+            const r = c.referral!;
+            const n = next[r.status];
+            return (
+              <div key={r.referralId} className="flex flex-wrap items-center gap-2 py-2.5 text-[13px]">
+                <span className="min-w-0 flex-1">
+                  {r.referralId}
+                  <span className="block text-[11.5px] text-muted-foreground">
+                    ส่งโดย {r.sentByName} · {formatThaiDate(r.preparedAt)} · {REFERRAL_STATUS_LABEL[r.status]}
+                  </span>
+                </span>
+                {n && (
+                  <Button size="sm" variant="outline" onClick={() => store.setReferralStatus(c.caseId, n)}>
+                    {action[r.status]}
+                  </Button>
+                )}
+              </div>
+            );
+          })}
+          {items.length === 0 && <p className="py-2 text-[12.5px] text-muted-foreground">ยังไม่มีเอกสารส่งต่อ</p>}
+        </div>
+      </CardContent>
+    </Card>
   );
 }

@@ -10,7 +10,7 @@ import { LinkButton } from "@/components/ui/link-button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ruleKind, ruleScoreText } from "@/lib/behavior-rules";
 import { useStore } from "@/lib/store";
-import { dcCriteria, dcSummaries, CURRENT_TERM } from "@/lib/mock-data";
+import { dcCriteria, CURRENT_TERM } from "@/lib/mock-data";
 import { downloadCsv } from "@/lib/csv";
 import { formatThaiDate, formatThaiDateTime, maskCitizenId } from "@/lib/format";
 import { canRevealCitizenId, canViewStudent } from "@/lib/roles";
@@ -92,7 +92,7 @@ export default function StudentDetailPage({
   const behaviors = store.behaviorOf(studentId).slice(0, 5);
   const behaviorScore = store.behaviorScoreOf(studentId);
   const careCase = store.caseOf(studentId);
-  const dc = dcSummaries.find((d) => d.studentId === studentId);
+  const dc = store.dcResultOf(studentId);
   // store เก็บรายการใหม่ไว้หน้าสุด
   const redFlag = store.redFlags.find((r) => r.studentId === studentId);
   const nineS = store.nineS.find((r) => r.studentId === studentId);
@@ -205,6 +205,11 @@ export default function StudentDetailPage({
               <div className="flex flex-wrap items-center gap-2.5">
                 <h2 className="text-xl font-bold">{student.fullName}</h2>
                 {risk && <RiskBadge group={risk} />}
+                {store.screeningWatch[studentId] && (
+                  <span className="rounded-md bg-muted px-2 py-0.5 text-[12px] font-semibold">
+                    เฝ้าดูผลคัดกรอง · {store.screeningWatch[studentId].reason}
+                  </span>
+                )}
               </div>
               <p className="mt-1 text-[13.5px] text-muted-foreground">
                 {student.roomName} เลขที่ {student.classNo} · เลขประจำตัว {student.studentId}
@@ -551,7 +556,7 @@ export default function StudentDetailPage({
                         <span className="w-32 shrink-0 text-[12.5px] text-muted-foreground">
                           {formatThaiDateTime(rec.occurredAt)}
                         </span>
-                        <span className="flex-1 text-[13.5px]">{rule?.name}</span>
+                        <span className="flex-1 text-[13.5px]">{rule?.name}{rule?.cancelled && <span className="ml-1.5 rounded bg-muted px-1.5 py-0.5 text-[11px] font-normal text-muted-foreground">กฎถูกยกเลิก</span>}</span>
                         {rec.source === "card_scan" && (
                           <span className="rounded bg-accent px-2 py-0.5 text-[11px] font-semibold text-primary">
                             สแกนบัตร
