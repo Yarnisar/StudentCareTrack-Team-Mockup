@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Camera, Check, Plus } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,7 @@ const STATUS_STYLE: Record<AppointmentStatus, string> = {
 export default function HomeVisitsPage() {
   const store = useStore();
   const [selected, setSelected] = useState(store.appointments[0]?.appointmentId ?? "");
+  const detailRef = useRef<HTMLDivElement>(null);
 
   const appointment = store.appointments.find((a) => a.appointmentId === selected);
   const student = appointment ? store.getStudent(appointment.studentId) : undefined;
@@ -45,7 +46,7 @@ export default function HomeVisitsPage() {
         }
       />
 
-      <div className="flex-1 overflow-y-auto p-8">
+      <div className="flex-1 overflow-y-auto p-4 sm:p-8">
         <div className="grid gap-5 xl:grid-cols-[320px_1fr]">
           <Card className="h-fit">
             <CardContent className="p-5">
@@ -57,7 +58,14 @@ export default function HomeVisitsPage() {
                   return (
                     <button
                       key={a.appointmentId}
-                      onClick={() => setSelected(a.appointmentId)}
+                      onClick={() => {
+                        setSelected(a.appointmentId);
+                        // จอแคบรายการกับรายละเอียดเรียงต่อกัน เลื่อนลงไปให้เห็นรายละเอียดทันที
+                        if (window.matchMedia("(max-width: 1279px)").matches)
+                          requestAnimationFrame(() =>
+                            detailRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
+                          );
+                      }}
                       className={
                         active
                           ? "w-full rounded-xl border border-primary bg-accent p-3 text-left"
@@ -83,10 +91,10 @@ export default function HomeVisitsPage() {
           </Card>
 
           {appointment && student ? (
-            <div className="space-y-5">
+            <div ref={detailRef} className="scroll-mt-4 space-y-5">
               <Card>
-                <CardContent className="flex items-center gap-4 p-6">
-                  <div className="flex-1">
+                <CardContent className="flex flex-wrap items-center gap-3 p-5 sm:gap-4 sm:p-6">
+                  <div className="min-w-0 flex-1 basis-64">
                     <h2 className="text-lg font-bold">{student.fullName}</h2>
                     <p className="mt-1 text-[13.5px] text-muted-foreground">
                       {student.roomName} เลขที่ {student.classNo} · นัดหมาย{" "}

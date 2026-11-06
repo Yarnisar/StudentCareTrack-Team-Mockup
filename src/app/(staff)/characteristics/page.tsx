@@ -27,7 +27,7 @@ export default function CharacteristicsPage() {
         subtitle={`ประเมิน 8 ด้าน · ครูประจำวิชาบันทึก ปพ.5 → ครูประจำชั้นสรุป ปพ.6 · ${CURRENT_TERM.label}`}
       />
 
-      <div className="flex-1 overflow-y-auto p-8">
+      <div className="flex-1 overflow-y-auto p-4 sm:p-8">
         {pending.length > 0 && (
           <div className="mb-5 flex items-center gap-3 rounded-xl border border-amber-200 bg-risk-amber-bg px-4 py-3.5">
             <AlertTriangle className="size-5 shrink-0 text-risk-amber" />

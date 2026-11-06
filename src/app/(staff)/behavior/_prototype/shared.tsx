@@ -28,9 +28,9 @@ export function useRuleOf() {
 export function Stat({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
   return (
     <Card>
-      <CardContent className="p-5">
-        <div className="text-[13px] font-semibold text-muted-foreground">{label}</div>
-        <div className={accent ? "mt-2 text-2xl font-bold text-primary" : "mt-2 text-2xl font-bold"}>
+      <CardContent className="p-4 sm:p-5">
+        <div className="text-[12.5px] font-semibold text-muted-foreground sm:text-[13px]">{label}</div>
+        <div className={accent ? "mt-1.5 text-xl font-bold text-primary sm:text-2xl" : "mt-1.5 text-xl font-bold sm:text-2xl"}>
           {value}
         </div>
       </CardContent>

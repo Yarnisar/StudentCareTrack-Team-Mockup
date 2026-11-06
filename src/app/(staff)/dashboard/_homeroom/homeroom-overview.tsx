@@ -97,7 +97,7 @@ export function HomeroomOverview() {
   ].join(" · ");
 
   return (
-    <div className="flex-1 overflow-y-auto p-8">
+    <div className="flex-1 overflow-y-auto p-4 sm:p-8">
       <div className="flex flex-wrap items-end gap-3">
         <Filter label="มุมมอง">
           <div className="flex h-10 rounded-lg border border-border p-1" role="group">

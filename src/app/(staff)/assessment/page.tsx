@@ -20,7 +20,7 @@ export default function AssessmentPage() {
         subtitle={`Red Flag → 9S → SDQ (ครู / นักเรียน / ผู้ปกครอง) · ${CURRENT_TERM.label}`}
       />
 
-      <div className="flex-1 overflow-y-auto p-8">
+      <div className="flex-1 overflow-y-auto p-4 sm:p-8">
         <Card className="mb-5">
           <CardContent className="p-6">
             <h2 className="text-[15.5px] font-bold">ลำดับการประเมินด้านสุขภาพจิต</h2>

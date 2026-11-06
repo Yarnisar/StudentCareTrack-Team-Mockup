@@ -48,7 +48,7 @@ export function VariantC({ records }: { records: BehaviorRecord[] }) {
     setExpanded((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
 
   return (
-    <div className="flex-1 overflow-y-auto p-8 pb-24">
+    <div className="flex-1 overflow-y-auto p-4 pb-24 sm:p-8 sm:pb-24">
       <div className="mb-4 flex items-center gap-3">
         <div>
           <h2 className="text-[15.5px] font-bold">ความประพฤติรายนักเรียน</h2>

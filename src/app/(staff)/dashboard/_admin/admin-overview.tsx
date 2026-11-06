@@ -134,7 +134,7 @@ export function AdminOverview() {
   };
 
   return (
-    <div className="flex-1 overflow-y-auto p-8">
+    <div className="flex-1 overflow-y-auto p-4 sm:p-8">
       <div className="mb-5 flex items-start gap-2.5 rounded-xl border border-border bg-surface px-4 py-3 text-[13px] text-muted-foreground">
         <FlaskConical className="mt-0.5 size-4 shrink-0" />
         <p>

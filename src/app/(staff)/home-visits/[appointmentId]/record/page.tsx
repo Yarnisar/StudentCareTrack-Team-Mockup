@@ -1525,7 +1525,7 @@ function VisitSaved({
   return (
     <>
       <PageHeader title="แบบบันทึกการเยี่ยมบ้านนักเรียน" subtitle={studentName} />
-      <div className="flex-1 overflow-y-auto p-8">
+      <div className="flex-1 overflow-y-auto p-4 sm:p-8">
         <div className="mx-auto max-w-2xl space-y-5">
           <div className="rounded-xl border border-border bg-card p-6">
             <div className="flex items-center gap-3">

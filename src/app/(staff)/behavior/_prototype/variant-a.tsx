@@ -28,7 +28,7 @@ export function VariantA({ records }: { records: BehaviorRecord[] }) {
   const studentsTouched = new Set(records.map((r) => r.studentId)).size;
 
   return (
-    <div className="flex-1 overflow-y-auto p-8 pb-24">
+    <div className="flex-1 overflow-y-auto p-4 pb-24 sm:p-8 sm:pb-24">
       <div className="mb-5 grid grid-cols-2 gap-4 xl:grid-cols-4">
         <Stat label="บันทึกทั้งหมด" value={`${records.length} รายการ`} />
         <Stat label="นักเรียนที่ถูกบันทึก" value={`${studentsTouched} คน`} />
@@ -40,7 +40,7 @@ export function VariantA({ records }: { records: BehaviorRecord[] }) {
       </div>
 
       <Card>
-        <CardContent className="p-6">
+        <CardContent className="p-4 sm:p-6">
           <div className="mb-3 flex items-center gap-3">
             <div>
               <h2 className="text-[15.5px] font-bold">ประวัติการบันทึกความประพฤติ</h2>
@@ -51,7 +51,41 @@ export function VariantA({ records }: { records: BehaviorRecord[] }) {
             <span className="flex-1" />
           </div>
 
-          <table className="w-full text-[13.5px]">
+          {/* จอแคบ: การ์ดรายการ ใครทำอะไร เมื่อไร อยู่บรรทัดบน รายละเอียดอยู่ล่าง */}
+          <div className="divide-y divide-border md:hidden">
+            {records.map((rec) => {
+              const rule = ruleOf(rec.ruleId);
+              const student = store.getStudent(rec.studentId);
+              return (
+                <div key={rec.recordId} className="flex gap-3 py-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-baseline gap-x-2">
+                      <span className="text-[14px] font-semibold">{student?.fullName}</span>
+                      <span className="text-[12px] text-muted-foreground">
+                        {student?.roomName} เลขที่ {student?.classNo}
+                      </span>
+                    </div>
+                    <div className="mt-0.5 text-[13.5px]">{rule?.name}</div>
+                    {rec.description !== "-" && (
+                      <div className="mt-0.5 text-[12.5px] text-muted-foreground">{rec.description}</div>
+                    )}
+                    <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11.5px] text-muted-foreground">
+                      <span>
+                        {formatThaiDate(rec.occurredAt)} {formatThaiTime(rec.occurredAt)}
+                      </span>
+                      <span>· {rec.recordedByName}</span>
+                      <SourceBadge source={rec.source} evidence={rec.evidence} />
+                    </div>
+                  </div>
+                  <div className="flex self-start">
+                    <ScoreChip delta={rule?.scoreDelta ?? 0} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <table className="hidden w-full text-[13.5px] md:table">
             <thead>
               <tr className="border-b border-border text-left text-[12px] text-muted-foreground">
                 <th className="w-32 py-2 font-medium">วันที่</th>

@@ -183,8 +183,8 @@ export default function StudentDetailPage({
     <>
       <PageHeader title="ข้อมูลนักเรียนรายบุคคล" subtitle={CURRENT_TERM.label} />
 
-      <div className="flex-1 overflow-y-auto p-8">
-        <div className="mb-4 flex items-center justify-between">
+      <div className="flex-1 overflow-y-auto p-4 sm:p-8">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
           <Link
             href="/students"
             className="inline-flex items-center gap-1.5 text-[13.5px] font-semibold text-muted-foreground hover:text-foreground"
@@ -197,12 +197,12 @@ export default function StudentDetailPage({
         </div>
 
         <Card className="mb-5">
-          <CardContent className="flex items-center gap-4 p-6">
-            <div className="flex size-16 items-center justify-center rounded-xl bg-muted text-xl font-bold text-muted-foreground">
+          <CardContent className="flex flex-wrap items-center gap-4 p-5 sm:p-6">
+            <div className="flex size-16 shrink-0 items-center justify-center rounded-xl bg-muted text-xl font-bold text-muted-foreground">
               {student.fullName.replace(/^(ด\.ช\.|ด\.ญ\.)\s*/, "").charAt(0)}
             </div>
-            <div className="flex-1">
-              <div className="flex items-center gap-2.5">
+            <div className="min-w-0 flex-1 basis-56">
+              <div className="flex flex-wrap items-center gap-2.5">
                 <h2 className="text-xl font-bold">{student.fullName}</h2>
                 {risk && <RiskBadge group={risk} />}
               </div>
@@ -211,7 +211,7 @@ export default function StudentDetailPage({
                 {screening ? ` · คัดกรองล่าสุด ${formatThaiDate(screening.screenedAt)}` : ""}
               </p>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <LinkButton variant="outline" href={`/screening/${studentId}`}>
                 คัดกรองใหม่
               </LinkButton>

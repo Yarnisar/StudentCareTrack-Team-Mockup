@@ -135,7 +135,7 @@ export default function DocumentsPage() {
         subtitle={`จัดทำเอกสาร ปพ. จากข้อมูลที่บันทึกไว้ในระบบ · ${CURRENT_TERM.label}`}
       />
 
-      <div className="flex-1 overflow-y-auto p-8">
+      <div className="flex-1 overflow-y-auto p-4 sm:p-8">
         <div className="mb-5 flex items-start gap-3 rounded-xl border border-blue-200 bg-accent px-4 py-3.5">
           <Info className="size-5 shrink-0 text-primary" />
           <p className="text-[13.5px] leading-relaxed text-accent-foreground">

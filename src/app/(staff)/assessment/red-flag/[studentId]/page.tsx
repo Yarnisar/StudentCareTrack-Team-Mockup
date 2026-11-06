@@ -65,7 +65,7 @@ export default function RedFlagPage({ params }: { params: Promise<{ studentId: s
         subtitle={`ขั้นที่ 1 ของการประเมินด้านสุขภาพจิต · ${CURRENT_TERM.label}`}
       />
 
-      <div className="flex-1 overflow-y-auto p-8">
+      <div className="flex-1 overflow-y-auto p-4 sm:p-8">
         <div className="mx-auto max-w-3xl">
           <StepIndicator current={1} />
 

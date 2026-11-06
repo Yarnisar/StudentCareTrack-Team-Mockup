@@ -66,7 +66,11 @@ const NAV: { title?: string; items: NavItem[] }[] = [
   },
 ];
 
-export function Sidebar() {
+/**
+ * จอใหญ่แสดงค้างไว้ด้านซ้าย จอแคบ StaffShell เปิดเป็นลิ้นชักทับหน้า
+ * onNavigate ใช้ปิดลิ้นชักเมื่อกดเมนู
+ */
+export function Sidebar({ className, onNavigate }: { className?: string; onNavigate?: () => void }) {
   const pathname = usePathname();
   const { role } = useStore();
   const info = ROLE_INFO[role];
@@ -82,7 +86,7 @@ export function Sidebar() {
   );
 
   return (
-    <aside className="flex w-[264px] shrink-0 flex-col border-r border-border bg-card">
+    <aside className={cn("flex w-[264px] shrink-0 flex-col border-r border-border bg-card", className)}>
       <div className="flex items-center gap-2.5 px-5 pt-5 pb-4">
         <div className="flex size-9 items-center justify-center rounded-[10px] bg-primary text-sm font-bold text-primary-foreground">
           SC
@@ -132,6 +136,8 @@ export function Sidebar() {
                 <Link
                   key={href}
                   href={href}
+                  onClick={onNavigate}
+                  aria-current={active ? "page" : undefined}
                   className={cn(
                     "mr-2 flex items-center gap-3 rounded-r-lg border-l-[3px] px-3.5 py-2 text-[14.5px] transition-colors",
                     active

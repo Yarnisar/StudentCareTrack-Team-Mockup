@@ -125,7 +125,7 @@ export default function ScreeningFormPage({
         subtitle={`ประเมินความเสี่ยง 6 มิติ · ${CURRENT_TERM.label}`}
       />
 
-      <div className="flex-1 overflow-y-auto p-8">
+      <div className="flex-1 overflow-y-auto p-4 sm:p-8">
         <Link
           href="/screening"
           className="mb-4 inline-flex items-center gap-1.5 text-[13.5px] font-semibold text-muted-foreground hover:text-foreground"

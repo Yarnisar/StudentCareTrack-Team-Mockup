@@ -48,7 +48,7 @@ function SdqContent({ studentId }: { studentId: string }) {
         subtitle={`ฉบับครูประเมิน · ครั้งที่ 1 · ${CURRENT_TERM.label}`}
       />
 
-      <div className="flex-1 overflow-y-auto p-8">
+      <div className="flex-1 overflow-y-auto p-4 sm:p-8">
         <div className="mx-auto max-w-3xl">
           <StepIndicator current={3} />
 

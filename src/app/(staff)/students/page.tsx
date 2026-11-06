@@ -20,7 +20,7 @@ export default function StudentsPage() {
         subtitle={`${CURRENT_TEACHER.role} · แสดง ${store.students.length} จาก ${CLASS_SIZE} คน`}
       />
 
-      <div className="flex-1 overflow-y-auto p-8">
+      <div className="flex-1 overflow-y-auto p-4 sm:p-8">
         <div className="mb-4 rounded-xl border border-border bg-card px-5 py-3 text-[13px] text-muted-foreground">
           ข้อมูลพื้นฐานของนักเรียนอ้างอิงจากงานทะเบียนนักเรียนของโรงเรียน — ระบบนี้อ่านอย่างเดียว
           ไม่มีการเพิ่มหรือแก้ไขข้อมูลทะเบียน

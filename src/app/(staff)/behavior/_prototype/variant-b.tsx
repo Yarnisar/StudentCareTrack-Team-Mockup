@@ -27,7 +27,7 @@ export function VariantB({ records }: { records: BehaviorRecord[] }) {
   const studentsTouched = new Set(records.map((r) => r.studentId)).size;
 
   return (
-    <div className="flex-1 overflow-y-auto p-8 pb-24">
+    <div className="flex-1 overflow-y-auto p-4 pb-24 sm:p-8 sm:pb-24">
       <div className="mb-5 grid grid-cols-2 gap-4 xl:grid-cols-4">
         <Stat label="บันทึกทั้งหมด" value={`${records.length} รายการ`} />
         <Stat label="นักเรียนที่ถูกบันทึก" value={`${studentsTouched} คน`} />
