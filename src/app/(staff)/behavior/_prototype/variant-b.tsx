@@ -16,13 +16,14 @@ import {
   ScoreChip,
   SourceBadge,
   Stat,
-  ruleOf,
+  useRuleOf,
 } from "./shared";
 
 export const VARIANT_B_NAME = "การ์ดรายบันทึก";
 
 export function VariantB({ records }: { records: BehaviorRecord[] }) {
   const store = useStore();
+  const ruleOf = useRuleOf();
   const studentsTouched = new Set(records.map((r) => r.studentId)).size;
 
   return (

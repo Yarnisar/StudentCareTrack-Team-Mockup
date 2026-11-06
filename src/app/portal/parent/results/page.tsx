@@ -5,7 +5,8 @@ import { MobileShell } from "@/components/layout/mobile-shell";
 import { SdqForm } from "@/components/assessment/sdq-form";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { dcSummaries, behaviorRules, useStore } from "@/lib/store";
+import { ruleKind, ruleScoreText } from "@/lib/behavior-rules";
+import { dcSummaries, useStore } from "@/lib/store";
 import { dcCriteria, CURRENT_TERM } from "@/lib/mock-data";
 import { formatThaiDate } from "@/lib/format";
 import { sdqSummaryForParent } from "@/lib/portal";
@@ -158,8 +159,9 @@ export default function ParentResultsPage() {
             <h2 className="mb-1 text-[14.5px] font-bold">ประวัติความประพฤติล่าสุด</h2>
             <div className="divide-y divide-border">
               {behaviors.map((rec) => {
-                const rule = behaviorRules.find((r) => r.ruleId === rec.ruleId);
+                const rule = store.behaviorRules.find((r) => r.ruleId === rec.ruleId);
                 const positive = (rule?.scoreDelta ?? 0) > 0;
+                const refer = rule ? ruleKind(rule) === "refer" : false;
                 return (
                   <div key={rec.recordId} className="flex items-center gap-3 py-2.5">
                     <span className="w-20 shrink-0 text-[11.5px] text-muted-foreground">
@@ -168,12 +170,14 @@ export default function ParentResultsPage() {
                     <span className="flex-1 text-[13px]">{rule?.name}</span>
                     <span
                       className={
-                        positive
-                          ? "text-[13.5px] font-bold text-risk-green"
-                          : "text-[13.5px] font-bold text-risk-red"
+                        refer
+                          ? "text-[12px] font-semibold text-muted-foreground"
+                          : positive
+                            ? "text-[13.5px] font-bold text-risk-green"
+                            : "text-[13.5px] font-bold text-risk-red"
                       }
                     >
-                      {positive ? `+${rule?.scoreDelta}` : rule?.scoreDelta}
+                      {rule ? ruleScoreText(rule) : ""}
                     </span>
                   </div>
                 );

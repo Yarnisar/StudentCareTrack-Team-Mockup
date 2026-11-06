@@ -8,7 +8,8 @@ import { RiskBadge } from "@/components/shared/risk-badge";
 import { Button } from "@/components/ui/button";
 import { LinkButton } from "@/components/ui/link-button";
 import { Card, CardContent } from "@/components/ui/card";
-import { behaviorRules, useStore } from "@/lib/store";
+import { ruleKind, ruleScoreText } from "@/lib/behavior-rules";
+import { useStore } from "@/lib/store";
 import { dcCriteria, dcSummaries, CURRENT_TERM } from "@/lib/mock-data";
 import { downloadCsv } from "@/lib/csv";
 import { formatThaiDate, formatThaiDateTime, maskCitizenId } from "@/lib/format";
@@ -174,7 +175,7 @@ export default function StudentDetailPage({
         `${careCase.status === "active" ? "กำลังดำเนินการ" : "ปิดแล้ว"} · ${SUPPORT_TYPE_LABEL[careCase.supportType]} · ${CASE_URGENCY_LABEL[careCase.urgency]}`,
       ]);
     }
-    rows.push(["ความประพฤติ", "คะแนนสะสม", behaviorScore]);
+    rows.push(["ความประพฤติ", "คะแนนความประพฤติ", behaviorScore]);
     downloadCsv(`รายงานนักเรียน-${student.studentId}.csv`, ["หมวด", "รายการ", "ผล"], rows);
   };
 
@@ -529,16 +530,22 @@ export default function StudentDetailPage({
                 <div className="mb-2 flex items-center justify-between">
                   <h3 className="text-[15.5px] font-bold">ประวัติความประพฤติล่าสุด</h3>
                   <span className="text-[13px] font-semibold">
-                    คะแนนสะสม:{" "}
-                    <span className={behaviorScore < 0 ? "text-risk-red" : "text-risk-green"}>
-                      {behaviorScore > 0 ? `+${behaviorScore}` : behaviorScore}
-                    </span>
+                    คะแนนความประพฤติ {behaviorScore}
+                    {store.behaviorScoreConfig.ceiling !== null && (
+                      <span className="font-normal text-muted-foreground"> / {store.behaviorScoreConfig.ceiling}</span>
+                    )}
+                    {store.isBehaviorWatch(studentId) && (
+                      <span className="ml-2 rounded-md bg-muted px-2 py-0.5 text-[12px]">
+                        เฝ้าระวังระดับ {store.behaviorWatchLevelOf(studentId)}
+                      </span>
+                    )}
                   </span>
                 </div>
                 <div className="divide-y divide-border">
                   {behaviors.map((rec) => {
-                    const rule = behaviorRules.find((r) => r.ruleId === rec.ruleId);
+                    const rule = store.behaviorRules.find((r) => r.ruleId === rec.ruleId);
                     const positive = (rule?.scoreDelta ?? 0) > 0;
+                    const refer = rule ? ruleKind(rule) === "refer" : false;
                     return (
                       <div key={rec.recordId} className="flex items-center gap-3 py-2.5">
                         <span className="w-32 shrink-0 text-[12.5px] text-muted-foreground">
@@ -552,12 +559,14 @@ export default function StudentDetailPage({
                         )}
                         <span
                           className={
-                            positive
-                              ? "w-10 text-right text-sm font-bold text-risk-green"
-                              : "w-10 text-right text-sm font-bold text-risk-red"
+                            refer
+                              ? "w-10 text-right text-[12px] font-semibold text-muted-foreground"
+                              : positive
+                                ? "w-10 text-right text-sm font-bold text-risk-green"
+                                : "w-10 text-right text-sm font-bold text-risk-red"
                           }
                         >
-                          {positive ? `+${rule?.scoreDelta}` : rule?.scoreDelta}
+                          {rule ? ruleScoreText(rule) : ""}
                         </span>
                       </div>
                     );

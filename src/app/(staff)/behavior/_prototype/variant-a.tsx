@@ -16,13 +16,14 @@ import {
   ScoreChip,
   SourceBadge,
   Stat,
-  ruleOf,
+  useRuleOf,
 } from "./shared";
 
 export const VARIANT_A_NAME = "ตารางเต็มความกว้าง";
 
 export function VariantA({ records }: { records: BehaviorRecord[] }) {
   const store = useStore();
+  const ruleOf = useRuleOf();
 
   const studentsTouched = new Set(records.map((r) => r.studentId)).size;
 

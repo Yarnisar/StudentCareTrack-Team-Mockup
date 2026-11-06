@@ -10,7 +10,7 @@ import { createContext, useContext, useMemo, useState, type ReactNode } from "re
 import {
   appointments as seedAppointments,
   behaviorRecords as seedBehaviorRecords,
-  behaviorRules,
+  behaviorRules as seedBehaviorRules,
   careCases as seedCareCases,
   CURRENT_TEACHER,
   CURRENT_TERM,
@@ -32,11 +32,13 @@ import { nowThaiIso } from "./format";
 import { usePathname } from "next/navigation";
 import { canRevealCitizenId, defaultRoleFor, ROLE_INFO, type Role } from "./roles";
 import { INITIAL_WINDOWS, type AssessmentWindow } from "./periods";
+import { DEFAULT_BEHAVIOR_SCORE, runningScore, watchLevelOf, type BehaviorScoreConfig } from "./behavior-score";
 import {
   AccessLog,
   AppointmentStatus,
   AssessmentOutcome,
   BehaviorRecord,
+  BehaviorRule,
   CareCase,
   CaseUrgency,
   CareMethod,
@@ -73,13 +75,24 @@ interface StoreValue {
   /** ช่วงเวลาดำเนินงานที่แอดมินตั้งในหน้าตั้งค่า (UC4 Scenario A, UC9) */
   assessmentWindows: AssessmentWindow[];
   setAssessmentWindows: React.Dispatch<React.SetStateAction<AssessmentWindow[]>>;
+  /** กฎความประพฤติชุดเดียว หน้าตั้งค่าแก้ ตัวบันทึกและการคิดคะแนนอ่านจากที่นี่ (UC7, UC8) */
+  behaviorRules: BehaviorRule[];
+  setBehaviorRules: React.Dispatch<React.SetStateAction<BehaviorRule[]>>;
+  /** คะแนนเริ่มต้น เพดาน คะแนนต่ำสุด และเกณฑ์เฝ้าระวังหลายระดับ ที่แอดมินตั้ง (UC7 Scenario D) */
+  behaviorScoreConfig: BehaviorScoreConfig;
+  setBehaviorScoreConfig: (config: BehaviorScoreConfig) => void;
 
   getStudent: (studentId: string) => Student | undefined;
   latestScreening: (studentId: string) => Screening | undefined;
   overallRiskOf: (studentId: string) => RiskGroup | null;
   sdqOf: (studentId: string) => SdqAssessment[];
   behaviorOf: (studentId: string) => BehaviorRecord[];
-  behaviorScoreOf: (studentId: string) => number;
+  /** คะแนนความประพฤติปัจจุบัน ใส่ extra เพื่อดูคะแนนหลังบันทึกรายการใหม่ (UC8 ข้อ 11) */
+  behaviorScoreOf: (studentId: string, extra?: { delta: number; at: string }) => number;
+  /** ระดับเฝ้าระวังด้านความประพฤติ 0 = ไม่อยู่ในสถานะ ใส่ extra เพื่อดูระดับหลังบันทึก (UC8 ข้อ 16) */
+  behaviorWatchLevelOf: (studentId: string, extra?: { delta: number; at: string }) => number;
+  /** ถึงเกณฑ์เฝ้าระวังด้านความประพฤติหรือไม่ */
+  isBehaviorWatch: (studentId: string) => boolean;
   caseOf: (studentId: string) => CareCase | undefined;
 
   /** ร่างแบบประเมินที่ยังไม่ส่ง (key จาก draftKey) */
@@ -148,6 +161,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [homeVisitRecords, setHomeVisitRecords] = useState<HomeVisitRecord[]>(seedHomeVisitRecords);
   const [accessLogs, setAccessLogs] = useState<AccessLog[]>([]);
   const [assessmentWindows, setAssessmentWindows] = useState<AssessmentWindow[]>(INITIAL_WINDOWS);
+  const [behaviorRules, setBehaviorRules] = useState<BehaviorRule[]>(seedBehaviorRules);
+  const [behaviorScoreConfig, setBehaviorScoreConfig] = useState<BehaviorScoreConfig>(DEFAULT_BEHAVIOR_SCORE);
   const [drafts, setDrafts] = useState<Record<string, unknown>>({});
 
   const value = useMemo<StoreValue>(() => {
@@ -174,11 +189,18 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         .filter((b) => b.studentId === studentId)
         .sort((a, b) => b.occurredAt.localeCompare(a.occurredAt));
 
-    const behaviorScoreOf = (studentId: string) =>
-      behaviorOf(studentId).reduce((sum, rec) => {
-        const rule = behaviorRules.find((r) => r.ruleId === rec.ruleId);
-        return sum + (rule?.scoreDelta ?? 0);
-      }, 0);
+    const behaviorScoreOf = (studentId: string, extra?: { delta: number; at: string }) => {
+      const items = behaviorOf(studentId).map((rec) => ({
+        delta: behaviorRules.find((r) => r.ruleId === rec.ruleId)?.scoreDelta ?? 0,
+        at: rec.occurredAt,
+      }));
+      return runningScore(extra ? [...items, extra] : items, behaviorScoreConfig);
+    };
+
+    const behaviorWatchLevelOf = (studentId: string, extra?: { delta: number; at: string }) =>
+      watchLevelOf(behaviorScoreOf(studentId, extra), behaviorScoreConfig);
+
+    const isBehaviorWatch = (studentId: string) => behaviorWatchLevelOf(studentId) > 0;
 
     const caseOf = (studentId: string) =>
       careCases.find((c) => c.studentId === studentId && c.status === "active") ??
@@ -513,12 +535,18 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       accessLogs,
       assessmentWindows,
       setAssessmentWindows,
+      behaviorRules,
+      setBehaviorRules,
+      behaviorScoreConfig,
+      setBehaviorScoreConfig,
       getStudent,
       latestScreening,
       overallRiskOf,
       sdqOf,
       behaviorOf,
       behaviorScoreOf,
+      behaviorWatchLevelOf,
+      isBehaviorWatch,
       caseOf,
       getDraft,
       saveDraft,
@@ -536,7 +564,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       closeCase,
       logCitizenIdView,
     };
-  }, [role, screenings, redFlags, nineS, sdq, behaviorRecords, appointments, careCases, homeVisitRecords, accessLogs, assessmentWindows, drafts]);
+  }, [role, screenings, redFlags, nineS, sdq, behaviorRecords, appointments, careCases, homeVisitRecords, accessLogs, assessmentWindows, behaviorRules, behaviorScoreConfig, drafts]);
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }
@@ -547,4 +575,4 @@ export function useStore() {
   return ctx;
 }
 
-export { behaviorRules, dcSummaries, seedDocuments as educationDocuments };
+export { seedBehaviorRules as behaviorRules, dcSummaries, seedDocuments as educationDocuments };

@@ -13,18 +13,16 @@
  */
 
 import { Card, CardContent } from "@/components/ui/card";
-import { behaviorRules } from "@/lib/store";
-import type { BehaviorRecord, BehaviorRule } from "@/lib/types";
+import { RULE_LEVEL_LABEL } from "@/lib/behavior-rules";
+import { useStore } from "@/lib/store";
+import type { BehaviorRecord } from "@/lib/types";
 
-export const SEVERITY_LABEL: Record<BehaviorRule["severity"], string> = {
-  minor: "เล็กน้อย",
-  moderate: "ปานกลาง",
-  severe: "ร้ายแรง",
-  positive: "คะแนนบวก",
-};
+export const SEVERITY_LABEL = RULE_LEVEL_LABEL;
 
-export function ruleOf(ruleId: string) {
-  return behaviorRules.find((r) => r.ruleId === ruleId);
+/** หากฎจากชุดเดียวกับหน้าตั้งค่า กฎที่แอดมินเพิ่มใหม่จึงแสดงชื่อได้ */
+export function useRuleOf() {
+  const { behaviorRules } = useStore();
+  return (ruleId: string) => behaviorRules.find((r) => r.ruleId === ruleId);
 }
 
 export function Stat({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
@@ -63,6 +61,17 @@ export function SourceBadge({ source, evidence }: { source: BehaviorRecord["sour
 
 export function ScoreChip({ delta, size = "md" }: { delta: number; size?: "md" | "lg" }) {
   const positive = delta > 0;
+  // กฎส่งต่อไม่มีคะแนน (UC8 Alt-G) จึงแสดงเป็นสถานะสีกลาง
+  if (delta === 0)
+    return (
+      <span
+        className={`shrink-0 rounded-md bg-muted text-center font-semibold text-muted-foreground ${
+          size === "lg" ? "px-3 py-1.5 text-base" : "w-12 py-1 text-xs"
+        }`}
+      >
+        ส่งต่อ
+      </span>
+    );
   return (
     <span
       className={`shrink-0 rounded-md text-center font-bold ${

@@ -2,13 +2,16 @@
 
 /**
  * ตัวบันทึกพฤติกรรมตัวเดียวของหน้าความประพฤติ (UC8) — ใช้ได้ทั้งครูที่โต๊ะและครูเวรหน้าประตู
- * 1. เลือกพฤติกรรม (แบ่งเป็นต้องปรับปรุง / เชิงบวก) แล้วค้างไว้
+ * หนึ่งรอบบันทึกใช้พฤติกรรมเดียว (UC8 ข้อ 5 และ 17)
+ * 1. เลือกพฤติกรรม (ตัดคะแนน / เพิ่มคะแนน / ส่งต่อ) จากกฎชุดเดียวกับหน้าตั้งค่า เมื่อมีนักเรียนในรายการแล้วจะเปลี่ยนพฤติกรรมไม่ได้จนกว่าจะบันทึกหรือล้างรายการ
+ *    กฎที่บทบาทของครูไม่มีสิทธิ์บันทึกจะกดไม่ได้และบอกว่าใครบันทึกได้ (ข้อ 6, Alt-B ข้อ 5)
  * 2. เพิ่มนักเรียน: สแกนบัตรหรือพิมพ์ชื่อในช่องเดียว (ข้อ 2, Alt-A) สแกนแล้วเข้ารายการทันที
- * 3. เพิ่มรายละเอียดแบบพับไว้: วันที่ย้อนหลัง รายละเอียด รูปหลักฐาน (ข้อ 5, 8) ใช้กับทั้งชุด
- * 4. ตรวจทานรายการที่จัดกลุ่มตามพฤติกรรม (เลือกพฤติกรรมได้ที่ปุ่มด้านบนที่เดียว บันทึกผิดให้เอาออกแล้วสแกนใหม่) แล้วยืนยันบันทึกครั้งเดียว
- * ครูตรวจรายชื่อทั้งรายการก่อนบันทึก ตรงกับ UC8 ข้อ 4 และข้อ 12
- * รอตัดสินใจ: UC8 ข้อ 5 ให้เลือกกฎเดียวต่อรอบ แต่ตัวบันทึกนี้รับหลายกฎในรอบเดียว
+ * 3. เพิ่มรายละเอียดแบบพับไว้: วันที่เกิดพฤติกรรม รายละเอียด รูปหลักฐาน (ข้อ 5, 8) ใช้กับทั้งรอบ
+ * 4. ตรวจรายชื่อพร้อมคะแนนก่อนและหลัง และบอกคนที่จะเข้าหรือขึ้นระดับเฝ้าระวัง (ข้อ 4, 11, 16) แล้วยืนยันบันทึกครั้งเดียว (ข้อ 12)
+ *    กฎส่งต่อไม่ปรับคะแนน และแจ้งครูที่ปรึกษาให้พิจารณาเปิดกรณี (Alt-G)
+ * 5. บันทึกแล้วพฤติกรรมยังค้างไว้ บันทึกรอบถัดไปได้ทันที (ข้อ 17)
  * PROTOTYPE: ยังไม่มีกล้อง พิมพ์เลขประจำตัวหรือกดรายชื่อตัวอย่างแทนการสแกน
+ *   การแจ้งเตือน (ผู้ปกครอง ครูที่ปรึกษา ผู้ที่กำหนดในแต่ละระดับ) แสดงเป็นข้อความหลังบันทึกเท่านั้น ยังไม่ส่งจริง
  *   ออฟไลน์: รายการค้างอยู่ในหน้านี้ กดบันทึกได้เมื่อกลับมาออนไลน์ (Project 2: เก็บคิวในเครื่องแล้วส่งเองเมื่อต่อเน็ตได้)
  */
 
@@ -21,8 +24,10 @@ import { formatThaiDate } from "@/lib/format";
 import { resizeImage } from "@/lib/image";
 import { DEMO_TODAY } from "@/lib/mock-data";
 import { shiftDate } from "@/lib/periods";
-import { behaviorRules, useStore } from "@/lib/store";
-import type { BehaviorRule, Student } from "@/lib/types";
+import { RULE_KIND_LABEL, canRecordRule, recordersText, ruleKind, ruleScoreText, type RuleKind } from "@/lib/behavior-rules";
+import { WATCH_NOTIFY_LABEL } from "@/lib/behavior-score";
+import { useStore } from "@/lib/store";
+import type { Student } from "@/lib/types";
 import { useOnline } from "@/lib/use-online";
 
 /** รูปหลักฐานต่อหนึ่งชุดบันทึก — PROTOTYPE: จำนวนยังไม่ได้ตกลงกับทีม */
@@ -30,19 +35,12 @@ const MAX_EVIDENCE = 3;
 
 interface Entry {
   studentId: string;
-  ruleId: string;
   via: "scan" | "search";
 }
 
 type Feedback = { kind: "added" | "duplicate" | "not_found" | "saved"; text: string } | null;
 
-const signed = (n: number) => (n > 0 ? `+${n}` : String(n));
-
-const RULE_GROUPS: { title: string; match: (r: BehaviorRule) => boolean }[] = [
-  { title: "ต้องปรับปรุง", match: (r) => r.scoreDelta < 0 },
-  { title: "เชิงบวก", match: (r) => r.scoreDelta > 0 },
-];
-const ACTIVE_RULES = behaviorRules.filter((r) => r.isActive);
+const RULE_GROUPS: RuleKind[] = ["deduct", "add", "refer"];
 
 export function BehaviorRecorder({ onClose }: { onClose: () => void }) {
   const store = useStore();
@@ -57,7 +55,19 @@ export function BehaviorRecorder({ onClose }: { onClose: () => void }) {
   const [evidence, setEvidence] = useState<string[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const ruleName = (id: string) => behaviorRules.find((r) => r.ruleId === id)?.name ?? "";
+  const activeRules = store.behaviorRules.filter((r) => r.isActive);
+  const rule = activeRules.find((r) => r.ruleId === ruleId && canRecordRule(r));
+  const ruleName = rule?.name ?? "";
+  const refer = rule ? ruleKind(rule) === "refer" : false;
+  const at = `${occurredOn}T23:59:59`;
+  /** ระดับเฝ้าระวังก่อนและหลังบันทึกของแต่ละคน (ข้อ 16) */
+  const watchChange = (studentId: string) => {
+    const before = store.behaviorWatchLevelOf(studentId);
+    const after = rule ? store.behaviorWatchLevelOf(studentId, { delta: rule.scoreDelta, at }) : before;
+    return { before, after };
+  };
+  /** มีนักเรียนในรายการแล้ว = รอบนี้ล็อกพฤติกรรมไว้ */
+  const locked = entries.length > 0;
   const q = code.trim();
   const isCode = /^\d+$/.test(q);
   // ไม่มีบัตร: พิมพ์ชื่อแล้วกดเลือกจากรายชื่อที่ตรง
@@ -71,8 +81,8 @@ export function BehaviorRecorder({ onClose }: { onClose: () => void }) {
       setFeedback({ kind: "duplicate", text: `${student.fullName} อยู่ในรายการแล้ว` });
       return;
     }
-    setEntries((prev) => [{ studentId: student.studentId, ruleId, via }, ...prev]);
-    setFeedback({ kind: "added", text: `${student.fullName} · ${ruleName(ruleId)}` });
+    setEntries((prev) => [{ studentId: student.studentId, via }, ...prev]);
+    setFeedback({ kind: "added", text: `${student.fullName} · ${ruleName}` });
     navigator.vibrate?.(40);
   };
 
@@ -92,25 +102,39 @@ export function BehaviorRecorder({ onClose }: { onClose: () => void }) {
   };
 
   const save = () => {
-    // บันทึกรวมตามพฤติกรรมและวิธีที่ได้รายชื่อมา (ที่มาของบันทึกจึงถูกต้องรายคน)
-    const groups = new Map<string, string[]>();
-    for (const e of entries) {
-      const key = `${e.ruleId}|${e.via}`;
-      groups.set(key, [...(groups.get(key) ?? []), e.studentId]);
-    }
-    for (const [key, studentIds] of groups) {
-      const [rid, via] = key.split("|");
+    if (!rule) return;
+    // คนที่เข้าหรือขึ้นระดับเฝ้าระวัง ต้องคำนวณก่อนเพิ่มรายการ (Alt-D)
+    const raised = entries
+      .map((e) => ({ id: e.studentId, ...watchChange(e.studentId) }))
+      .filter((w) => w.after > w.before);
+    // พฤติกรรมเดียวทั้งรอบ แยกเฉพาะวิธีที่ได้รายชื่อมา (ที่มาของบันทึกจึงถูกต้องรายคน)
+    for (const via of ["scan", "search"] as const) {
+      const studentIds = entries.filter((e) => e.via === via).map((e) => e.studentId);
+      if (studentIds.length === 0) continue;
       store.addBehaviorRecord({
         studentIds,
-        ruleId: rid,
+        ruleId,
         description: description.trim() || "-",
         occurredOn,
         evidence,
         source: via === "scan" ? "card_scan" : "manual",
       });
     }
-    setFeedback({ kind: "saved", text: `บันทึกแล้ว ${entries.length} คน` });
-    // เก็บพฤติกรรมและวันที่ไว้ เผื่อบันทึกเรื่องเดียวกันต่อ
+    const notes = [`แจ้งผู้ปกครอง ${entries.length} คนในระบบ`];
+    if (refer) notes.push("แจ้งครูที่ปรึกษาให้พิจารณาเปิดกรณีช่วยเหลือ");
+    if (raised.length > 0) {
+      const top = Math.max(...raised.map((w) => w.after));
+      const extra = store.behaviorScoreConfig.watchLevels
+        .slice(0, top)
+        .flatMap((l) => l.notify)
+        .filter((n, i, all) => all.indexOf(n) === i)
+        .map((n) => WATCH_NOTIFY_LABEL[n]);
+      notes.push(
+        `${raised.length} คนเข้าสถานะเฝ้าระวัง แจ้งครูที่ปรึกษา นักเรียน และผู้ปกครอง${extra.length ? ` รวมถึง${extra.join(" ")}` : ""}`
+      );
+    }
+    setFeedback({ kind: "saved", text: `บันทึกแล้ว ${entries.length} คน · ${ruleName} · ${notes.join(" · ")}` });
+    // เก็บพฤติกรรมและวันที่ไว้ เผื่อบันทึกเรื่องเดียวกันต่อ หรือเลือกพฤติกรรมใหม่สำหรับรอบถัดไป
     setEntries([]);
     setDescription("");
     setEvidence([]);
@@ -142,30 +166,62 @@ export function BehaviorRecorder({ onClose }: { onClose: () => void }) {
 
         <div className="flex-1 overflow-y-auto">
           <div className="space-y-3 border-b border-border px-4 py-3">
-            {RULE_GROUPS.map((g) => (
-              <div key={g.title}>
-                <div className="mb-1.5 text-[12.5px] font-semibold">{g.title}</div>
-                <div className="flex flex-wrap gap-2">
-                  {ACTIVE_RULES.filter(g.match).map((r) => (
-                    <button
-                      key={r.ruleId}
-                      type="button"
-                      aria-pressed={ruleId === r.ruleId}
-                      onClick={() => {
-                        setRuleId(r.ruleId);
-                        inputRef.current?.focus();
-                      }}
-                      className={chip(ruleId === r.ruleId)}
-                    >
-                      {r.name} <span className="text-muted-foreground">{signed(r.scoreDelta)}</span>
-                    </button>
-                  ))}
+            {RULE_GROUPS.map((kind) => {
+              const list = activeRules.filter((r) => ruleKind(r) === kind);
+              if (list.length === 0) return null;
+              return (
+                <div key={kind}>
+                  <div className="mb-1.5 text-[12.5px] font-semibold">{RULE_KIND_LABEL[kind]}</div>
+                  <div className="flex flex-wrap gap-2">
+                    {list.map((r) => {
+                      const allowed = canRecordRule(r);
+                      return (
+                        <button
+                          key={r.ruleId}
+                          type="button"
+                          aria-pressed={ruleId === r.ruleId}
+                          disabled={!allowed || (locked && ruleId !== r.ruleId)}
+                          title={allowed ? undefined : `บันทึกได้เฉพาะ${recordersText(r)}`}
+                          onClick={() => {
+                            setRuleId(r.ruleId);
+                            inputRef.current?.focus();
+                          }}
+                          className={`${chip(ruleId === r.ruleId)} text-left disabled:cursor-not-allowed disabled:opacity-40`}
+                        >
+                          {r.name}{" "}
+                          {kind !== "refer" && <span className="text-muted-foreground">{ruleScoreText(r)}</span>}
+                          {!allowed && (
+                            <span className="block text-[11px] font-normal text-muted-foreground">
+                              เฉพาะ{recordersText(r)}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
-            ))}
-            {ruleId && (
+              );
+            })}
+            {ruleId && !locked && (
               <p className="text-[12.5px] text-muted-foreground">
-                คนที่สแกนต่อจากนี้จะบันทึกเป็น <b className="text-foreground">{ruleName(ruleId)}</b>
+                รอบนี้บันทึกเป็น <b className="text-foreground">{ruleName}</b> ทุกคน
+                {refer && " · ไม่ปรับคะแนน บันทึกแล้วแจ้งครูที่ปรึกษาให้พิจารณาเปิดกรณี"}
+              </p>
+            )}
+            {locked && (
+              <p className="flex flex-wrap items-center gap-x-2 text-[12.5px] text-muted-foreground">
+                <span>
+                  รอบนี้บันทึกเป็น <b className="text-foreground">{ruleName}</b> · บันทึกก่อนจึงเปลี่ยนพฤติกรรมได้
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (window.confirm(`ล้างรายการ ${entries.length} คนเพื่อเปลี่ยนพฤติกรรมไหม`)) setEntries([]);
+                  }}
+                  className="font-semibold text-foreground underline underline-offset-2"
+                >
+                  ล้างรายการ
+                </button>
               </p>
             )}
           </div>
@@ -326,46 +382,50 @@ export function BehaviorRecorder({ onClose }: { onClose: () => void }) {
           </div>
 
           <div className="px-4 py-3">
-            <div className="mb-1 text-[12.5px] font-semibold">รายการที่จะบันทึก · {entries.length} คน</div>
-            {/* จัดกลุ่มตามพฤติกรรม เลือกพฤติกรรมได้ที่ปุ่มด้านบนที่เดียว บันทึกผิดให้เอาออกแล้วสแกนใหม่ */}
-            {ACTIVE_RULES.filter((r) => entries.some((e) => e.ruleId === r.ruleId)).map((r) => {
-              const group = entries.filter((e) => e.ruleId === r.ruleId);
-              return (
-                <div key={r.ruleId} className="mt-2">
-                  <div className="text-[12.5px] text-muted-foreground">
-                    <span className="rounded-md bg-muted px-2 py-0.5 font-semibold text-foreground">
-                      {r.name} {signed(r.scoreDelta)}
-                    </span>{" "}
-                    · {group.length} คน
-                  </div>
-                  <div className="divide-y divide-border">
-                    {group.map((e) => {
-                      const s = store.getStudent(e.studentId);
-                      const before = store.behaviorScoreOf(e.studentId);
-                      return (
-                        <div key={e.studentId} className="flex items-center gap-2 py-2">
-                          <div className="min-w-0 flex-1">
-                            <div className="truncate text-[13.5px] font-medium">{s?.fullName}</div>
-                            <div className="text-[11.5px] text-muted-foreground">
-                              {s?.roomName} เลขที่ {s?.classNo} · คะแนน {signed(before)} →{" "}
-                              {signed(before + r.scoreDelta)}
-                            </div>
-                          </div>
-                          <button
-                            type="button"
-                            aria-label={`เอา ${s?.fullName} ออก`}
-                            onClick={() => setEntries((prev) => prev.filter((x) => x.studentId !== e.studentId))}
-                            className="rounded-md p-1.5 text-muted-foreground hover:bg-muted"
-                          >
-                            <X className="size-4" />
-                          </button>
+            <div className="mb-1 text-[12.5px] font-semibold">
+              รายการที่จะบันทึก · {entries.length} คน
+              {rule && entries.length > 0 && (
+                <span className="ml-1.5 rounded-md bg-muted px-2 py-0.5">
+                  {rule.name} {ruleScoreText(rule)}
+                </span>
+              )}
+            </div>
+            <div className="divide-y divide-border">
+              {rule &&
+                entries.map((e) => {
+                  const s = store.getStudent(e.studentId);
+                  // คะแนนก่อนและหลัง คิดตามวันที่เกิดพฤติกรรม และอยู่ระหว่างคะแนนต่ำสุดถึงเพดาน (ข้อ 11, 13)
+                  const before = store.behaviorScoreOf(e.studentId);
+                  const after = store.behaviorScoreOf(e.studentId, { delta: rule.scoreDelta, at });
+                  const capped = !refer && after - before !== rule.scoreDelta;
+                  const watch = watchChange(e.studentId);
+                  return (
+                    <div key={e.studentId} className="flex items-center gap-2 py-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-[13.5px] font-medium">{s?.fullName}</div>
+                        <div className="text-[11.5px] text-muted-foreground">
+                          {s?.roomName} เลขที่ {s?.classNo} ·{" "}
+                          {refer ? `คะแนน ${before} (ไม่ปรับคะแนน)` : `คะแนน ${before} → ${after}`}
+                          {capped && (rule.scoreDelta > 0 ? " (ถึงเพดานแล้ว)" : " (ถึงคะแนนต่ำสุดแล้ว)")}
                         </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })}
+                        {watch.after > watch.before && (
+                          <div className="mt-0.5 text-[11.5px] font-semibold text-foreground">
+                            {watch.before === 0 ? `เข้าสถานะเฝ้าระวังระดับ ${watch.after}` : `ขึ้นเป็นเฝ้าระวังระดับ ${watch.after}`}
+                          </div>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        aria-label={`เอา ${s?.fullName} ออก`}
+                        onClick={() => setEntries((prev) => prev.filter((x) => x.studentId !== e.studentId))}
+                        className="rounded-md p-1.5 text-muted-foreground hover:bg-muted"
+                      >
+                        <X className="size-4" />
+                      </button>
+                    </div>
+                  );
+                })}
+            </div>
           </div>
         </div>
 

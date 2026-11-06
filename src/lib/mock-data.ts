@@ -292,14 +292,21 @@ export const sdqAssessments: SdqAssessment[] = [
   },
 ];
 
+/**
+ * กฎตัวอย่าง คะแนนอิงระดับการดำเนินการในภาคผนวก ข (ว่ากล่าวตักเตือน 5, ทำทัณฑ์บน 10–15, ทำกิจกรรม 20)
+ * กฎส่งต่อไม่มีคะแนน (UC7 Scenario B ข้อ 7) และบางกฎบันทึกได้เฉพาะหัวหน้างานปกครอง (ข้อ 9)
+ */
 export const behaviorRules: BehaviorRule[] = [
-  { ruleId: "BR-01", name: "มาสาย", severity: "minor", scoreDelta: -2, isActive: true },
-  { ruleId: "BR-02", name: "แต่งกายไม่ถูกระเบียบ", severity: "minor", scoreDelta: -1, isActive: true },
-  { ruleId: "BR-03", name: "ไม่ส่งงาน / การบ้าน", severity: "moderate", scoreDelta: -3, isActive: true },
-  { ruleId: "BR-04", name: "ใช้โทรศัพท์ในเวลาเรียน", severity: "moderate", scoreDelta: -3, isActive: true },
-  { ruleId: "BR-05", name: "ทะเลาะวิวาท", severity: "severe", scoreDelta: -10, isActive: true },
-  { ruleId: "BR-06", name: "ช่วยเหลือกิจกรรมโรงเรียน", severity: "positive", scoreDelta: 5, isActive: true },
-  { ruleId: "BR-07", name: "ช่วยเหลือครูหรือเพื่อน", severity: "positive", scoreDelta: 3, isActive: true },
+  { ruleId: "BR-01", name: "มาสาย", severity: "minor", scoreDelta: -5, isActive: true, recordableBy: ["teacher"] },
+  { ruleId: "BR-02", name: "แต่งกายไม่ถูกระเบียบ", severity: "minor", scoreDelta: -5, isActive: true, recordableBy: ["teacher"] },
+  { ruleId: "BR-03", name: "ไม่ส่งงาน / การบ้าน", severity: "minor", scoreDelta: -5, isActive: true, recordableBy: ["teacher"] },
+  { ruleId: "BR-04", name: "ใช้โทรศัพท์ในเวลาเรียน", severity: "moderate", scoreDelta: -10, isActive: true, recordableBy: ["teacher"] },
+  { ruleId: "BR-05", name: "ทะเลาะวิวาท", severity: "moderate", scoreDelta: -15, isActive: true, recordableBy: ["teacher"] },
+  { ruleId: "BR-06", name: "ช่วยเหลือกิจกรรมโรงเรียน", severity: "positive", scoreDelta: 10, isActive: true, recordableBy: ["teacher"] },
+  { ruleId: "BR-07", name: "ช่วยเหลือครูหรือเพื่อน", severity: "positive", scoreDelta: 5, isActive: true, recordableBy: ["teacher"] },
+  { ruleId: "BR-08", name: "ไม่ร่วมกิจกรรมที่โรงเรียนกำหนด", severity: "severe", scoreDelta: -20, isActive: true, recordableBy: ["discipline_head", "executive"] },
+  { ruleId: "BR-09", name: "พกพาอาวุธหรือสิ่งที่ใช้เป็นอาวุธ", severity: "refer", scoreDelta: 0, isActive: true, recordableBy: ["teacher"] },
+  { ruleId: "BR-10", name: "ทะเลาะวิวาทโดยใช้อาวุธ", severity: "refer", scoreDelta: 0, isActive: true, recordableBy: ["discipline_head", "executive"] },
 ];
 
 export const behaviorRecords: BehaviorRecord[] = [

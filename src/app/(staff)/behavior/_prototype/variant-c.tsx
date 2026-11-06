@@ -10,32 +10,35 @@
 import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { ruleKind, ruleScoreText } from "@/lib/behavior-rules";
 import { formatThaiDate, formatThaiTime } from "@/lib/format";
 import { useStore } from "@/lib/store";
 import type { BehaviorRecord } from "@/lib/types";
 import {
   SEVERITY_LABEL,
   SourceBadge,
-  ruleOf,
+  useRuleOf,
 } from "./shared";
 
 export const VARIANT_C_NAME = "จัดกลุ่มตามนักเรียน";
 
 export function VariantC({ records }: { records: BehaviorRecord[] }) {
   const store = useStore();
+  const ruleOf = useRuleOf();
   const [expanded, setExpanded] = useState<string[]>([]);
 
-  /** ยุบบันทึกทั้งหมดเป็นรายนักเรียน เรียงจากคะแนนติดลบมากที่สุด */
+  /** ยุบบันทึกทั้งหมดเป็นรายนักเรียน เรียงจากคะแนนความประพฤติน้อยที่สุด (คะแนนตามค่าตั้งต้นในหน้าตั้งค่า) */
   const groups = Array.from(new Set(records.map((r) => r.studentId)))
     .map((studentId) => {
       const own = records.filter((r) => r.studentId === studentId);
-      const total = own.reduce((sum, r) => sum + (ruleOf(r.ruleId)?.scoreDelta ?? 0), 0);
+      const total = store.behaviorScoreOf(studentId);
       return {
         studentId,
         student: store.getStudent(studentId),
         records: own,
         total,
-        severeCount: own.filter((r) => ruleOf(r.ruleId)?.severity === "severe").length,
+        watchLevel: store.behaviorWatchLevelOf(studentId),
+        severeCount: own.filter((r) => ["severe", "refer"].includes(ruleOf(r.ruleId)?.severity ?? "")).length,
         lastAt: own[0]?.occurredAt ?? "",
       };
     })
@@ -50,7 +53,7 @@ export function VariantC({ records }: { records: BehaviorRecord[] }) {
         <div>
           <h2 className="text-[15.5px] font-bold">ความประพฤติรายนักเรียน</h2>
           <p className="text-xs text-muted-foreground">
-            เรียงจากคะแนนสะสมติดลบมากที่สุด · คลิกชื่อเพื่อดูบันทึกทั้งหมดของนักเรียนคนนั้น
+            เรียงจากคะแนนน้อยที่สุด · คลิกชื่อเพื่อดูบันทึกทั้งหมดของนักเรียนคนนั้น
           </p>
         </div>
         <span className="flex-1" />
@@ -69,13 +72,9 @@ export function VariantC({ records }: { records: BehaviorRecord[] }) {
                   className="flex w-full items-center gap-3 px-5 py-4 text-left hover:bg-muted/40"
                 >
                   <span
-                    className={`flex size-11 shrink-0 items-center justify-center rounded-full text-[15px] font-bold ${
-                      g.total < 0
-                        ? "bg-risk-red-bg text-risk-red"
-                        : "bg-risk-green-bg text-risk-green"
-                    }`}
+                    className="flex size-11 shrink-0 items-center justify-center rounded-full bg-muted text-[15px] font-bold"
                   >
-                    {g.total > 0 ? `+${g.total}` : g.total}
+                    {g.total}
                   </span>
 
                   <span className="min-w-0 flex-1">
@@ -86,6 +85,11 @@ export function VariantC({ records }: { records: BehaviorRecord[] }) {
                     </span>
                   </span>
 
+                  {g.watchLevel > 0 && (
+                    <span className="shrink-0 rounded-md bg-muted px-2.5 py-1 text-[11.5px] font-semibold">
+                      เฝ้าระวังระดับ {g.watchLevel}
+                    </span>
+                  )}
                   {g.severeCount > 0 && (
                     <span className="shrink-0 rounded-md bg-risk-red-bg px-2.5 py-1 text-[11.5px] font-semibold text-risk-red">
                       ร้ายแรง {g.severeCount} ครั้ง
@@ -116,8 +120,10 @@ export function VariantC({ records }: { records: BehaviorRecord[] }) {
 }
 
 function RecordRow({ rec }: { rec: BehaviorRecord }) {
+  const ruleOf = useRuleOf();
   const rule = ruleOf(rec.ruleId);
   const positive = (rule?.scoreDelta ?? 0) > 0;
+  const refer = rule ? ruleKind(rule) === "refer" : false;
   return (
     <div className="flex gap-3 border-b border-border py-3 last:border-0">
       <span className="w-28 shrink-0 text-[12px] text-muted-foreground">
@@ -144,10 +150,10 @@ function RecordRow({ rec }: { rec: BehaviorRecord }) {
       </span>
       <span
         className={`w-12 shrink-0 self-start text-right text-[15px] font-bold ${
-          positive ? "text-risk-green" : "text-risk-red"
+          refer ? "text-[13px] text-muted-foreground" : positive ? "text-risk-green" : "text-risk-red"
         }`}
       >
-        {positive ? `+${rule?.scoreDelta}` : rule?.scoreDelta}
+        {rule ? ruleScoreText(rule) : ""}
       </span>
     </div>
   );

@@ -1,12 +1,11 @@
 "use client";
 
 /**
- * หน้าตั้งค่าระบบ
+ * หน้าตั้งค่าระบบ (แอดมิน)
+ * แบ่งเป็นแท็บตามเรื่อง (?tab=windows|rules|score|audit) รายการเป็นแถวสรุป กดแล้วแก้ในแผงด้านข้าง
+ * รวมแบบร่าง A, B, C เดิมเหลือแบบเดียว เพราะหน้ายาวต้องเลื่อนมากและเข้าถึงเรื่องที่จะแก้ได้ช้า
  *
- * PROTOTYPE: หน้านี้เปรียบเทียบ 2 แกนพร้อมกัน
- *   ?variant=A|B|C  — หน้าตาของหน้าตั้งค่า (ลูกศร ← →)
- *   ?confirm=A|B|C  — วิธีถามยืนยันก่อนสลับสวิตช์เปิด-ปิด (ลูกศร ↑ ↓)
- * แถบสลับแสดงเฉพาะตอน dev เมื่อเลือกได้แล้วให้ยุบเหลืออย่างละแบบและลบโฟลเดอร์ _prototype/ ทิ้ง
+ * PROTOTYPE: ยังเปรียบเทียบวิธีถามยืนยันก่อนสลับสวิตช์อยู่ ?confirm=A|B|C (ลูกศร ↑ ↓ แสดงเฉพาะตอน dev)
  */
 
 import { Suspense, useMemo } from "react";
@@ -18,15 +17,9 @@ import { CURRENT_TERM, SCHOOL_NAME } from "@/lib/mock-data";
 import { CONFIRM_VARIANTS, ConfirmProvider, type ConfirmStyle } from "./_prototype/confirm";
 import type { ImpactContext } from "./_prototype/confirm-text";
 import { useSettingsPrototype, windowStatus } from "./_prototype/state";
-import { VariantA, VARIANT_A_NAME } from "./_prototype/variant-a";
-import { VariantB, VARIANT_B_NAME } from "./_prototype/variant-b";
-import { VariantC, VARIANT_C_NAME } from "./_prototype/variant-c";
+import { SettingsWorkspace } from "./_prototype/workspace";
 
-const VARIANTS = [
-  { key: "A", name: VARIANT_A_NAME },
-  { key: "B", name: VARIANT_B_NAME },
-  { key: "C", name: VARIANT_C_NAME },
-];
+const LAYOUT = [{ key: "A", name: "แท็บ + แถวสรุป + แผงแก้ไข" }];
 
 export default function SettingsPage() {
   return (
@@ -38,7 +31,6 @@ export default function SettingsPage() {
 
 function SettingsContent() {
   const params = useSearchParams();
-  const variant = params.get("variant") ?? "A";
   const confirmStyle = (params.get("confirm") ?? "A") as ConfirmStyle;
 
   const store = useStore();
@@ -72,12 +64,10 @@ function SettingsContent() {
         subtitle={`${SCHOOL_NAME} · ${CURRENT_TERM.label} · เปิดให้ทำอยู่ ${openNow} รอบ · กฎที่ใช้งาน ${activeRules} จาก ${proto.rules.length} ข้อ`}
       />
 
-      {variant === "A" && <VariantA proto={proto} ruleUsage={ruleUsage} impact={impact} />}
-      {variant === "B" && <VariantB proto={proto} ruleUsage={ruleUsage} impact={impact} />}
-      {variant === "C" && <VariantC proto={proto} ruleUsage={ruleUsage} impact={impact} />}
+      <SettingsWorkspace proto={proto} ruleUsage={ruleUsage} impact={impact} />
 
       <PrototypeSwitcher
-        variants={VARIANTS}
+        variants={LAYOUT}
         secondary={{
           param: "confirm",
           label: "การยืนยัน",

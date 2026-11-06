@@ -51,9 +51,6 @@ export const PROCESS_KINDS: Partial<Record<ProcessKey, AssessmentKind[]>> = {
   home_visit: ["home_visit"],
 };
 
-/** คะแนนความประพฤติสุทธิต่ำกว่าหรือเท่ากับค่านี้ถือว่าถึงเกณฑ์เฝ้าระวัง — PROTOTYPE: รอ UC7 Scenario D ให้แอดมินกำหนด */
-export const BEHAVIOR_WATCH_SCORE = -5;
-
 export interface Item {
   process: ProcessKey;
   status: Status;
@@ -233,13 +230,14 @@ export function processStatus(store: Store, termId: string): { items: Item[]; su
     }
 
     // ---- ความประพฤติ: ไม่มีรอบ แสดงเฉพาะคนที่ถึงเกณฑ์เฝ้าระวัง
-    const score = store.behaviorScoreOf(id);
-    if (score <= BEHAVIOR_WATCH_SCORE) {
+    // เกณฑ์เฝ้าระวังมาจากหน้าตั้งค่า (UC7 Scenario D)
+    if (store.isBehaviorWatch(id)) {
+      const score = store.behaviorScoreOf(id);
       items.push({
         process: "behavior",
         status: "watch",
         student,
-        detail: `คะแนนความประพฤติสุทธิ ${score} (เกณฑ์เฝ้าระวัง ${BEHAVIOR_WATCH_SCORE})`,
+        detail: `เฝ้าระวังระดับ ${store.behaviorWatchLevelOf(id)} · คะแนนความประพฤติ ${score}`,
         href: `/students/${id}`,
         action: "ดูประวัติ",
       });

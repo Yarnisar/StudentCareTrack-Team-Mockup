@@ -181,12 +181,17 @@ export interface EqAssessment {
   assessedAt: string;
 }
 
+/** บทบาทที่บันทึกกฎได้ (UC7 Scenario B ข้อ 9) */
+export type RuleRecorder = "teacher" | "discipline_head" | "executive";
+
 export interface BehaviorRule {
   ruleId: string;
   name: string;
-  severity: "minor" | "moderate" | "severe" | "positive";
+  /** ชนิดและระดับการดำเนินการ ดู lib/behavior-rules.ts (refer = ส่งต่อ ไม่มีคะแนน) */
+  severity: "minor" | "moderate" | "severe" | "positive" | "refer";
   scoreDelta: number;
   isActive: boolean;
+  recordableBy: RuleRecorder[];
 }
 
 export interface BehaviorRecord {
@@ -297,9 +302,9 @@ export interface CareFollowup {
 export type CaseUrgency = "high" | "medium" | "low";
 
 export const CASE_URGENCY_LABEL: Record<CaseUrgency, string> = {
-  high: "เร่งด่วน",
-  medium: "ปานกลาง",
-  low: "ไม่เร่งด่วน",
+  high: "เร่งด่วนมาก",
+  medium: "เร่งด่วน",
+  low: "ปกติ",
 };
 
 export interface CareCase {

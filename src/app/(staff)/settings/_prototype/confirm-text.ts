@@ -88,9 +88,12 @@ export function ruleActiveConfirm(rule: BehaviorRule, usedCount: number) {
       }
     : {
         title: `เปิดใช้งานกฎ "${name}" ?`,
-        description: `กฎนี้จะกลับไปอยู่ในตัวเลือกของครู โดยมีผลต่อคะแนน ${
-          rule.scoreDelta > 0 ? `+${rule.scoreDelta}` : rule.scoreDelta
-        } ต่อการบันทึกหนึ่งครั้ง`,
+        description:
+          rule.severity === "refer"
+            ? "กฎนี้จะกลับไปอยู่ในตัวเลือกของครู เป็นกฎส่งต่อที่ไม่มีคะแนน บันทึกแล้วแจ้งครูที่ปรึกษาให้พิจารณาเปิดกรณี"
+            : `กฎนี้จะกลับไปอยู่ในตัวเลือกของครู โดยมีผลต่อคะแนน ${
+                rule.scoreDelta > 0 ? `+${rule.scoreDelta}` : rule.scoreDelta
+              } ต่อการบันทึกหนึ่งครั้ง`,
         confirmLabel: "เปิดใช้งาน",
         doneLabel: `เปิดใช้งานกฎ "${name}" แล้ว`,
         danger: false,
