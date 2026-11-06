@@ -2,9 +2,10 @@
 
 /**
  * ภาพรวมของแอดมินโรงเรียน (UC1): โครงเดียวกับภาพรวมของครูประจำชั้น ต่างกันที่ขอบเขต
- * ตารางสถานะ 5 กระบวนการ → ตารางรายห้อง → กดห้องเพื่อดูสถานะรายคนของห้องนั้น
+ * ตารางสถานะ 5 กระบวนการ → ตารางรายห้อง → กดห้องเพื่อดูตัวเลขของห้องนั้น
  * ตัวกรองปีการศึกษา / ภาคเรียน / ระดับชั้น / ห้อง / สถานะ (รายงาน 3.2.1) และส่งออกตามตัวกรองปัจจุบัน (Subflow C)
- * แอดมินเห็นเฉพาะสถานะการดำเนินงาน ไม่เห็นผลคัดกรองรายคน (ตาราง 3.4: ผลคัดกรองของแอดมิน = จำนวนรวม)
+ * แอดมินเห็นเป็นจำนวนเท่านั้น ไม่เห็นชื่อนักเรียนหรือสถานะรายคน (UC1 Post-condition 3, หัวข้อ 3.4.1)
+ * ส่งออกได้เฉพาะสถิติรายห้องที่ไม่มีชื่อนักเรียน (UC1 Scenario A ข้อ 3)
  */
 
 import { useState } from "react";
@@ -13,10 +14,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { NativeSelect } from "@/components/ui/native-select";
 import { downloadCsv } from "@/lib/csv";
-import { formatThaiDate } from "@/lib/format";
 import { CURRENT_TERM } from "@/lib/mock-data";
 import { useStore } from "@/lib/store";
-import { Filter, ProcessTable, STATUS_TAG } from "../_shared/process-table";
+import { Filter, ProcessTable } from "../_shared/process-table";
 import { PROCESS_LABEL, STATUS_LABEL, type ProcessKey, type Status } from "../_homeroom/process-status";
 import { PagerNumbered, usePagination } from "./pagination";
 import {
@@ -41,8 +41,6 @@ const STATUS_FILTER_LABEL: Record<StatusFilter, string> = {
   done: STATUS_LABEL.done,
   all: "ทุกสถานะ",
 };
-
-const STATUS_RANK: Record<Status, number> = { overdue: 0, near_due: 1, pending: 2, watch: 3, done: 4 };
 
 const YEARS = [CURRENT_TERM.academicYear, CURRENT_TERM.academicYear - 1];
 const SEMESTERS = [1, 2];
@@ -73,10 +71,6 @@ export function AdminOverview() {
   const rooms = allRooms.filter((r) => (level === "all" || r.level === level) && (room === "all" || r.room === room));
   const items = adminItems(students, windows);
   const summaries = adminSummaries(items, students, windows);
-  // เรียงเหมือนภาพรวมของครู: เกินกำหนดก่อน แล้วตามเลขที่
-  const shown = items
-    .filter((i) => matches(i, process, status))
-    .sort((a, b) => STATUS_RANK[a.status] - STATUS_RANK[b.status] || a.student.classNo - b.student.classNo);
   const selectedRoom = room === "all" ? null : allRooms.find((r) => r.room === room);
 
   const scopeLabel = selectedRoom
@@ -94,19 +88,16 @@ export function AdminOverview() {
     .map(({ room: r, own }) => ({ room: r, own, selected: own.filter((i) => matches(i, process, status)).length }))
     .sort((a, b) => b.selected - a.selected || a.room.room.localeCompare(b.room.room, "th"));
   const roomPager = usePagination(roomRows, pageSize);
-  const itemPager = usePagination(shown, 20);
 
   const pick = (p: ProcessKey, s: Status) => {
     const same = p === process && s === status;
     setProcess(same ? "all" : p);
     setStatus(same ? "open" : s);
     roomPager.reset();
-    itemPager.reset();
   };
   const openRoom = (r: Room) => {
     setLevel(r.level);
     setRoom(r.room);
-    itemPager.reset();
   };
   const backToSchool = () => {
     setRoom("all");
@@ -118,26 +109,9 @@ export function AdminOverview() {
   };
 
   const exportCsv = () => {
-    if (selectedRoom) {
-      downloadCsv(
-        `ภาพรวม-${selectedRoom.room.replace("/", "-")}-${CURRENT_TERM.termId}.csv`,
-        ["ห้อง", "เลขที่", "ชื่อ-สกุล", "กระบวนการ", "สถานะ", "รายละเอียด", "ครบกำหนด"],
-        shown.map((i) => [
-          i.student.room,
-          i.student.classNo,
-          i.student.name,
-          PROCESS_LABEL[i.process],
-          STATUS_LABEL[i.status],
-          i.detail,
-          i.due ? formatThaiDate(i.due) : "",
-        ])
-      );
-      return;
-    }
-    // ไม่ได้เลือกห้อง: ส่งออกสรุปรายห้อง ไม่ส่งรายชื่อนักเรียนทั้งโรงเรียน
     const count = (own: AdminItem[], p: ProcessKey, s: Status) => own.filter((i) => i.process === p && i.status === s).length;
     downloadCsv(
-      `ภาพรวม-${level === "all" ? "ทั้งโรงเรียน" : `ม${level}`}-${CURRENT_TERM.termId}.csv`,
+      `ภาพรวม-${selectedRoom ? selectedRoom.room.replace("/", "-") : level === "all" ? "ทั้งโรงเรียน" : `ม${level}`}-${CURRENT_TERM.termId}.csv`,
       [
         "ห้อง",
         "ครูประจำชั้น",
@@ -233,8 +207,7 @@ export function AdminOverview() {
             onChange={(e) => {
               setStatus(e.target.value as StatusFilter);
               roomPager.reset();
-              itemPager.reset();
-            }}
+                      }}
             className="w-48"
           >
             {(Object.keys(STATUS_FILTER_LABEL) as StatusFilter[]).map((s) => (
@@ -246,7 +219,7 @@ export function AdminOverview() {
         </Filter>
         <span className="flex-1" />
         <Button variant="outline" className="h-10" onClick={exportCsv} disabled={noData}>
-          <Download className="size-4" /> {selectedRoom ? `ส่งออกรายการ (${n(shown.length)})` : "ส่งออกสรุปรายห้อง"}
+          <Download className="size-4" /> ส่งออกสรุปรายห้อง
         </Button>
       </div>
 
@@ -286,12 +259,12 @@ export function AdminOverview() {
         </CardContent>
       </Card>
 
-      {!noData && !selectedRoom && (
+      {!noData && (
         <Card className="mt-5">
           <CardContent className="p-6">
             <h2 className="text-[15.5px] font-bold">ห้องเรียน · {n(rooms.length)} ห้อง</h2>
             <p className="mt-0.5 mb-3 text-[12.5px] text-muted-foreground">
-              เรียงจากห้องที่มีงาน “{selectionLabel}” มากที่สุด · กดห้องเพื่อดูรายชื่อ
+              เรียงจากห้องที่มีงาน “{selectionLabel}” มากที่สุด · กดห้องเพื่อดูตัวเลขของห้องนั้น
             </p>
             <table className="w-full text-[13.5px]">
               <thead>
@@ -355,60 +328,6 @@ export function AdminOverview() {
                 roomPager.reset();
               }}
             />
-          </CardContent>
-        </Card>
-      )}
-
-      {!noData && selectedRoom && (
-        <Card className="mt-5">
-          <CardContent className="p-6">
-            <h2 className="text-[15.5px] font-bold">
-              {selectedRoom.room} · {selectionLabel} · {n(shown.length)} รายการ
-            </h2>
-            <p className="mt-0.5 text-[12.5px] text-muted-foreground">
-              แสดงเฉพาะสถานะการดำเนินงาน ผลคัดกรองและรายละเอียดรายคนอยู่กับครูประจำชั้น
-            </p>
-            <div className="mt-4 space-y-2">
-              {itemPager.slice.map((item, i) => (
-                <div
-                  key={`${item.process}-${item.student.id}-${i}`}
-                  className="flex flex-wrap items-center gap-3 rounded-xl border border-border p-3.5"
-                >
-                  <span
-                    className={`w-28 shrink-0 rounded-md px-2.5 py-1 text-center text-[11.5px] font-semibold ${STATUS_TAG[item.status]}`}
-                  >
-                    {STATUS_LABEL[item.status]}
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-[14px] font-semibold">
-                      {item.student.name}
-                      <span className="ml-2 text-[12px] font-normal text-muted-foreground">
-                        {PROCESS_LABEL[item.process]}
-                      </span>
-                    </span>
-                    <span className="block text-[12px] text-muted-foreground">
-                      เลขที่ {item.student.classNo} · {item.detail}
-                      {item.due && item.status !== "done" && ` · ครบกำหนด ${formatThaiDate(item.due)}`}
-                    </span>
-                  </span>
-                </div>
-              ))}
-              {shown.length === 0 && (
-                <p className="py-10 text-center text-[13px] text-muted-foreground">
-                  ไม่มีรายการในสถานะนี้ ลองเปลี่ยนตัวกรอง
-                </p>
-              )}
-            </div>
-            {itemPager.totalPages > 1 && (
-              <PagerNumbered
-                page={itemPager.page}
-                totalPages={itemPager.totalPages}
-                setPage={itemPager.setPage}
-                from={itemPager.from}
-                to={itemPager.to}
-                total={itemPager.total}
-              />
-            )}
           </CardContent>
         </Card>
       )}

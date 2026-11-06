@@ -1,5 +1,5 @@
 /**
- * บทบาทผู้ใช้และสิทธิ์เข้าถึงหน้า (รายงาน 3.2, ตาราง 3.1)
+ * บทบาทผู้ใช้และสิทธิ์เข้าถึงหน้า (รายงาน 3.4.1, ตาราง 3.4)
  *
  * PROTOTYPE: ยังไม่มีบัญชีจริง บทบาทเลือกจากหน้า login หรือแถบสลับบทบาท (RoleSwitcher)
  * Project 2: บทบาทและขอบเขตความรับผิดชอบมาจากระบบยืนยันตัวตนกลาง และ backend ต้องตรวจสิทธิ์ซ้ำทุกคำขอ
@@ -59,8 +59,16 @@ const TEACHER_PAGES = [
   "/care-cases",
 ];
 
+/**
+ * แอดมินดูภาพรวมเป็นจำนวน ตั้งค่า และจัดทำเอกสาร ปพ. เท่านั้น (3.4.1)
+ * ไม่เข้าหน้าที่มีข้อมูลรายคน: ผลคัดกรอง ผล SDQ/EQ รายละเอียด case ผลเยี่ยมบ้าน ความประพฤติ และคุณลักษณะฯ
+ * การตั้งค่าช่วงเวลาเยี่ยมบ้าน (UC4 Scenario A) และกฎความประพฤติ (UC7) อยู่ในหน้าตั้งค่า
+ * PROTOTYPE: ยังไม่มีหน้าจัดทำบัตรนักเรียน (UC14)
+ */
+const ADMIN_PAGES = ["/dashboard", "/documents", "/settings"];
+
 const ALLOWED: Record<Role, string[]> = {
-  admin: [...TEACHER_PAGES, "/settings"],
+  admin: ADMIN_PAGES,
   homeroom: TEACHER_PAGES,
   subject: ["/behavior", "/characteristics"],
   student: ["/portal/student"],
@@ -78,11 +86,11 @@ export function defaultRoleFor(pathname: string): Role {
 
 /**
  * ดูข้อมูลรายบุคคลของนักเรียนได้หรือไม่ (UC2 Alternate: ไม่มีสิทธิ์)
- * แอดมินดูได้ทั้งโรงเรียน ครูประจำชั้นดูได้เฉพาะห้องที่รับผิดชอบ
+ * UC2 เป็นของครูและผู้ปกครอง ครูประจำชั้นดูได้เฉพาะห้องที่รับผิดชอบ
+ * แอดมินไม่เห็นข้อมูลรายคน (3.4.1) — ข้อมูลรายคนที่แอดมินใช้มีแค่ในงานจัดทำบัตรและเอกสาร ปพ.
  * PROTOTYPE: เทียบจากชื่อห้อง · Project 2 ใช้ Assignment จริงและตรวจซ้ำที่ backend
  */
 export function canViewStudent(role: Role, roomName: string): boolean {
-  if (role === "admin") return true;
   if (role === "homeroom") return roomName === ROLE_INFO.homeroom.user.scope;
   return false;
 }

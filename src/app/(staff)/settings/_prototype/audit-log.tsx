@@ -12,19 +12,22 @@ export interface AuditEntry {
   by: string;
 }
 
+/**
+ * ประวัติที่แอดมินเห็นบอกแค่ว่ามีการทำอะไร โดยใคร เมื่อไร ไม่ระบุชื่อนักเรียนหรือรายละเอียดเหตุการณ์ (3.4.1)
+ */
 export function useAuditEntries(): AuditEntry[] {
   const store = useStore();
   return [
     ...store.behaviorRecords.slice(0, 4).map((b) => ({
       at: b.occurredAt,
       action: "CREATE_BEHAVIOR",
-      detail: `บันทึกความประพฤติ: ${b.description}`,
+      detail: "บันทึกความประพฤติ 1 รายการ",
       by: b.recordedByName,
     })),
     ...store.screenings.slice(0, 3).map((s) => ({
       at: s.screenedAt,
       action: "CREATE_SCREENING",
-      detail: `คัดกรองนักเรียน ${store.getStudent(s.studentId)?.fullName ?? s.studentId}`,
+      detail: "บันทึกผลคัดกรอง 1 คน",
       by: s.screenedBy,
     })),
   ].sort((a, b) => b.at.localeCompare(a.at));
