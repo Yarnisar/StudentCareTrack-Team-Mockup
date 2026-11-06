@@ -70,7 +70,7 @@ interface StoreValue {
   homeVisitRecords: HomeVisitRecord[];
   /** ประวัติการเปิดดูเลขบัตรประชาชน เรียงใหม่สุดก่อน */
   accessLogs: AccessLog[];
-  /** ช่วงเวลาดำเนินงานที่แอดมินตั้งในหน้าตั้งค่า (UC3 Subflow A, UC8) */
+  /** ช่วงเวลาดำเนินงานที่แอดมินตั้งในหน้าตั้งค่า (UC4 Scenario A, UC9) */
   assessmentWindows: AssessmentWindow[];
   setAssessmentWindows: React.Dispatch<React.SetStateAction<AssessmentWindow[]>>;
 
@@ -90,7 +90,7 @@ interface StoreValue {
   saveRedFlag: (studentId: string, answers: Record<string, boolean>) => AssessmentOutcome;
   saveNineS: (studentId: string, answers: Record<string, 0 | 1 | 2>) => AssessmentOutcome;
   saveSdq: (studentId: string, rater: SdqRater, answers: Record<number, 0 | 1 | 2>) => SdqAssessment;
-  /** บันทึกพฤติกรรมเดียวกันให้นักเรียนหนึ่งคนหรือหลายคน (UC7 ข้อ 3) */
+  /** บันทึกพฤติกรรมเดียวกันให้นักเรียนหนึ่งคนหรือหลายคน (UC8) */
   addBehaviorRecord: (input: {
     studentIds: string[];
     ruleId: string;

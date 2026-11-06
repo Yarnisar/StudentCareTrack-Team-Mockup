@@ -196,7 +196,7 @@ export interface BehaviorRecord {
   description: string;
   occurredAt: string;
   recordedByName: string;
-  /** card_scan = เลือกนักเรียนจากการสแกนบัตร (UC7 Subflow A) */
+  /** card_scan = เลือกนักเรียนจากการสแกนบัตร (UC8 ข้อ 2) */
   source: "manual" | "card_scan";
   /** รูปหลักฐาน (data URL ที่ย่อแล้ว) — PROTOTYPE: Project 2 เก็บไฟล์บน server แล้วเก็บแค่ลิงก์ */
   evidence?: string[];
@@ -289,7 +289,7 @@ export interface CareFollowup {
   result: string;
   followupDate: string;
   recordedByName: string;
-  /** วันติดตามครั้งถัดไปที่กำหนดตอนบันทึกครั้งนี้ (UC10 Subflow B) */
+  /** วันติดตามครั้งถัดไปที่กำหนดตอนบันทึกครั้งนี้ (UC11 ข้อ 14) */
   nextFollowupDate?: string;
 }
 

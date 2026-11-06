@@ -44,14 +44,14 @@ const STATUS_RANK: Record<Status, number> = { overdue: 0, near_due: 1, pending: 
 /** case ที่เร่งด่วนกว่าขึ้นก่อนเมื่อสถานะเท่ากัน */
 const URGENCY_RANK: Record<CaseUrgency, number> = { high: 0, medium: 1, low: 2 };
 
-/** ช่วงเวลาในหน้าตั้งค่าที่เป็นของแต่ละกระบวนการ (คัดกรองรวม Red Flag และ 9S ตาม UC5) */
+/** ช่วงเวลาในหน้าตั้งค่าที่เป็นของแต่ละกระบวนการ (คัดกรองรวม Red Flag และ 9S ตาม UC6) */
 export const PROCESS_KINDS: Partial<Record<ProcessKey, AssessmentKind[]>> = {
   screening: ["screening", "red_flag", "nine_s"],
   assessment: ["sdq", "eq"],
   home_visit: ["home_visit"],
 };
 
-/** คะแนนความประพฤติสุทธิต่ำกว่าหรือเท่ากับค่านี้ถือว่าถึงเกณฑ์เฝ้าระวัง — PROTOTYPE: รอ UC6/7 */
+/** คะแนนความประพฤติสุทธิต่ำกว่าหรือเท่ากับค่านี้ถือว่าถึงเกณฑ์เฝ้าระวัง — PROTOTYPE: รอ UC7 Scenario D ให้แอดมินกำหนด */
 export const BEHAVIOR_WATCH_SCORE = -5;
 
 export interface Item {
@@ -102,7 +102,7 @@ export function processStatus(store: Store, termId: string): { items: Item[]; su
   for (const student of store.students) {
     const id = student.studentId;
 
-    // ---- คัดกรอง (UC5): 6 มิติ → Red Flag ของมิติสุขภาพจิต → 9S เมื่อ Red Flag ไม่พบความเสี่ยง (Subflow A)
+    // ---- คัดกรอง (UC6): 6 มิติ → Red Flag ของมิติสุขภาพจิต → 9S เมื่อ Red Flag ไม่พบความเสี่ยง (Scenario B)
     const screening = store.screenings.find((s) => s.studentId === id && s.termId === termId);
     const redFlag = store.redFlags.find((r) => r.studentId === id && r.termId === termId);
     const nineS = store.nineS.find((n) => n.studentId === id && n.termId === termId);
@@ -138,7 +138,7 @@ export function processStatus(store: Store, termId: string): { items: Item[]; su
       );
     }
 
-    // ---- การประเมิน (UC9): SDQ 3 ฉบับ (ครู / นักเรียน / ผู้ปกครอง) ที่ระบบเปิดเมื่อ Red Flag หรือ 9S ควรดูแล
+    // ---- การประเมิน (UC10): SDQ 3 ฉบับ (ครู / นักเรียน / ผู้ปกครอง) ที่ระบบเปิดเมื่อ Red Flag หรือ 9S ควรดูแล
     // PROTOTYPE: ยังไม่มี EQ
     const sdq = store.sdq.filter((s) => s.studentId === id && s.termId === termId);
     if (sdq.length > 0) {
@@ -196,7 +196,7 @@ export function processStatus(store: Store, termId: string): { items: Item[]; su
       items.push(open("home_visit", "home_visit", { student, detail: "รอผู้ปกครองยืนยันวันนัด" }));
     }
 
-    // ---- การติดตามช่วยเหลือ (UC10): ครบกำหนดตามวันติดตามครั้งถัดไปที่ครูกำหนดใน case
+    // ---- การติดตามช่วยเหลือ (UC11): ครบกำหนดตามวันติดตามครั้งถัดไปที่ครูกำหนดใน case
     const cases = store.careCases.filter((c) => c.studentId === id);
     const activeCase = cases.find((c) => c.status === "active");
     if (activeCase) {
