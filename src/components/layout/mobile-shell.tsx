@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronLeft, Heart, Home, LayoutGrid, QrCode, User, ClipboardList } from "lucide-react";
+import { ChevronLeft, Heart, Home, LayoutGrid, QrCode, User, ClipboardList, UserRound } from "lucide-react";
 import type { ReactNode } from "react";
 
 const STUDENT_TABS = [
-  { href: "/portal/student", label: "หน้าหลัก", icon: LayoutGrid },
+  { href: "/portal/student", label: "ข้อมูลของฉัน", icon: UserRound },
   { href: "/portal/student/card", label: "บัตรของฉัน", icon: QrCode },
   { href: "/portal/student/sdq", label: "แบบประเมิน", icon: ClipboardList },
 ];
@@ -14,7 +14,8 @@ const STUDENT_TABS = [
 const PARENT_TABS = [
   { href: "/portal/parent", label: "หน้าหลัก", icon: LayoutGrid },
   { href: "/portal/parent/appointment", label: "นัดหมาย", icon: Home },
-  { href: "/portal/parent/results", label: "ผลของบุตร", icon: Heart },
+  { href: "/portal/parent/results", label: "ผลประเมิน", icon: Heart },
+  { href: "/portal/parent/child", label: "ข้อมูลบุตร", icon: UserRound },
 ];
 
 export function MobileShell({

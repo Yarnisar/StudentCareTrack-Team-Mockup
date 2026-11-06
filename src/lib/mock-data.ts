@@ -26,6 +26,13 @@ import {
  */
 export const DEMO_TODAY = "2570-02-16";
 
+/**
+ * บุตรหลานที่เชื่อมกับบัญชีผู้ปกครองตัวอย่าง (UC3 ข้อ 2) และนักเรียนที่ล็อกอินใน portal
+ * PROTOTYPE: การเชื่อมบัญชีจริงมาจาก IAM ของ Team B
+ */
+export const PORTAL_STUDENT_ID = "30125";
+export const PARENT_CHILDREN: string[] = [PORTAL_STUDENT_ID];
+
 export const CURRENT_TERM = {
   termId: "T2569-2",
   academicYear: 2569,

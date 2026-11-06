@@ -167,6 +167,9 @@ interface StoreValue {
   sendReferral: (caseId: string) => void;
   /** แอดมินเปลี่ยนสถานะเอกสารส่งต่อ โดยไม่เปิดอ่านเนื้อหา (Scenario D ข้อ 6) */
   setReferralStatus: (caseId: string, status: ReferralStatus) => void;
+  /** id การแจ้งเตือนที่ผู้ใช้เปิดอ่านแล้ว (UC3 ข้อ 6) */
+  readNotifications: string[];
+  markNotificationRead: (id: string) => void;
   /** ผลประเมินคุณลักษณะทุกรอบ (UC13) */
   dcAssessments: DcAssessment[];
   /** ผลล่าสุดที่ส่งแล้วของนักเรียน ใช้ทำ ปพ.4 / ปพ.6 / ปพ.3 */
@@ -227,6 +230,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       assessedBy: CURRENT_TEACHER.name,
     }))
   );
+  const [readNotifications, setReadNotifications] = useState<string[]>([]);
   const [educationDocuments, setEducationDocuments] = useState<EducationDocument[]>(seedDocuments);
   const [documentRequests, setDocumentRequests] = useState<DocumentRequest[]>([]);
   const [screeningWatch, setScreeningWatchState] = useState<StoreValue["screeningWatch"]>({});
@@ -676,6 +680,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       );
     };
 
+    const markNotificationRead = (id: string) =>
+      setReadNotifications((prev) => (prev.includes(id) ? prev : [...prev, id]));
+
     const latestDc = (studentId: string) =>
       dcAssessments.filter((a) => a.studentId === studentId).sort((a, b) => b.round - a.round)[0];
 
@@ -832,6 +839,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       closeCase,
       sendReferral,
       setReferralStatus,
+      readNotifications,
+      markNotificationRead,
       dcAssessments,
       dcResultOf,
       latestDc,
@@ -844,7 +853,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       fulfillRequest,
       logCitizenIdView,
     };
-  }, [role, screenings, redFlags, nineS, sdq, behaviorRecords, appointments, careCases, homeVisitRecords, accessLogs, assessmentWindows, behaviorRules, behaviorScoreConfig, drafts, screeningWatch, educationDocuments, documentRequests, dcAssessments]);
+  }, [role, screenings, redFlags, nineS, sdq, behaviorRecords, appointments, careCases, homeVisitRecords, accessLogs, assessmentWindows, behaviorRules, behaviorScoreConfig, drafts, screeningWatch, educationDocuments, documentRequests, dcAssessments, readNotifications]);
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }

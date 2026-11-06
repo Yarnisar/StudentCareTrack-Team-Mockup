@@ -25,7 +25,7 @@ export default function StudentSdqPage() {
       title="แบบประเมิน SDQ"
       subtitle="ฉบับนักเรียนประเมินตนเอง"
       role="student"
-      back="/portal/student/card"
+      back="/portal/student"
     >
       <div className="space-y-4 p-5">
         <div className="flex gap-2.5 rounded-xl border border-blue-200 bg-accent p-3.5">
@@ -46,8 +46,8 @@ export default function StudentSdqPage() {
                 ขอบคุณที่ตอบแบบประเมินนะ หากอยากพูดคุยหรือมีเรื่องไม่สบายใจ
                 สามารถติดต่อครูประจำชั้นได้ตลอดเวลา
               </p>
-              <LinkButton className="mt-5 w-full" href="/portal/student/card">
-                กลับหน้าบัตรนักเรียน
+              <LinkButton className="mt-5 w-full" href="/portal/student">
+                กลับหน้าข้อมูลของฉัน
               </LinkButton>
             </CardContent>
           </Card>

@@ -1,14 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { MobileShell } from "@/components/layout/mobile-shell";
 import { SdqForm } from "@/components/assessment/sdq-form";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ruleKind, ruleScoreText } from "@/lib/behavior-rules";
 import { useStore } from "@/lib/store";
 import { dcCriteria, CURRENT_TERM } from "@/lib/mock-data";
-import { formatThaiDate } from "@/lib/format";
 import { sdqSummaryForParent } from "@/lib/portal";
 import { DC_LEVEL_LABEL, SDQ_PORTAL_LABEL, SdqRater } from "@/lib/types";
 
@@ -23,7 +22,6 @@ export default function ParentResultsPage() {
   const sdqSet = store.sdqOf(DEMO_STUDENT_ID).filter((s) => s.round === 1);
   const parentSdq = sdqSet.find((s) => s.rater === "parent");
   const dc = store.dcResultOf(DEMO_STUDENT_ID);
-  const behaviors = store.behaviorOf(DEMO_STUDENT_ID).slice(0, 4);
   const summary = sdqSummaryForParent(sdqSet);
 
   if (!student) return null;
@@ -154,40 +152,9 @@ export default function ParentResultsPage() {
           </Card>
         )}
 
-        <Card>
-          <CardContent className="p-5">
-            <h2 className="mb-1 text-[14.5px] font-bold">ประวัติความประพฤติล่าสุด</h2>
-            <div className="divide-y divide-border">
-              {behaviors.map((rec) => {
-                const rule = store.behaviorRules.find((r) => r.ruleId === rec.ruleId);
-                const positive = (rule?.scoreDelta ?? 0) > 0;
-                const refer = rule ? ruleKind(rule) === "refer" : false;
-                return (
-                  <div key={rec.recordId} className="flex items-center gap-3 py-2.5">
-                    <span className="w-20 shrink-0 text-[11.5px] text-muted-foreground">
-                      {formatThaiDate(rec.occurredAt)}
-                    </span>
-                    <span className="flex-1 text-[13px]">{rule?.name}{rule?.cancelled && <span className="ml-1.5 rounded bg-muted px-1.5 py-0.5 text-[11px] font-normal text-muted-foreground">กฎถูกยกเลิก</span>}</span>
-                    <span
-                      className={
-                        refer
-                          ? "text-[12px] font-semibold text-muted-foreground"
-                          : positive
-                            ? "text-[13.5px] font-bold text-risk-green"
-                            : "text-[13.5px] font-bold text-risk-red"
-                      }
-                    >
-                      {rule ? ruleScoreText(rule) : ""}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-            <p className="mt-3 text-[11.5px] leading-relaxed text-muted-foreground">
-              แสดงเฉพาะรายการและคะแนน ไม่แสดงรายละเอียดภายในของโรงเรียน
-            </p>
-          </CardContent>
-        </Card>
+        <Link href="/portal/parent/child" className="block rounded-xl border border-border bg-card px-4 py-3 text-[13px]">
+          คะแนนและประวัติความประพฤติ ดูได้ที่ <b>ข้อมูลบุตร</b> →
+        </Link>
       </div>
     </MobileShell>
   );

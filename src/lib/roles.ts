@@ -36,7 +36,7 @@ export const ROLE_INFO: Record<
   },
   student: {
     label: "นักเรียน",
-    home: "/portal/student/card",
+    home: "/portal/student",
     // ตรงกับนักเรียนตัวอย่างของ portal (studentId 30125 ใน mock-data)
     user: { name: "ด.ญ. แพรวา สายใจ", title: "นักเรียน ม.3/1", scope: "ม.3/1" },
   },

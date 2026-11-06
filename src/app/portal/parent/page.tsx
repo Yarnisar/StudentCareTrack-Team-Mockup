@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronRight, ClipboardList, Home } from "lucide-react";
+import { Bell, ChevronRight, ClipboardList, Home } from "lucide-react";
 import { MobileShell } from "@/components/layout/mobile-shell";
 import { Card, CardContent } from "@/components/ui/card";
 import { useStore } from "@/lib/store";
 import { formatThaiDate, formatThaiTime } from "@/lib/format";
 import { dcCriteria } from "@/lib/mock-data";
 import { dcSummaryForParent, sdqSummaryForParent } from "@/lib/portal";
+import { buildNotifications } from "@/lib/portal-notifications";
 import { SDQ_PORTAL_LABEL } from "@/lib/types";
 
 const DEMO_STUDENT_ID = "30125";
@@ -28,6 +29,15 @@ export default function ParentHomePage() {
     store.dcResultOf(DEMO_STUDENT_ID),
     dcCriteria.length
   );
+
+  const unread = buildNotifications({
+    viewer: "parent",
+    behaviors: store.behaviorOf(DEMO_STUDENT_ID),
+    rules: store.behaviorRules,
+    watchLevel: store.behaviorWatchLevelOf(DEMO_STUDENT_ID),
+    appointments: store.appointments.filter((a) => a.studentId === DEMO_STUDENT_ID),
+    sdq: store.sdqOf(DEMO_STUDENT_ID),
+  }).filter((n) => !store.readNotifications.includes(n.id)).length;
 
   if (!student) return null;
 
@@ -52,6 +62,17 @@ export default function ParentHomePage() {
             </div>
           </CardContent>
         </Card>
+
+        {unread > 0 && (
+          <ActionCard
+            href="/portal/parent/child"
+            tone="info"
+            icon={<Bell className="size-5 text-primary" />}
+            title={`แจ้งเตือนใหม่ ${unread} รายการ`}
+            description="บันทึกพฤติกรรม นัดหมาย และแบบประเมินของบุตรหลาน"
+            cta="ดูการแจ้งเตือน"
+          />
+        )}
 
         <h2 className="pt-1 text-sm font-bold">สิ่งที่ต้องดำเนินการ</h2>
 
