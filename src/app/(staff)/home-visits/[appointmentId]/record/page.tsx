@@ -436,7 +436,7 @@ export default function HomeVisitRecordPage({
           {/* หน้า 1 : ข้อมูลนักเรียนและผู้ปกครอง */}
           {step === 0 && (
             <>
-            <SectionCard no="1." title="ข้อมูลนักเรียนและผู้ปกครอง" description="หน้า 1 ของแบบฟอร์ม">
+            <SectionCard no="1." title="ข้อมูลนักเรียนและผู้ปกครอง">
               {/* ข้อมูลทะเบียนอ่านอย่างเดียว: ย่อเป็นบรรทัดเดียว กดดูทั้งหมดได้ */}
               <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-lg bg-surface px-3.5 py-2.5 text-[13px]">
                 <AutoBadge source="registry" />
@@ -536,7 +536,7 @@ export default function HomeVisitRecordPage({
 
           {/* ข้อ 3 : สมาชิกครัวเรือนและรายได้ */}
           <SectionCard
-            no="3."
+            no="2."
             title="จำนวนสมาชิกในครัวเรือนและรายได้"
             description="รวมตัวนักเรียน · รายได้เฉลี่ยต่อเดือนแยกตามประเภท (บาท/เดือน)"
           >
@@ -718,7 +718,7 @@ export default function HomeVisitRecordPage({
 
           {/* ข้อ 4 : สถานะของครัวเรือน */}
           {step === 1 && (
-          <SectionCard no="4." title="สถานะของครัวเรือน" description="กรอกเฉพาะบุคคลที่อาศัยในบ้านปัจจุบัน">
+          <SectionCard no="3." title="สถานะของครัวเรือน" description="กรอกเฉพาะบุคคลที่อาศัยในบ้านปัจจุบัน">
             {form.needsConfirm.includes("status") && (
               <div className="mb-6">
                 {question(
@@ -736,14 +736,14 @@ export default function HomeVisitRecordPage({
               {question(
                 "4.1",
                 <ChipGroup
-                  label="4.1 ภาระพึ่งพิงของครัวเรือน"
+                  label="ภาระพึ่งพิงของครัวเรือน"
                   options={DEPENDENCY_OPTIONS}
                   {...noneGroup("dependencies")}
                   lockedIds={derived}
-                  lockedNote="เลือกให้จากตารางข้อ 3 — แก้ที่ตาราง"
+                  lockedNote="เลือกให้จากตารางสมาชิกครัวเรือน — แก้ที่ตาราง"
                   hint={
                     unemployed.length > 0
-                      ? `ไม่มีรายได้ในข้อ 3: ${unemployed.map((m) => `${m.relation} (${m.age} ปี)`).join(", ")} — ถามว่าว่างงานหรือไม่`
+                      ? `ไม่มีรายได้ในตารางสมาชิกครัวเรือน: ${unemployed.map((m) => `${m.relation} (${m.age} ปี)`).join(", ")} — ถามว่าว่างงานหรือไม่`
                       : undefined
                   }
                   source={autoFilled.get("dependencies")}
@@ -754,7 +754,7 @@ export default function HomeVisitRecordPage({
               {question(
                 "4.2",
                 <ChipSelect
-                  label="4.2 ประเภทที่อยู่อาศัย"
+                  label="ประเภทที่อยู่อาศัย"
                   options={HOUSING_TYPE_OPTIONS}
                   value={form.housingType}
                   onChange={(v) => set("housingType", v)}
@@ -765,7 +765,7 @@ export default function HomeVisitRecordPage({
               {question(
                 "4.3",
                 <ChipGroup
-                  label="4.3 สภาพที่อยู่อาศัย"
+                  label="สภาพที่อยู่อาศัย"
                   options={HOUSING_CONDITION_OPTIONS}
                   {...noneGroup("housingConditions")}
                   source={autoFilled.get("housingConditions")}
@@ -776,7 +776,7 @@ export default function HomeVisitRecordPage({
               {question(
                 "4.4",
                 <YesNoRows
-                  label="4.4 ยานพาหนะของครอบครัว"
+                  label="ยานพาหนะของครอบครัว"
                   rows={VEHICLE_OPTIONS}
                   values={form.vehicles}
                   onChange={(id, value) => set("vehicles", { ...form.vehicles, [id]: value })}
@@ -786,7 +786,7 @@ export default function HomeVisitRecordPage({
               {question(
                 "4.5",
                 <ChipSelect
-                  label="4.5 ที่ดินทำกิน"
+                  label="ที่ดินทำกิน"
                   options={FARMLAND_OPTIONS}
                   value={form.farmland}
                   onChange={(v) => set("farmland", v)}
@@ -800,13 +800,13 @@ export default function HomeVisitRecordPage({
 
           {/* ข้อ 5 : ความสัมพันธ์ในครอบครัว */}
           {step === 2 && (
-          <SectionCard no="5." title="ความสัมพันธ์ในครอบครัว" description="หน้า 2 ของแบบฟอร์ม">
+          <SectionCard no="4." title="ความสัมพันธ์ในครอบครัว">
             <div className="space-y-6">
               {question(
                 "5.1",
                 <div className="grid gap-4 md:grid-cols-2">
                   <Field
-                    label="5.1 สมาชิกในครอบครัวมีเวลาอยู่ร่วมกันกี่ชั่วโมงต่อวัน"
+                    label="สมาชิกในครอบครัวมีเวลาอยู่ร่วมกันกี่ชั่วโมงต่อวัน"
                     htmlFor="hours"
                     source={autoFilled.get("hoursTogether")}
                   >
@@ -829,10 +829,10 @@ export default function HomeVisitRecordPage({
               {question(
                 "5.2",
                 <SegmentedRows
-                  label="5.2 ความสัมพันธ์ระหว่างนักเรียนกับสมาชิกในครอบครัว"
+                  label="ความสัมพันธ์ระหว่างนักเรียนกับสมาชิกในครอบครัว"
                   hint={
                     suggestedNone.length > 0
-                      ? `ระบบเลือก “ไม่มี” ให้ ${suggestedNone.join(", ")} เพราะไม่อยู่ในสมาชิกครัวเรือนข้อ 3 เปลี่ยนได้ถ้ายังติดต่อกันอยู่`
+                      ? `ระบบเลือก “ไม่มี” ให้ ${suggestedNone.join(", ")} เพราะไม่อยู่ในตารางสมาชิกครัวเรือน เปลี่ยนได้ถ้ายังติดต่อกันอยู่`
                       : "เลือกระดับความสัมพันธ์ของแต่ละคน หากไม่มีสมาชิกคนนั้นให้เลือก “ไม่มี”"
                   }
                   rows={FAMILY_MEMBERS}
@@ -845,7 +845,7 @@ export default function HomeVisitRecordPage({
               {question(
                 "5.3",
                 <ChipSelect
-                  label="5.3 กรณีที่ผู้ปกครองไม่อยู่บ้าน ฝากนักเรียนอยู่บ้านกับใคร"
+                  label="กรณีที่ผู้ปกครองไม่อยู่บ้าน ฝากนักเรียนอยู่บ้านกับใคร"
                   options={CARETAKER_OPTIONS}
                   value={form.caretakerWhenAway}
                   onChange={(v) => set("caretakerWhenAway", v)}
@@ -869,13 +869,13 @@ export default function HomeVisitRecordPage({
                 <div className="flex items-start gap-2 rounded-lg bg-risk-green-bg px-3.5 py-2.5">
                   <AutoBadge source="guardian" />
                   <span className="text-[12.5px] text-risk-green">
-                    สิ่งที่ผู้ปกครองอยากให้ครูช่วย (ใช้ประกอบข้อ 5.6 และ 5.8): {appointment.guardianNote}
+                    สิ่งที่ผู้ปกครองอยากให้ครูช่วย (ใช้ประกอบคำถามถัดไป): {appointment.guardianNote}
                   </span>
                 </div>
               )}
 
               <ChipGroup
-                label="5.6 สิ่งที่ผู้ปกครองต้องการให้โรงเรียนช่วยเหลือนักเรียน"
+                label="สิ่งที่ผู้ปกครองต้องการให้โรงเรียนช่วยเหลือนักเรียน"
                 options={SUPPORT_REQUEST_OPTIONS}
                 selected={form.supportRequests}
                 onToggle={(id) => toggleItem("supportRequests", id)}
@@ -887,7 +887,7 @@ export default function HomeVisitRecordPage({
               {question(
                 "5.7",
                 <ChipGroup
-                  label="5.7 ความช่วยเหลือที่ครอบครัวเคยได้รับหรือต้องการได้รับ"
+                  label="ความช่วยเหลือที่ครอบครัวเคยได้รับหรือต้องการได้รับ"
                   options={WELFARE_RECEIVED_OPTIONS}
                   {...noneGroup("welfareReceived")}
                   noneLabel="ไม่เคยได้รับ"
@@ -897,7 +897,7 @@ export default function HomeVisitRecordPage({
               )}
 
               <Field
-                label="5.8 ข้อห่วงใยของผู้ปกครองที่มีต่อนักเรียน"
+                label="ข้อห่วงใยของผู้ปกครองที่มีต่อนักเรียน"
                 htmlFor="concern"
               >
                 <Textarea
@@ -913,12 +913,12 @@ export default function HomeVisitRecordPage({
           )}
 
           {step === 3 && (
-          <SectionCard no="6." title="พฤติกรรมและความเสี่ยง" description="หน้า 2–3 ของแบบฟอร์ม">
+          <SectionCard no="5." title="พฤติกรรมและความเสี่ยง">
             <div className="space-y-6">
               {question(
                 "6.1",
                 <ChipGroup
-                  label="6.1 สุขภาพ"
+                  label="สุขภาพ"
                   options={HEALTH_RISK_OPTIONS}
                   {...noneGroup("healthRisks")}
                   hint={
@@ -934,7 +934,7 @@ export default function HomeVisitRecordPage({
               {question(
                 "6.2",
                 <ChipGroup
-                  label="6.2 สวัสดิภาพหรือความปลอดภัย"
+                  label="สวัสดิภาพหรือความปลอดภัย"
                   options={WELFARE_RISK_OPTIONS}
                   {...noneGroup("welfareRisks")}
                   hint={
@@ -952,7 +952,7 @@ export default function HomeVisitRecordPage({
               <div>
                 <div className="mb-2.5 flex flex-wrap items-center gap-2">
                   <span className="text-[13.5px] font-semibold">
-                    6.3 ระยะทางและการเดินทางมาโรงเรียน
+                    ระยะทางและการเดินทางมาโรงเรียน
                   </span>
                   {autoFilled.get("travel") && <AutoBadge source="previous" />}
                 </div>
@@ -1003,7 +1003,7 @@ export default function HomeVisitRecordPage({
               {question(
                 "6.4",
                 <ChipGroup
-                  label="6.4 ภาระงานความรับผิดชอบของนักเรียนต่อครอบครัว"
+                  label="ภาระงานความรับผิดชอบของนักเรียนต่อครอบครัว"
                   options={DUTY_OPTIONS}
                   {...noneGroup("duties")}
                   source={autoFilled.get("duties")}
@@ -1014,7 +1014,7 @@ export default function HomeVisitRecordPage({
               )}
 
               <ChipGroup
-                label="6.5 กิจกรรมยามว่างหรืองานอดิเรก"
+                label="กิจกรรมยามว่างหรืองานอดิเรก"
                 options={HOBBY_OPTIONS}
                 selected={form.hobbies}
                 onToggle={(id) => toggleItem("hobbies", id)}
@@ -1026,7 +1026,7 @@ export default function HomeVisitRecordPage({
               {question(
                 "6.6",
                 <ChipGroup
-                  label="6.6 พฤติกรรมการใช้สารเสพติด"
+                  label="พฤติกรรมการใช้สารเสพติด"
                   options={SUBSTANCE_OPTIONS}
                   {...noneGroup("substances")}
                   noneLabel="ไม่พบความเสี่ยง"
@@ -1037,7 +1037,7 @@ export default function HomeVisitRecordPage({
               {question(
                 "6.7",
                 <ChipGroup
-                  label="6.7 พฤติกรรมการใช้ความรุนแรง"
+                  label="พฤติกรรมการใช้ความรุนแรง"
                   options={VIOLENCE_OPTIONS}
                   {...noneGroup("violence")}
                   noneLabel="ไม่พบความเสี่ยง"
@@ -1048,7 +1048,7 @@ export default function HomeVisitRecordPage({
               {question(
                 "6.8",
                 <ChipGroup
-                  label="6.8 พฤติกรรมทางเพศ"
+                  label="พฤติกรรมทางเพศ"
                   options={SEXUAL_OPTIONS}
                   {...noneGroup("sexual")}
                   noneLabel="ไม่พบความเสี่ยง"
@@ -1059,7 +1059,7 @@ export default function HomeVisitRecordPage({
               {question(
                 "6.9",
                 <ChipGroup
-                  label="6.9 การติดเกม"
+                  label="การติดเกม"
                   options={GAMING_OPTIONS}
                   {...noneGroup("gaming")}
                   hint={
@@ -1075,7 +1075,7 @@ export default function HomeVisitRecordPage({
               {question(
                 "6.10",
                 <ChipSelect
-                  label="6.10 การเข้าถึงสื่อคอมพิวเตอร์และอินเทอร์เน็ตที่บ้าน"
+                  label="การเข้าถึงสื่อคอมพิวเตอร์และอินเทอร์เน็ตที่บ้าน"
                   options={INTERNET_OPTIONS}
                   value={form.internet}
                   onChange={(v) => set("internet", v)}
@@ -1087,7 +1087,7 @@ export default function HomeVisitRecordPage({
               {question(
                 "6.11",
                 <ChipGroup
-                  label="6.11 การใช้เครื่องมือสื่อสารอิเล็กทรอนิกส์"
+                  label="การใช้เครื่องมือสื่อสารอิเล็กทรอนิกส์"
                   options={DEVICE_OPTIONS}
                   {...noneGroup("devices")}
                   noneLabel="ไม่พบพฤติกรรมข้างต้น"
@@ -1099,7 +1099,7 @@ export default function HomeVisitRecordPage({
           )}
 
           {step === 4 && (
-          <SectionCard no="7." title="ผู้ให้ข้อมูลและการรับรองข้อมูล" description="หน้า 3–4 ของแบบฟอร์ม">
+          <SectionCard no="6." title="ผู้ให้ข้อมูลและการรับรองข้อมูล">
             <div className="space-y-5">
               {question(
                 "informant",
