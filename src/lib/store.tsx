@@ -101,6 +101,10 @@ interface StoreValue {
   latestScreening: (studentId: string) => Screening | undefined;
   overallRiskOf: (studentId: string) => RiskGroup | null;
   sdqOf: (studentId: string) => SdqAssessment[];
+  /** รอบ SDQ ปัจจุบัน = ช่วงเวลา SDQ ที่เปิดอยู่ในหน้าตั้งค่า (ไม่มีรอบเปิด = รอบที่ปิดล่าสุด) */
+  sdqRound: 1 | 2;
+  /** SDQ 3 ฉบับของรอบที่ระบุ (ค่าเริ่มต้น = รอบปัจจุบัน) */
+  sdqSetOf: (studentId: string, round?: 1 | 2) => SdqAssessment[];
   /** EQ ภาคเรียนนี้ (UC10) */
   eq: EqAssessment[];
   eqOf: (studentId: string) => EqAssessment | undefined;
@@ -354,12 +358,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const sdqOf = (studentId: string) => sdq.filter((s) => s.studentId === studentId);
     const eqOf = (studentId: string) => eq.find((e) => e.studentId === studentId);
     const reviewOf = (studentId: string, kind: ReviewKind) =>
-      reviews.filter((r) => r.studentId === studentId && r.kind === kind).sort((a, b) => b.reviewedAt.localeCompare(a.reviewedAt))[0];
+      reviews
+        .filter((r) => r.studentId === studentId && r.kind === kind && (kind !== "sdq" || (r.round ?? 1) === sdqRound))
+        .sort((a, b) => b.reviewedAt.localeCompare(a.reviewedAt))[0];
     const sdqWindow = windowFor(assessmentWindows, "sdq");
+    const sdqRound: 1 | 2 = sdqWindow?.round ?? 1;
+    const sdqSetOf = (studentId: string, round: 1 | 2 = sdqRound) => sdqOf(studentId).filter((x) => x.round === round);
     const sdqReview: StoreValue["sdqReview"] = (studentId) => {
       const review = reviewOf(studentId, "sdq");
       const roundClosed = !!sdqWindow && windowStatus(sdqWindow) === "closed";
-      return { ...sdqReviewInfo(sdqOf(studentId).filter((x) => x.round === 1), review, roundClosed), review };
+      return { ...sdqReviewInfo(sdqSetOf(studentId), review, roundClosed), review };
     };
     const eqReview: StoreValue["eqReview"] = (studentId) => {
       const review = reviewOf(studentId, "eq");
@@ -372,11 +380,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         {
           studentId,
           kind,
+          round: kind === "sdq" ? sdqRound : undefined,
           reviewedAt: nowThaiIso(),
           reviewedBy: CURRENT_TEACHER.name,
           released:
             kind === "sdq"
-              ? { sdq: sdqSummaryForParent(sdqOf(studentId).filter((x) => x.round === 1)) }
+              ? { sdq: sdqSummaryForParent(sdqSetOf(studentId)) }
               : { eq: e?.status === "completed" ? e.levels : null },
         },
       ]);
@@ -615,7 +624,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       ];
       setSdq((prev) => {
         const existing = new Set(
-          prev.filter((s) => s.studentId === studentId && s.round === 1).map((s) => s.rater)
+          prev.filter((s) => s.studentId === studentId && s.round === sdqRound).map((s) => s.rater)
         );
         const created = raters
           .filter((r) => !existing.has(r.rater))
@@ -623,7 +632,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             id: nextId("SDQ"),
             studentId,
             termId: CURRENT_TERM.termId,
-            round: 1,
+            round: sdqRound,
             rater: r.rater,
             raterName: r.raterName,
             answers: {},
@@ -645,7 +654,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
       setSdq((prev) => {
         const idx = prev.findIndex(
-          (s) => s.studentId === studentId && s.rater === rater && s.round === 1
+          (s) => s.studentId === studentId && s.rater === rater && s.round === sdqRound
         );
         const base: SdqAssessment =
           idx >= 0
@@ -654,7 +663,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
                 id: nextId("SDQ"),
                 studentId,
                 termId: CURRENT_TERM.termId,
-                round: 1,
+                round: sdqRound,
                 rater,
                 raterName:
                   rater === "teacher"
@@ -695,7 +704,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           id: nextId("SDQ"),
           studentId,
           termId: CURRENT_TERM.termId,
-          round: 1,
+          round: sdqRound,
           rater,
           raterName: "",
           answers,
@@ -1085,6 +1094,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       latestScreening,
       overallRiskOf,
       sdqOf,
+      sdqRound,
+      sdqSetOf,
       eq,
       eqOf,
       saveEq,

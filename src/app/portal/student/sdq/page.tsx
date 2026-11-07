@@ -3,7 +3,9 @@
 import { useState } from "react";
 import { HeartHandshake } from "lucide-react";
 import { WindowLocked } from "@/components/shared/window-locked";
-import { lockedWindowFor } from "@/lib/periods";
+import { lockedWindowFor, windowFor, windowStatus } from "@/lib/periods";
+import { formatThaiDate } from "@/lib/format";
+import { Button } from "@/components/ui/button";
 import { MobileShell } from "@/components/layout/mobile-shell";
 import { SdqForm } from "@/components/assessment/sdq-form";
 import { LinkButton } from "@/components/ui/link-button";
@@ -18,15 +20,16 @@ export default function StudentSdqPage() {
   const store = useStore();
   const [justSubmitted, setJustSubmitted] = useState(false);
 
-  // ส่งแล้วทำซ้ำไม่ได้ (เดิมส่งซ้ำจะเขียนทับผลเดิม)
-  const alreadyDone =
-    store
-      .sdqOf(DEMO_STUDENT_ID)
-      .find((s) => s.rater === "student" && s.round === 1)?.status === "completed";
+  const [editing, setEditing] = useState(false);
+  // ส่งแล้วแก้คำตอบได้จนกว่าจะปิดรับ ระบบเก็บประวัติ และครูต้องตรวจผลใหม่ (UC10 ข้อ 8, 13)
+  const own = store.sdqSetOf(DEMO_STUDENT_ID).find((s) => s.rater === "student");
+  const alreadyDone = own?.status === "completed";
+  const sdqWindow = windowFor(store.assessmentWindows, "sdq", store.sdqRound);
+  const canEdit = alreadyDone && !!sdqWindow && windowStatus(sdqWindow) === "open";
 
   const releasedSdq = store.sdqReview(DEMO_STUDENT_ID).review?.released.sdq;
   // ปิดรับแล้ว (UC9) นักเรียนติดต่อครูประจำชั้น
-  const lockedSdq = lockedWindowFor(store.assessmentWindows, "sdq");
+  const lockedSdq = lockedWindowFor(store.assessmentWindows, "sdq", store.sdqRound);
 
   return (
     <MobileShell
@@ -44,7 +47,7 @@ export default function StudentSdqPage() {
           </p>
         </div>
 
-        {justSubmitted || alreadyDone ? (
+        {!editing && (justSubmitted || alreadyDone) ? (
           // ไม่แสดงคะแนนหรือผลแปลให้นักเรียน — ผลใช้เพื่อให้ครูดูแล ไม่ใช่ป้ายที่เด็กต้องรับรู้
           <Card>
             <CardContent className="p-6 text-center">
@@ -65,7 +68,12 @@ export default function StudentSdqPage() {
                   <span className="text-muted-foreground">รอครูประจำชั้นตรวจผล เมื่อตรวจแล้วจะเห็นผลสรุปที่หน้านี้</span>
                 )}
               </p>
-              <LinkButton className="mt-5 w-full" href="/portal/student">
+              {canEdit && (
+                <Button variant="outline" className="mt-5 h-11 w-full" onClick={() => setEditing(true)}>
+                  แก้คำตอบ (ได้ถึง {formatThaiDate(sdqWindow!.closeDate)})
+                </Button>
+              )}
+              <LinkButton className={`${canEdit ? "mt-2.5" : "mt-5"} w-full`} href="/portal/student">
                 กลับหน้าข้อมูลของฉัน
               </LinkButton>
             </CardContent>
@@ -77,9 +85,12 @@ export default function StudentSdqPage() {
             studentId={DEMO_STUDENT_ID}
             rater="student"
             layout="mobile"
+            initial={editing ? own?.answers : undefined}
+            submitLabel={editing ? "ส่งคำตอบที่แก้ไข" : undefined}
             onSubmit={(answers) => {
               store.saveSdq(DEMO_STUDENT_ID, "student", answers);
               setJustSubmitted(true);
+              setEditing(false);
             }}
           />
         )}

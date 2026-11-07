@@ -36,15 +36,20 @@ export function SdqForm({
   onSubmit,
   onExit,
   layout = "desktop",
+  initial,
+  submitLabel = "บันทึกผลการประเมิน",
 }: {
   studentId: string;
   rater: SdqRater;
+  /** แก้คำตอบที่ส่งแล้ว: เริ่มจากคำตอบเดิม */
+  initial?: Record<number, 0 | 1 | 2>;
+  submitLabel?: string;
   onSubmit: (answers: Record<number, 0 | 1 | 2>) => void;
   /** ปุ่ม "ออกและทำต่อภายหลัง" — ไม่ส่งมาก็ไม่แสดงปุ่ม */
   onExit?: () => void;
   layout?: "desktop" | "mobile";
 }) {
-  const draft = useDraft<Record<number, 0 | 1 | 2>>(draftKey(`sdq_${rater}`, studentId), () => ({}));
+  const draft = useDraft<Record<number, 0 | 1 | 2>>(draftKey(`sdq_${rater}`, studentId), () => initial ?? {});
   const answers = draft.value;
   // กลับมาทำต่อจากร่าง -> เปิดที่หน้าที่มีข้อแรกที่ยังไม่ได้ตอบ
   const [page, setPage] = useState(() => {
@@ -205,7 +210,7 @@ export function SdqForm({
               ข้อถัดไป <ArrowRight className="size-4" />
             </Button>
           ) : (
-            <Button onClick={handleSubmit}>บันทึกผลการประเมิน</Button>
+            <Button onClick={handleSubmit}>{submitLabel}</Button>
           )}
         </div>
       </div>

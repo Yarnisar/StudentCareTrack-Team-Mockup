@@ -11,7 +11,7 @@ import { useStore } from "@/lib/store";
 export function AssessmentTabs({ studentId }: { studentId: string }) {
   const store = useStore();
   const pathname = usePathname();
-  const sdqDone = store.sdqOf(studentId).find((s) => s.rater === "student" && s.round === 1)?.status === "completed";
+  const sdqDone = store.sdqSetOf(studentId).find((s) => s.rater === "student")?.status === "completed";
   const eq = store.eqOf(studentId);
   const tabs = [
     {

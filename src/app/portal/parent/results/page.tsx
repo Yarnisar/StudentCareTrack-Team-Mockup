@@ -7,6 +7,8 @@ import { SdqForm } from "@/components/assessment/sdq-form";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useStore } from "@/lib/store";
+import { formatThaiDate } from "@/lib/format";
+import { windowFor, windowStatus } from "@/lib/periods";
 import { EQ_DOMAIN_LABEL, EQ_DOMAINS, EQ_LEVEL_LABEL } from "@/lib/eq";
 import { dcCriteria, CURRENT_TERM } from "@/lib/mock-data";
 import { DC_LEVEL_LABEL, SDQ_PORTAL_LABEL, SdqRater } from "@/lib/types";
@@ -19,8 +21,9 @@ export default function ParentResultsPage() {
   const [justSubmitted, setJustSubmitted] = useState(false);
 
   const student = store.getStudent(DEMO_STUDENT_ID);
-  const sdqSet = store.sdqOf(DEMO_STUDENT_ID).filter((s) => s.round === 1);
+  const sdqSet = store.sdqSetOf(DEMO_STUDENT_ID);
   const parentSdq = sdqSet.find((s) => s.rater === "parent");
+  const sdqWindow = windowFor(store.assessmentWindows, "sdq", store.sdqRound);
   const dc = store.dcResultOf(DEMO_STUDENT_ID);
   // เปิดผลหลังครูที่ปรึกษาตรวจแล้วเท่านั้น (UC10 สถานการณ์ B)
   const sdqReview = store.sdqReview(DEMO_STUDENT_ID);
@@ -43,6 +46,8 @@ export default function ParentResultsPage() {
             studentId={DEMO_STUDENT_ID}
             rater="parent"
             layout="mobile"
+            initial={parentSdq?.status === "completed" ? parentSdq.answers : undefined}
+            submitLabel={parentSdq?.status === "completed" ? "ส่งคำตอบที่แก้ไข" : undefined}
             onSubmit={(answers) => {
               store.saveSdq(DEMO_STUDENT_ID, "parent", answers);
               setTakingSdq(false);
@@ -65,7 +70,7 @@ export default function ParentResultsPage() {
         <Card>
           <CardContent className="p-5">
             <h2 className="mb-3 text-[14.5px] font-bold">
-              แบบประเมิน SDQ · {CURRENT_TERM.label}
+              แบบประเมิน SDQ รอบที่ {store.sdqRound} · {CURRENT_TERM.label}
             </h2>
 
             {justSubmitted && (
@@ -118,6 +123,12 @@ export default function ParentResultsPage() {
             {parentSdq?.status === "pending" && (
               <Button className="mt-4 h-12 w-full" onClick={() => setTakingSdq(true)}>
                 เริ่มทำแบบประเมินฉบับผู้ปกครอง
+              </Button>
+            )}
+            {/* ส่งแล้วแก้ได้จนกว่าจะปิดรับ ครูต้องตรวจผลใหม่ (UC10 ข้อ 8) */}
+            {parentSdq?.status === "completed" && sdqWindow && windowStatus(sdqWindow) === "open" && (
+              <Button variant="outline" className="mt-4 h-11 w-full" onClick={() => setTakingSdq(true)}>
+                แก้คำตอบฉบับผู้ปกครอง (ได้ถึง {formatThaiDate(sdqWindow.closeDate)})
               </Button>
             )}
 

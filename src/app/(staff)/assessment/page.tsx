@@ -55,7 +55,7 @@ export default function AssessmentPage() {
 
             <div className="divide-y divide-border">
               {store.students.map((student) => {
-                const sdqSet = store.sdqOf(student.studentId).filter((s) => s.round === 1);
+                const sdqSet = store.sdqSetOf(student.studentId);
                 const redFlag = store.redFlags.find((r) => r.studentId === student.studentId);
                 const nineS = store.nineS.find((n) => n.studentId === student.studentId);
 

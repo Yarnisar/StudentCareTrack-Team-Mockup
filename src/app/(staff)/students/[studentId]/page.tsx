@@ -90,7 +90,7 @@ export default function StudentDetailPage({
 
   const risk = store.overallRiskOf(studentId);
   const screening = store.latestScreening(studentId);
-  const sdqSet = store.sdqOf(studentId).filter((s) => s.round === 1);
+  const sdqSet = store.sdqSetOf(studentId);
   const behaviors = store.behaviorOf(studentId).slice(0, 5);
   const behaviorScore = store.behaviorScoreOf(studentId);
   const careCase = store.caseOf(studentId);
@@ -389,7 +389,7 @@ export default function StudentDetailPage({
             <Card>
               <CardContent className="p-6">
                 <div className="mb-3 flex flex-wrap items-center gap-2">
-                  <h3 className="text-[15.5px] font-bold">ผลการประเมิน SDQ (3 ผู้ประเมิน)</h3>
+                  <h3 className="text-[15.5px] font-bold">ผลการประเมิน SDQ รอบที่ {store.sdqRound} (3 ผู้ประเมิน)</h3>
                   <span className="rounded-md bg-muted px-2 py-0.5 text-[11.5px] font-semibold text-muted-foreground">
                     {REVIEW_STATE_LABEL[store.sdqReview(studentId).state]}
                   </span>
@@ -443,6 +443,23 @@ export default function StudentDetailPage({
                     );
                   })}
                 </div>
+                {/* ประวัติรอบก่อน (รอบ 1 / รอบ 2 ตามช่วงเวลาในหน้าตั้งค่า) */}
+                {([1, 2] as const)
+                  .filter((r) => r !== store.sdqRound && store.sdqSetOf(studentId, r).some((x) => x.status === "completed"))
+                  .map((r) => (
+                    <p key={r} className="mt-3 rounded-lg bg-surface px-3 py-2 text-[12.5px] text-muted-foreground">
+                      <b className="text-foreground">รอบที่ {r}:</b>{" "}
+                      {(["teacher", "student", "parent"] as SdqRater[])
+                        .map((rater) => {
+                          const rec = store.sdqSetOf(studentId, r).find((x) => x.rater === rater);
+                          const who = SDQ_RATER_LABEL[rater].replace("ประเมินตนเอง", "").replace("ประเมิน", "");
+                          return rec?.status === "completed" && rec.level
+                            ? `${who} ${rec.totalDifficulties} (${SDQ_LEVEL_LABEL[rec.level]})`
+                            : `${who} ไม่ได้ตอบ`;
+                        })
+                        .join(" · ")}
+                    </p>
+                  ))}
               </CardContent>
             </Card>
 

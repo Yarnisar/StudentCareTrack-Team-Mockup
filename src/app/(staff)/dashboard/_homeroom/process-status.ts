@@ -142,7 +142,7 @@ export function processStatus(store: Store, termId: string): { items: Item[]; su
     }
 
     // ---- การประเมิน (UC10): SDQ 3 ฉบับ (ครู / นักเรียน / ผู้ปกครอง) ที่ระบบเปิดเมื่อ Red Flag หรือ 9S ควรดูแล
-    const sdq = store.sdq.filter((s) => s.studentId === id && s.termId === termId);
+    const sdq = store.sdqSetOf(id).filter((s) => s.termId === termId);
     if (sdq.length > 0) {
       const pending = sdq.filter((s) => s.status === "pending");
       const review = store.sdqReview(id);
@@ -176,8 +176,8 @@ export function processStatus(store: Store, termId: string): { items: Item[]; su
             .join(" · "),
           ...(teacherPending && { href: `/assessment/sdq/${id}`, action: "ทำ SDQ" }),
         };
-        // ครบกำหนดตามช่วงเวลา SDQ ที่เปิดอยู่ — PROTOTYPE: SDQ ในระบบผูกรอบ 1 ตายตัว ยังแยกตามรอบจริงไม่ได้
-        items.push(open("assessment", "sdq", base));
+        // ครบกำหนดตามช่วงเวลา SDQ ของรอบนั้น
+        items.push(open("assessment", "sdq", base, pending[0].round));
       }
     }
 

@@ -34,10 +34,10 @@ function SdqContent({ studentId }: { studentId: string }) {
 
   if (!student) return <p className="p-8 text-sm text-muted-foreground">ไม่พบข้อมูลนักเรียน</p>;
 
-  const set = store.sdqOf(studentId).filter((s) => s.round === 1);
+  const set = store.sdqSetOf(studentId);
 
-  // ปิดรับแล้ว (UC9) — PROTOTYPE: SDQ ในระบบผูกรอบ 1 ตายตัว จึงตรวจกับช่วงเวลา SDQ ที่เปิดอยู่ปัจจุบัน
-  const locked = lockedWindowFor(store.assessmentWindows, "sdq");
+  // ปิดรับแล้ว (UC9) ตรวจกับช่วงเวลาของรอบปัจจุบัน
+  const locked = lockedWindowFor(store.assessmentWindows, "sdq", store.sdqRound);
   if (locked && set.find((s) => s.rater === "teacher")?.status !== "completed") {
     return (
       <>
@@ -62,7 +62,7 @@ function SdqContent({ studentId }: { studentId: string }) {
     <>
       <PageHeader
         title="แบบประเมิน SDQ"
-        subtitle={`ฉบับครูประเมิน · ครั้งที่ 1 · ${CURRENT_TERM.label}`}
+        subtitle={`ฉบับครูประเมิน · รอบที่ ${store.sdqRound} · ${CURRENT_TERM.label}`}
       />
 
       <div className="flex-1 overflow-y-auto p-4 sm:p-8">

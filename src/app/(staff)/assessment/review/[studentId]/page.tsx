@@ -37,7 +37,7 @@ export default function ReviewPage({ params }: { params: Promise<{ studentId: st
   const student = store.getStudent(studentId);
   if (!student) return <p className="p-8 text-sm text-muted-foreground">ไม่พบข้อมูลนักเรียน</p>;
 
-  const set = store.sdqOf(studentId).filter((s) => s.round === 1);
+  const set = store.sdqSetOf(studentId);
   const sdq = store.sdqReview(studentId);
   const eq = store.eqOf(studentId);
   const eqInfo = store.eqReview(studentId);

@@ -15,6 +15,8 @@ export const REVIEW_KIND_LABEL: Record<ReviewKind, string> = { sdq: "SDQ", eq: "
 export interface AssessmentReview {
   studentId: string;
   kind: ReviewKind;
+  /** SDQ: รอบที่ตรวจ (รอบ 1 / รอบ 2 ตามหน้าตั้งค่า) */
+  round?: 1 | 2;
   reviewedAt: string;
   reviewedBy: string;
   /** ผลที่เปิดให้นักเรียน/ผู้ปกครองเห็น ณ เวลาที่ตรวจ */

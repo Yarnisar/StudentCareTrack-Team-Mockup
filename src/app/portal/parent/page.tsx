@@ -21,9 +21,7 @@ export default function ParentHomePage() {
       a.studentId === DEMO_STUDENT_ID &&
       ["pending", "confirmed", "reschedule_requested", "awaiting_visit_confirmation"].includes(a.status)
   );
-  const parentSdq = store
-    .sdqOf(DEMO_STUDENT_ID)
-    .find((s) => s.rater === "parent" && s.round === 1);
+  const parentSdq = store.sdqSetOf(DEMO_STUDENT_ID).find((s) => s.rater === "parent");
   // เปิดผลหลังครูที่ปรึกษาตรวจแล้วเท่านั้น และแสดงผล ณ เวลาที่ตรวจ (UC10 สถานการณ์ B ข้อ 7)
   const sdqSummary = store.sdqReview(DEMO_STUDENT_ID).review?.released.sdq ?? null;
   const dc = dcSummaryForParent(
