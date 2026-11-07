@@ -22,6 +22,8 @@ export const KIND_LABEL: Record<AssessmentKind, string> = {
 export interface AssessmentWindow {
   id: string;
   kind: AssessmentKind;
+  /** เยี่ยมบ้าน: ระยะเวลารอนักเรียนหรือผู้ปกครองยืนยันผลการเยี่ยม ค่าเริ่มต้น 3 วัน (UC4 Scenario A ข้อ 4) */
+  confirmWaitDays?: number;
   label: string;
   round?: 1 | 2;
   /** วันเปิดให้ทำ (พ.ศ. yyyy-mm-dd) */
@@ -110,6 +112,7 @@ export const INITIAL_WINDOWS: AssessmentWindow[] = [
     id: "W7",
     kind: "home_visit",
     label: "รอบเยี่ยมบ้าน",
+    confirmWaitDays: 3,
     openDate: "2569-12-01",
     closeDate: "2570-03-20",
     enabled: true,

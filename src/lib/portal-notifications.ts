@@ -54,6 +54,13 @@ export function buildNotifications(input: {
         title: "นัดหมายเยี่ยมบ้าน รอการยืนยัน",
         body: `${a.teacherName} · ${formatThaiDate(a.proposedDate)} ${formatThaiTime(a.proposedDate)}`,
       });
+    if (a.status === "awaiting_visit_confirmation")
+      list.push({
+        id: `ap-${a.appointmentId}-visit`,
+        at: a.proposedDate,
+        title: "ยืนยันว่าครูได้เยี่ยมบ้านจริง",
+        body: `ครูบันทึกผลการเยี่ยมบ้านแล้ว ยืนยันได้ภายใน ${formatThaiDate(a.visitConfirmDeadline ?? "")} ที่เมนูนัดหมาย`,
+      });
     if (a.status === "confirmed")
       list.push({
         id: `ap-${a.appointmentId}-confirmed`,

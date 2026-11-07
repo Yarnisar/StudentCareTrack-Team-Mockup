@@ -8,6 +8,7 @@ import { LinkButton } from "@/components/ui/link-button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { NewAppointmentDialog } from "./new-appointment";
+import { AppointmentStatusPanel } from "./status-panel";
 import { draftKey, useStore } from "@/lib/store";
 import { formatBaht, formatThaiDate, formatThaiTime } from "@/lib/format";
 import { APPOINTMENT_STATUS_LABEL, AppointmentStatus } from "@/lib/types";
@@ -18,6 +19,9 @@ const STATUS_STYLE: Record<AppointmentStatus, string> = {
   pending: "border border-border text-foreground",
   confirmed: "bg-accent text-primary",
   reschedule_requested: "border border-dashed border-foreground/40 text-foreground",
+  awaiting_visit_confirmation: "border border-border text-foreground",
+  visit_disputed: "border border-dashed border-foreground/40 text-foreground",
+  completed_no_response: "bg-muted text-muted-foreground",
   completed: "bg-muted text-muted-foreground",
   cancelled: "bg-muted text-muted-foreground line-through",
 };
@@ -136,16 +140,19 @@ export default function HomeVisitsPage() {
                 </CardContent>
               </Card>
 
-              {appointment.guardianNote && (
+              <AppointmentStatusPanel appointmentId={appointment.appointmentId} onReschedule={() => setCreating(true)} />
+
+              {(appointment.guardianNote || appointment.convenientTime) && (
                 <Card>
                   <CardContent className="p-6">
                     <h3 className="text-[15.5px] font-bold">ข้อมูลที่ผู้ปกครองให้ไว้ล่วงหน้า</h3>
                     <div className="mt-3 grid gap-3 sm:grid-cols-2">
                       <Field label="เบอร์ติดต่อที่สะดวก" value={appointment.guardianPhone ?? "-"} />
+                      <Field label="เวลาที่สะดวก" value={appointment.convenientTime || "-"} />
                       <Field label="ผู้ดูแลหลักกรณีไม่อยู่บ้าน" value={formatCaretaker(appointment.caretakerRelation, appointment.caretakerName) || "-"} />
                     </div>
                     <div className="mt-3">
-                      <Field label="สิ่งที่อยากให้ครูช่วยเหลือ" value={appointment.guardianNote} />
+                      <Field label="สิ่งที่อยากให้ครูช่วยเหลือ" value={appointment.guardianNote || "-"} />
                     </div>
                   </CardContent>
                 </Card>

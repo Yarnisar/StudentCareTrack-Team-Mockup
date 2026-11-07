@@ -14,6 +14,7 @@ import {
   careCases as seedCareCases,
   CURRENT_TEACHER,
   CURRENT_TERM,
+  DEMO_TODAY,
   dcSummaries,
   educationDocuments as seedDocuments,
   homeVisitRecords as seedHomeVisitRecords,
@@ -31,7 +32,7 @@ import {
 import { nowThaiIso } from "./format";
 import { usePathname } from "next/navigation";
 import { canRevealCitizenId, defaultRoleFor, ROLE_INFO, type Role } from "./roles";
-import { INITIAL_WINDOWS, type AssessmentWindow } from "./periods";
+import { INITIAL_WINDOWS, shiftDate, type AssessmentWindow } from "./periods";
 import { DEFAULT_BEHAVIOR_SCORE, runningScore, watchLevelOf, type BehaviorScoreConfig } from "./behavior-score";
 import {
   AccessLog,
@@ -125,8 +126,22 @@ interface StoreValue {
   createAppointment: (studentId: string, proposedDate: string) => HomeVisitAppointment;
   saveGuardianInfo: (
     appointmentId: string,
-    info: { guardianPhone: string; caretakerRelation: string; caretakerName: string; guardianNote: string }
+    info: {
+      guardianPhone: string;
+      caretakerRelation: string;
+      caretakerName: string;
+      guardianNote: string;
+      convenientTime?: string;
+    }
   ) => void;
+  /** นักเรียนหรือผู้ปกครองยืนยันนัด (Scenario D ข้อ 5) */
+  confirmAppointment: (appointmentId: string, by: string) => void;
+  /** ขอเปลี่ยนวันพร้อมเหตุผล วันเดิมยังมีผล (Alt-C ข้อ 1–2) */
+  requestReschedule: (appointmentId: string, date: string, reason: string, by: string) => void;
+  /** ครูพิจารณาคำขอเปลี่ยนวัน: รับวันใหม่ หรือคงวันเดิม (Alt-C ข้อ 3) */
+  resolveReschedule: (appointmentId: string, accept: boolean) => void;
+  /** ยืนยันว่าได้เยี่ยมจริง (Scenario E) หรือแจ้งว่าไม่ได้เยี่ยม (Alt-E) */
+  respondVisit: (appointmentId: string, visited: boolean, by: string) => void;
   /** บันทึกผลการเยี่ยมบ้าน ปิดนัดหมายเป็น "เสร็จสิ้น" และลบร่าง */
   saveHomeVisit: (
     appointmentId: string,
@@ -209,7 +224,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [nineS, setNineS] = useState<NineSAssessment[]>([]);
   const [sdq, setSdq] = useState<SdqAssessment[]>(seedSdq);
   const [behaviorRecords, setBehaviorRecords] = useState<BehaviorRecord[]>(seedBehaviorRecords);
-  const [appointments, setAppointments] = useState<HomeVisitAppointment[]>(seedAppointments);
+  const [rawAppointments, setAppointments] = useState<HomeVisitAppointment[]>(seedAppointments);
   const [careCases, setCareCases] = useState<CareCase[]>(seedCareCases);
   const [homeVisitRecords, setHomeVisitRecords] = useState<HomeVisitRecord[]>(seedHomeVisitRecords);
   const [accessLogs, setAccessLogs] = useState<AccessLog[]>([]);
@@ -236,6 +251,19 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [screeningWatch, setScreeningWatchState] = useState<StoreValue["screeningWatch"]>({});
 
   const value = useMemo<StoreValue>(() => {
+    /**
+     * งานตรวจตามเวลา (3.4.3) ต้นแบบคำนวณตอนอ่านเทียบกับวันนี้ของข้อมูลตัวอย่าง
+     * - Alt-D: ถึงวันนัดโดยไม่มีผู้ยืนยันและครูยังไม่ยืนยันวันใหม่ ระบบยืนยันวันนัดเดิม
+     * - Alt-F: ครบระยะเวลายืนยันการเยี่ยมโดยไม่มีผู้ตอบ ระบบปิดงานเป็น "ยืนยันโดยไม่มีผู้ตอบกลับ"
+     */
+    const appointments = rawAppointments.map((a): HomeVisitAppointment => {
+      if ((a.status === "pending" || a.status === "reschedule_requested") && a.proposedDate.slice(0, 10) <= DEMO_TODAY)
+        return { ...a, status: "confirmed", confirmedBy: "ระบบ (ถึงวันนัดโดยไม่มีผู้ยืนยัน)", reschedule: undefined };
+      if (a.status === "awaiting_visit_confirmation" && a.visitConfirmDeadline && DEMO_TODAY > a.visitConfirmDeadline)
+        return { ...a, status: "completed_no_response" };
+      return a;
+    });
+
     const getStudent = (studentId: string) => students.find((s) => s.studentId === studentId);
 
     const latestScreening = (studentId: string) =>
@@ -577,6 +605,29 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       );
     };
 
+    const patchAppointment = (appointmentId: string, fn: (a: HomeVisitAppointment) => HomeVisitAppointment) =>
+      setAppointments((prev) => prev.map((a) => (a.appointmentId === appointmentId ? fn(a) : a)));
+
+    const confirmAppointment: StoreValue["confirmAppointment"] = (appointmentId, by) =>
+      patchAppointment(appointmentId, (a) => ({ ...a, status: "confirmed", confirmedBy: by, reschedule: undefined }));
+
+    const requestReschedule: StoreValue["requestReschedule"] = (appointmentId, date, reason, by) =>
+      patchAppointment(appointmentId, (a) => ({ ...a, status: "reschedule_requested", reschedule: { date, reason, by } }));
+
+    const resolveReschedule: StoreValue["resolveReschedule"] = (appointmentId, accept) =>
+      patchAppointment(appointmentId, (a) =>
+        accept && a.reschedule
+          ? { ...a, status: "confirmed", proposedDate: a.reschedule.date, confirmedBy: a.reschedule.by, reschedule: undefined }
+          : { ...a, status: "pending", reschedule: undefined }
+      );
+
+    const respondVisit: StoreValue["respondVisit"] = (appointmentId, visited, by) =>
+      patchAppointment(appointmentId, (a) => ({
+        ...a,
+        status: visited ? "completed" : "visit_disputed",
+        visitRespondedBy: by,
+      }));
+
     const saveHomeVisit: StoreValue["saveHomeVisit"] = (appointmentId, result) => {
       const appointment = appointments.find((a) => a.appointmentId === appointmentId);
       if (!appointment) return null;
@@ -588,7 +639,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         signedAt: nowThaiIso().split("T")[0],
       };
       setHomeVisitRecords((prev) => [record, ...prev.filter((r) => r.appointmentId !== appointmentId)]);
-      setAppointmentStatus(appointmentId, "completed");
+      // ส่งคำขอให้นักเรียนหรือผู้ปกครองยืนยันว่าได้เยี่ยมจริง (UC5 ข้อ 12, UC4 Scenario E)
+      const waitDays = assessmentWindows.find((w) => w.kind === "home_visit")?.confirmWaitDays ?? 3;
+      patchAppointment(appointmentId, (a) => ({
+        ...a,
+        status: "awaiting_visit_confirmation",
+        visitConfirmDeadline: shiftDate(DEMO_TODAY, waitDays),
+        visitRespondedBy: undefined,
+      }));
       clearDraft(draftKey("home_visit", appointmentId));
       return record;
     };
@@ -828,6 +886,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setAppointmentStatus,
       createAppointment,
       saveGuardianInfo,
+      confirmAppointment,
+      requestReschedule,
+      resolveReschedule,
+      respondVisit,
       saveHomeVisit,
       openCase,
       openOrLinkCase,
@@ -853,7 +915,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       fulfillRequest,
       logCitizenIdView,
     };
-  }, [role, screenings, redFlags, nineS, sdq, behaviorRecords, appointments, careCases, homeVisitRecords, accessLogs, assessmentWindows, behaviorRules, behaviorScoreConfig, drafts, screeningWatch, educationDocuments, documentRequests, dcAssessments, readNotifications]);
+  }, [role, screenings, redFlags, nineS, sdq, behaviorRecords, rawAppointments, careCases, homeVisitRecords, accessLogs, assessmentWindows, behaviorRules, behaviorScoreConfig, drafts, screeningWatch, educationDocuments, documentRequests, dcAssessments, readNotifications]);
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }

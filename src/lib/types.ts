@@ -213,6 +213,12 @@ export type AppointmentStatus =
   | "pending"
   | "confirmed"
   | "reschedule_requested"
+  /** ครูบันทึกผลแล้ว รอนักเรียนหรือผู้ปกครองยืนยันว่าได้เยี่ยมจริง (UC4 Scenario E) */
+  | "awaiting_visit_confirmation"
+  /** นักเรียนหรือผู้ปกครองแจ้งว่าไม่ได้เยี่ยมจริง ครูต้องตรวจสอบและนัดใหม่ (Alt-E) */
+  | "visit_disputed"
+  /** ครบระยะเวลาโดยไม่มีผู้ตอบ ระบบปิดงานเอง (Alt-F) */
+  | "completed_no_response"
   | "completed"
   | "cancelled";
 
@@ -220,6 +226,9 @@ export const APPOINTMENT_STATUS_LABEL: Record<AppointmentStatus, string> = {
   pending: "รอการยืนยัน",
   confirmed: "ยืนยันแล้ว",
   reschedule_requested: "ขอเปลี่ยนวันเวลา",
+  awaiting_visit_confirmation: "รอยืนยันว่าได้เยี่ยมจริง",
+  visit_disputed: "แจ้งว่าไม่ได้เยี่ยมจริง",
+  completed_no_response: "ยืนยันโดยไม่มีผู้ตอบกลับ",
   completed: "เสร็จสิ้น",
   cancelled: "ยกเลิก",
 };
@@ -243,6 +252,16 @@ export interface HomeVisitAppointment {
   /** ผู้ดูแลเมื่อผู้ปกครองไม่อยู่บ้าน: ความสัมพันธ์ (เลือกจากรายการ) และชื่อ (ไม่บังคับ) */
   caretakerRelation?: string;
   caretakerName?: string;
+  /** ช่วงเวลาที่สะดวกที่นักเรียนหรือผู้ปกครองให้ไว้ (UC4 Scenario C) */
+  convenientTime?: string;
+  /** ผู้ยืนยันนัด: ชื่อผู้ใช้ หรือ "ระบบ" เมื่อถึงวันนัดโดยไม่มีผู้ยืนยัน (Scenario D, Alt-D) */
+  confirmedBy?: string;
+  /** คำขอเปลี่ยนวันที่รอครูพิจารณา วันนัดเดิมยังมีผลระหว่างรอ (Alt-C) */
+  reschedule?: { date: string; reason: string; by: string };
+  /** วันสุดท้ายที่ยืนยันว่าได้เยี่ยมจริงได้ (Scenario E ข้อ 5) */
+  visitConfirmDeadline?: string;
+  /** ผู้ยืนยันว่าได้เยี่ยมจริง หรือผู้แจ้งว่าไม่ได้เยี่ยม */
+  visitRespondedBy?: string;
 }
 
 export interface HomeVisitRecord {

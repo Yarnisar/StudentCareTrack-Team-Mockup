@@ -17,7 +17,9 @@ export default function ParentHomePage() {
   const store = useStore();
   const student = store.getStudent(DEMO_STUDENT_ID);
   const appointment = store.appointments.find(
-    (a) => a.studentId === DEMO_STUDENT_ID && a.status !== "completed"
+    (a) =>
+      a.studentId === DEMO_STUDENT_ID &&
+      ["pending", "confirmed", "reschedule_requested", "awaiting_visit_confirmation"].includes(a.status)
   );
   const parentSdq = store
     .sdqOf(DEMO_STUDENT_ID)
@@ -84,6 +86,17 @@ export default function ParentHomePage() {
             title="นัดหมายเยี่ยมบ้าน รอการยืนยัน"
             description={`${appointment.teacherName} ขอนัดเยี่ยมบ้านวันที่ ${formatThaiDate(appointment.proposedDate)} เวลา ${formatThaiTime(appointment.proposedDate)}`}
             cta="ดูรายละเอียดและยืนยัน"
+          />
+        )}
+
+        {appointment && appointment.status === "awaiting_visit_confirmation" && (
+          <ActionCard
+            href="/portal/parent/appointment"
+            tone="warn"
+            icon={<Home className="size-5 text-risk-amber" />}
+            title="ยืนยันว่าครูได้เยี่ยมบ้านจริง"
+            description={`ครูบันทึกผลการเยี่ยมบ้านแล้ว กรุณายืนยันภายใน ${formatThaiDate(appointment.visitConfirmDeadline ?? "")}`}
+            cta="ยืนยันการเยี่ยมบ้าน"
           />
         )}
 

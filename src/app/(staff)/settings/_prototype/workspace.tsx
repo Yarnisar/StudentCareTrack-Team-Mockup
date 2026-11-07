@@ -316,6 +316,17 @@ export function SettingsWorkspace({
                       onChange={(v) => proto.updateWindow(win.id, { remindDaysBefore: v })}
                     />
                   </Field>
+                  {win.kind === "home_visit" && (
+                    <Field label="ระยะเวลารอนักเรียนหรือผู้ปกครองยืนยันผลการเยี่ยมบ้าน">
+                      <Stepper
+                        value={win.confirmWaitDays ?? 3}
+                        unit="วัน"
+                        step={1}
+                        min={1}
+                        onChange={(v) => proto.updateWindow(win.id, { confirmWaitDays: v })}
+                      />
+                    </Field>
+                  )}
                   <Field label="ผู้ที่ต้องทำแบบประเมินรอบนี้">
                     <div className="flex flex-wrap gap-1.5">
                       {(["teacher", "student", "parent"] as SdqRater[]).map((r) => {

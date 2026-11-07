@@ -162,8 +162,14 @@ export function processStatus(store: Store, termId: string): { items: Item[]; su
 
     // ---- เยี่ยมบ้าน: ทุกคน ปีละครั้ง
     const record = store.homeVisitRecords.find((r) => r.studentId === id);
-    const appointment = store.appointments.find((a) => a.studentId === id && a.status !== "completed");
-    if (record) {
+    const appointment = store.appointments.find(
+      (a) => a.studentId === id && !["completed", "completed_no_response", "cancelled"].includes(a.status)
+    );
+    if (appointment?.status === "visit_disputed") {
+      items.push(
+        open("home_visit", "home_visit", { student, detail: "แจ้งว่าไม่ได้เยี่ยมบ้านจริง ต้องนัดใหม่", href: "/home-visits", action: "ดูนัดหมาย" })
+      );
+    } else if (record) {
       items.push({ process: "home_visit", status: "done", student, detail: `เยี่ยมบ้านเมื่อ ${formatThaiDate(record.signedAt)}` });
     } else if (!appointment) {
       items.push(open("home_visit", "home_visit", { student, detail: "ยังไม่ได้นัดหมาย", href: "/home-visits", action: "นัดหมาย" }));

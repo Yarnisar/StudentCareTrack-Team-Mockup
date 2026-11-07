@@ -397,7 +397,9 @@ export const appointments: HomeVisitAppointment[] = [
     studentId: "30118",
     teacherName: CURRENT_TEACHER.name,
     proposedDate: "2570-02-08T15:00:00",
-    status: "completed",
+    status: "awaiting_visit_confirmation",
+    confirmedBy: "นางสมศรี ตั้งใจเรียน",
+    visitConfirmDeadline: "2570-02-11",
   },
   {
     // การเยี่ยมบ้านรอบติดตามผล — ใช้สาธิตการดึงข้อมูลจากการเยี่ยมบ้านครั้งก่อนมากรอกอัตโนมัติ

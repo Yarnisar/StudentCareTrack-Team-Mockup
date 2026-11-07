@@ -9,6 +9,7 @@ const STUDENT_TABS = [
   { href: "/portal/student", label: "ข้อมูลของฉัน", icon: UserRound },
   { href: "/portal/student/card", label: "บัตรของฉัน", icon: QrCode },
   { href: "/portal/student/sdq", label: "แบบประเมิน", icon: ClipboardList },
+  { href: "/portal/student/appointment", label: "นัดหมาย", icon: Home },
 ];
 
 const PARENT_TABS = [

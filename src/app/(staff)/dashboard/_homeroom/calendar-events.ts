@@ -80,7 +80,7 @@ export function calendarEvents(
       title: student.fullName,
       detail: `${formatThaiTime(a.proposedDate)} น. · ${APPOINTMENT_STATUS_LABEL[a.status]}`,
       student,
-      attention: a.status === "reschedule_requested",
+      attention: a.status === "reschedule_requested" || a.status === "visit_disputed",
       href: a.status === "confirmed" ? `/home-visits/${a.appointmentId}/record` : "/home-visits",
       action: a.status === "confirmed" ? "บันทึกผล" : "ดูนัดหมาย",
     });

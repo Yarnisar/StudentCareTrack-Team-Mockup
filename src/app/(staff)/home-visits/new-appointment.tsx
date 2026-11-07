@@ -18,7 +18,8 @@ import { DEMO_TODAY } from "@/lib/mock-data";
 import { useStore } from "@/lib/store";
 
 const TIMES = ["15:30", "16:00", "16:30", "17:00"];
-const OPEN_STATUSES = ["pending", "confirmed", "reschedule_requested"];
+/** นัดที่ยังค้างอยู่ นักเรียนคนนั้นจึงนัดซ้ำไม่ได้ (นัดที่ถูกแจ้งว่าไม่ได้เยี่ยมจริงนัดใหม่ได้) */
+const OPEN_STATUSES = ["pending", "confirmed", "reschedule_requested", "awaiting_visit_confirmation"];
 
 export function NewAppointmentDialog({
   onClose,
@@ -91,6 +92,7 @@ export function NewAppointmentDialog({
               <div>
                 ผู้ปกครอง {student.guardianName} ({student.guardianRelation}) · {lastInfo?.guardianPhone ?? student.guardianPhone}
               </div>
+              {lastInfo?.convenientTime && <div className="text-muted-foreground">เวลาที่สะดวก: {lastInfo.convenientTime}</div>}
               {lastInfo?.guardianNote ? (
                 <div className="text-muted-foreground">ผู้ปกครองแจ้งไว้: {lastInfo.guardianNote}</div>
               ) : (
