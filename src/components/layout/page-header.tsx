@@ -1,5 +1,5 @@
-import { Bell } from "lucide-react";
 import { GlobalSearch } from "./global-search";
+import { NotificationBell } from "./notification-bell";
 import type { ReactNode } from "react";
 
 export function PageHeader({
@@ -20,7 +20,7 @@ export function PageHeader({
       <div className="flex shrink-0 items-center gap-4">
         {action}
         <GlobalSearch />
-        <Bell className="size-5 shrink-0 text-muted-foreground" />
+        <NotificationBell />
       </div>
     </header>
   );

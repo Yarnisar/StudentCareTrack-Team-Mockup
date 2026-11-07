@@ -91,11 +91,12 @@ export function BehaviorScoreCard() {
 
         <h3 className="mt-5 text-[13.5px] font-bold">ระยะเวลาบันทึกและแก้ไข</h3>
         <p className="mt-0.5 mb-2 text-[12px] text-muted-foreground">
-          บันทึกย้อนหลังต้องระบุเหตุผล ผู้บันทึกแก้ไขหรือยกเลิกรายการของตนได้ภายในระยะเวลาที่กำหนด ระบบเก็บประวัติทุกครั้ง
+          บันทึกย้อนหลังต้องระบุเหตุผล ผู้บันทึกแก้ไขหรือยกเลิกรายการของตนได้ภายในระยะเวลาที่กำหนด ระบบเก็บประวัติทุกครั้ง คะแนนกลับเข้าเกณฑ์แล้วครูที่ปรึกษายังไม่ยืนยันถอนสถานะเกินกำหนด ระบบเตือนซ้ำและแจ้งแอดมินโดยไม่ระบุชื่อ
         </p>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-3 sm:grid-cols-3">
           <Stepper label="บันทึกย้อนหลังได้ไม่เกิน (วัน)" value={draft.backdateDays} step={1} onChange={(v) => set({ backdateDays: v })} />
           <Stepper label="แก้ไขหรือยกเลิกได้ภายใน (วันหลังบันทึก)" value={draft.editDays} step={1} onChange={(v) => set({ editDays: v })} />
+          <Stepper label="ครูที่ปรึกษายืนยันถอนสถานะภายใน (วัน)" value={draft.withdrawalWaitDays} step={1} onChange={(v) => set({ withdrawalWaitDays: v })} />
         </div>
 
         <h3 className="mt-5 text-[13.5px] font-bold">เกณฑ์เฝ้าระวัง</h3>

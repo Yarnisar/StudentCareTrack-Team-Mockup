@@ -329,8 +329,8 @@ export function processStatus(store: Store, termId: string): { items: Item[]; su
         detail: store.watchWithdrawalPending(id)
           ? `คะแนนกลับเข้าเกณฑ์แล้ว (${score}) · รอครูที่ปรึกษายืนยันถอนสถานะเฝ้าระวังระดับ ${store.behaviorWatchLevelOf(id)}`
           : `เฝ้าระวังระดับ ${store.behaviorWatchLevelOf(id)} · คะแนนความประพฤติ ${score}`,
-        href: `/students/${id}`,
-        action: "ดูประวัติ",
+        href: store.watchWithdrawalPending(id) ? "/behavior/withdrawals" : `/students/${id}`,
+        action: store.watchWithdrawalPending(id) ? "พิจารณาถอนสถานะ" : "ดูประวัติ",
       });
     }
   }

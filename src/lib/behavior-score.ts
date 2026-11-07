@@ -38,6 +38,8 @@ export interface BehaviorScoreConfig {
   backdateDays: number;
   /** ผู้บันทึกแก้ไขหรือยกเลิกได้ภายในกี่วันหลังบันทึก (UC8 สถานการณ์ B, Alt-E) */
   editDays: number;
+  /** ครูที่ปรึกษาต้องยืนยันถอนสถานะภายในกี่วันหลังคะแนนกลับเข้าเกณฑ์ เลยแล้วเตือนซ้ำและแจ้งแอดมิน (UC8 Alt-F) */
+  withdrawalWaitDays: number;
 }
 
 /** ค่าตั้งต้น: เริ่ม 100 เพดานเท่าคะแนนเริ่มต้น ต่ำสุด 0 ตามรายงาน ส่วนเกณฑ์เฝ้าระวังเป็นค่าตัวอย่าง ยังไม่ได้ตกลงกับโรงเรียน */
@@ -52,6 +54,7 @@ export const DEFAULT_BEHAVIOR_SCORE: BehaviorScoreConfig = {
   // PROTOTYPE: ค่าตัวอย่าง ยังไม่ได้ตกลงกับโรงเรียน
   backdateDays: 7,
   editDays: 3,
+  withdrawalWaitDays: 7,
 };
 
 export interface ScoreItem {
@@ -66,6 +69,24 @@ export const NEAR_WATCH_POINTS = 10;
 export function clampScore(score: number, cfg: BehaviorScoreConfig): number {
   const capped = cfg.ceiling === null ? score : Math.min(score, cfg.ceiling);
   return Math.max(capped, cfg.minScore);
+}
+
+/**
+ * วันเวลาของรายการที่ทำให้คะแนนกลับขึ้นพ้นเกณฑ์ระดับ 1 ล่าสุด ใช้นับระยะเวลารอยืนยันถอนสถานะ (UC8 Alt-F)
+ * คะแนนยังอยู่ในเกณฑ์ หรือไม่เคยเข้าเกณฑ์ = null
+ */
+export function lastRecoveryAt(items: ScoreItem[], cfg: BehaviorScoreConfig): string | null {
+  const first = cfg.watchLevels[0]?.atOrBelow;
+  if (first === undefined) return null;
+  let score = cfg.startScore;
+  let at: string | null = null;
+  for (const item of [...items].sort((a, b) => a.at.localeCompare(b.at))) {
+    const before = score;
+    score = clampScore(score + item.delta, cfg);
+    if (before <= first && score > first) at = item.at;
+    else if (score <= first) at = null;
+  }
+  return at;
 }
 
 export function runningScore(items: ScoreItem[], cfg: BehaviorScoreConfig): number {
@@ -99,6 +120,7 @@ export function validateScoreConfig(cfg: BehaviorScoreConfig): string[] {
   if (cfg.minScore >= cfg.startScore) errors.push("คะแนนต่ำสุดต้องน้อยกว่าคะแนนเริ่มต้น");
   if (cfg.backdateDays < 0) errors.push("ระยะบันทึกย้อนหลังต้องไม่ติดลบ");
   if (cfg.editDays < 0) errors.push("ระยะเวลาแก้ไขต้องไม่ติดลบ");
+  if (cfg.withdrawalWaitDays < 1) errors.push("ระยะเวลารอยืนยันถอนสถานะต้องอย่างน้อย 1 วัน");
   if (cfg.ceiling !== null && cfg.ceiling < cfg.startScore) errors.push("เพดานต้องไม่น้อยกว่าคะแนนเริ่มต้น");
   cfg.watchLevels.forEach((l, i) => {
     if (l.atOrBelow < cfg.minScore || l.atOrBelow >= cfg.startScore)

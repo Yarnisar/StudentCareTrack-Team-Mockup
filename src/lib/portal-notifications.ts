@@ -25,6 +25,8 @@ export function buildNotifications(input: {
   appointments: HomeVisitAppointment[];
   sdq: SdqAssessment[];
   eq?: EqAssessment;
+  /** ครูที่ปรึกษายืนยันถอนสถานะเฝ้าระวังแล้ว (UC8 สถานการณ์ C ข้อ 5) */
+  withdrawals?: { at: string }[];
 }): PortalNotification[] {
   const list: PortalNotification[] = [];
 
@@ -62,6 +64,14 @@ export function buildNotifications(input: {
       at: `${DEMO_TODAY}T08:00:00`,
       title: "เข้าสถานะเฝ้าระวังด้านความประพฤติ",
       body: `ระดับ ${input.watchLevel} · ครูที่ปรึกษาจะติดตามและอาจติดต่อเพื่อพูดคุย`,
+    });
+
+  for (const w of input.withdrawals ?? [])
+    list.push({
+      id: `watch-withdrawn-${w.at}`,
+      at: w.at,
+      title: "ถอนสถานะเฝ้าระวังด้านความประพฤติแล้ว",
+      body: "ครูที่ปรึกษาตรวจสอบแล้ว ขอบคุณที่ปรับตัว",
     });
 
   for (const a of input.appointments) {

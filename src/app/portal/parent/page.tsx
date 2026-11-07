@@ -36,6 +36,7 @@ export default function ParentHomePage() {
     watchLevel: store.behaviorWatchLevelOf(DEMO_STUDENT_ID),
     appointments: store.appointments.filter((a) => a.studentId === DEMO_STUDENT_ID),
     sdq: store.sdqOf(DEMO_STUDENT_ID),
+    withdrawals: store.watchDecisions.filter((d) => d.studentId === DEMO_STUDENT_ID && d.withdraw),
   }).filter((n) => !store.readNotifications.includes(n.id)).length;
 
   if (!student) return null;

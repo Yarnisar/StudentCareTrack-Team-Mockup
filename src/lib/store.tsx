@@ -39,7 +39,9 @@ import { INITIAL_WINDOWS, shiftDate, windowFor, windowStatus, type AssessmentWin
 import { scoreEq, type EqAnswer, type EqAssessment } from "./eq";
 import { eqReviewInfo, sdqReviewInfo, type AssessmentReview, type ReviewKind } from "./assessment-review";
 import { sdqSummaryForParent } from "./portal";
-import { DEFAULT_BEHAVIOR_SCORE, peakWatchLevel, runningScore, watchLevelOf, type BehaviorScoreConfig } from "./behavior-score";
+import { DEFAULT_BEHAVIOR_SCORE, lastRecoveryAt, peakWatchLevel, runningScore, WATCH_NOTIFY_LABEL, watchLevelOf, type BehaviorScoreConfig } from "./behavior-score";
+import { ruleKind } from "./behavior-rules";
+import { isFor, type NotificationLogEntry, type StaffNotification } from "./staff-notifications";
 import {
   AccessLog,
   AppointmentStatus,
@@ -134,6 +136,12 @@ interface StoreValue {
   resolveWatchWithdrawal: (studentId: string, withdraw: boolean, reason?: string) => void;
   /** ประวัติการถอน / คงสถานะเฝ้าระวัง */
   watchDecisions: { studentId: string; at: string; by: string; withdraw: boolean; reason: string }[];
+  /** วันที่คะแนนกลับเข้าเกณฑ์ วันครบกำหนดยืนยันถอน และเลยกำหนดหรือยัง (UC8 Alt-F) ไม่ได้รอยืนยัน = null */
+  withdrawalWait: (studentId: string) => { since: string; dueOn: string; overdue: boolean } | null;
+  /** การแจ้งเตือนของผู้ใช้ปัจจุบัน (กระดิ่งที่หัวหน้า) ใหม่สุดก่อน */
+  staffNotifications: StaffNotification[];
+  /** บันทึกการส่งที่ไม่มีกล่องรับในต้นแบบ (อีเมล / ผู้รับตามระดับ) แสดงในประวัติการใช้งานของแอดมิน ไม่มีชื่อนักเรียน */
+  notificationLog: NotificationLogEntry[];
   caseOf: (studentId: string) => CareCase | undefined;
 
   /** ร่างแบบประเมินที่ยังไม่ส่ง (key จาก draftKey) */
@@ -355,6 +363,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [educationDocuments, setEducationDocuments] = useState<EducationDocument[]>(seedDocuments);
   const [documentRequests, setDocumentRequests] = useState<DocumentRequest[]>([]);
   const [screeningWatch, setScreeningWatchState] = useState<StoreValue["screeningWatch"]>({});
+  const [staffEvents, setStaffEvents] = useState<StaffNotification[]>([]);
+  const [notificationLog, setNotificationLog] = useState<NotificationLogEntry[]>([]);
   const [caseConsiderations, setCaseConsiderations] = useState<StoreValue["caseConsiderations"]>({});
 
   const value = useMemo<StoreValue>(() => {
@@ -505,11 +515,105 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const watchWithdrawalPending = (studentId: string) =>
       behaviorWatchLevelOf(studentId) > currentWatchLevel(studentId);
 
-    const resolveWatchWithdrawal: StoreValue["resolveWatchWithdrawal"] = (studentId, withdraw, reason = "") =>
+    const resolveWatchWithdrawal: StoreValue["resolveWatchWithdrawal"] = (studentId, withdraw, reason = "") => {
       setWatchDecisions((prev) => [
         ...prev,
         { studentId, at: nowThaiIso(), by: CURRENT_TEACHER.name, withdraw, reason },
       ]);
+      // ถอนสถานะแล้วแจ้งนักเรียนและผู้ปกครองในระบบ (สถานการณ์ C ข้อ 5) นักเรียน/ผู้ปกครองเห็นจากรายการแจ้งเตือนในพอร์ทัล
+      if (withdraw) {
+        const room = getStudent(studentId)?.roomName ?? "";
+        logSend("ในระบบ", "นักเรียน, ผู้ปกครอง", `ถอนสถานะเฝ้าระวังของนักเรียนห้อง ${room} (ครูที่ปรึกษายืนยันแล้ว)`);
+      }
+    };
+
+    // ----- การแจ้งเตือนของครูและแอดมิน (UC8 Alt-D, Alt-F, Alt-G)
+    function addStaffEvent(n: Omit<StaffNotification, "id">) {
+      setStaffEvents((prev) => [{ ...n, id: nextId("NT") }, ...prev]);
+    }
+    function logSend(channel: NotificationLogEntry["channel"], to: string, text: string) {
+      setNotificationLog((prev) => [{ id: nextId("NL"), at: nowThaiIso(), channel, to, text }, ...prev]);
+    }
+    /** ครูที่ปรึกษาของห้องตามการมอบหมาย */
+    const homeroomTeacherOf = (room: string) => {
+      const r = (Object.keys(TEACHER_ASSIGNMENTS) as Role[]).find((k) => TEACHER_ASSIGNMENTS[k]?.homeroomRoom === room);
+      return r ? ROLE_INFO[r].user.name : undefined;
+    };
+    /** เข้าหรือขึ้นระดับเฝ้าระวัง: แจ้งครูที่ปรึกษา ครูที่บันทึก นักเรียน ผู้ปกครอง (ในระบบและอีเมล) และผู้ที่แอดมินกำหนดไว้ของระดับนั้น */
+    const notifyWatchRaised = (studentId: string, before: number, after: number, recorder: string, score: number) => {
+      if (after <= before) return;
+      const st = getStudent(studentId);
+      if (!st) return;
+      const title = before === 0 ? `${st.fullName} เข้าสถานะเฝ้าระวัง` : `${st.fullName} ขึ้นเป็นเฝ้าระวังระดับ ${after}`;
+      const body = `ระดับ ${after} · คะแนนคงเหลือ ${score} · บันทึกโดย ${recorder}`;
+      const href = `/students/${studentId}`;
+      const at = nowThaiIso();
+      addStaffEvent({ kind: "watch_raised", title, body, href, at, to: { homeroomOf: st.roomName } });
+      if (homeroomTeacherOf(st.roomName) !== recorder) addStaffEvent({ kind: "watch_raised", title, body, href, at, to: { userName: recorder } });
+      const where = `นักเรียนห้อง ${st.roomName}`;
+      logSend("ในระบบ", "ครูที่ปรึกษา, ครูที่บันทึก, นักเรียน, ผู้ปกครอง", `${where} ${before === 0 ? "เข้า" : "ขึ้นเป็น"}สถานะเฝ้าระวังระดับ ${after}`);
+      logSend("อีเมล (จำลอง)", "ผู้ปกครอง", `${where} ${before === 0 ? "เข้า" : "ขึ้นเป็น"}สถานะเฝ้าระวังระดับ ${after}`);
+      const extra = behaviorScoreConfig.watchLevels
+        .slice(0, after)
+        .flatMap((l) => l.notify)
+        .filter((n, i, all) => all.indexOf(n) === i)
+        .map((n) => WATCH_NOTIFY_LABEL[n]);
+      if (extra.length > 0) logSend("ในระบบ", extra.join(", "), `${where} สถานะเฝ้าระวังระดับ ${after} ตามที่กำหนดไว้ในหน้าตั้งค่า`);
+    };
+
+    const withdrawalWait: StoreValue["withdrawalWait"] = (studentId) => {
+      if (!watchWithdrawalPending(studentId)) return null;
+      const items = scoreItems(studentId);
+      const since = (lastRecoveryAt(items, behaviorScoreConfig) ?? items.map((i) => i.at).sort().at(-1) ?? DEMO_TODAY).slice(0, 10);
+      const dueOn = shiftDate(since, behaviorScoreConfig.withdrawalWaitDays);
+      return { since, dueOn, overdue: DEMO_TODAY > dueOn };
+    };
+
+    /** เหตุการณ์ตามเวลา: รอยืนยันถอนสถานะ และเลยกำหนด (เตือนครูที่ปรึกษาซ้ำ + แจ้งแอดมินโดยไม่ระบุชื่อ) */
+    const derivedStaffEvents = (): StaffNotification[] => {
+      const out: StaffNotification[] = [];
+      const overdueByRoom: Record<string, number> = {};
+      for (const st of students) {
+        const w = withdrawalWait(st.studentId);
+        if (!w) continue;
+        const href = "/behavior/withdrawals";
+        out.push({
+          id: `wd-${st.studentId}-${w.since}`,
+          kind: "watch_pending",
+          title: `${st.fullName} คะแนนกลับเข้าเกณฑ์แล้ว`,
+          body: "รอคุณยืนยันถอนสถานะเฝ้าระวัง ระบบไม่ถอนให้เอง",
+          href,
+          at: `${w.since}T08:00:00`,
+          to: { homeroomOf: st.roomName },
+        });
+        if (w.overdue) {
+          out.push({
+            id: `wdo-${st.studentId}-${w.dueOn}`,
+            kind: "watch_overdue",
+            title: `เลยกำหนดยืนยันถอนสถานะ ${st.fullName}`,
+            body: `รอมาเกิน ${behaviorScoreConfig.withdrawalWaitDays} วันแล้ว ระบบคงสถานะเฝ้าระวังไว้`,
+            href,
+            at: `${w.dueOn}T08:00:00`,
+            to: { homeroomOf: st.roomName },
+          });
+          overdueByRoom[st.roomName] = (overdueByRoom[st.roomName] ?? 0) + 1;
+        }
+      }
+      for (const [room, n] of Object.entries(overdueByRoom))
+        out.push({
+          id: `wdo-admin-${room}-${n}`,
+          kind: "watch_overdue_admin",
+          title: "มีนักเรียนรอยืนยันถอนสถานะเฝ้าระวังเกินกำหนด",
+          body: `ห้อง ${room} · ${n} คน · เตือนครูที่ปรึกษาซ้ำแล้ว`,
+          at: `${DEMO_TODAY}T08:00:00`,
+          to: { role: "admin" },
+        });
+      return out;
+    };
+    const viewer = { role, name: ROLE_INFO[role].user.name, homeroom: TEACHER_ASSIGNMENTS[role]?.homeroomRoom };
+    const staffNotifications = [...staffEvents, ...derivedStaffEvents()]
+      .filter((n) => isFor(n, viewer))
+      .sort((a, b) => b.at.localeCompare(a.at));
 
     const currentUserName = ROLE_INFO[role].user.name;
     const behaviorEditable: StoreValue["behaviorEditable"] = (rec) => {
@@ -546,7 +650,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       };
     };
 
-    const updateBehaviorRecord: StoreValue["updateBehaviorRecord"] = (recordId, patch) =>
+    const updateBehaviorRecord: StoreValue["updateBehaviorRecord"] = (recordId, patch) => {
+      const target = behaviorRecords.find((r) => r.recordId === recordId);
+      if (target) {
+        const p = previewBehaviorChange(recordId, { ruleId: patch.ruleId, occurredOn: patch.occurredOn });
+        notifyWatchRaised(target.studentId, p.levelBefore, p.levelAfter, ROLE_INFO[role].user.name, p.scoreAfter);
+      }
       setBehaviorRecords((prev) =>
         prev.map((r) => {
           if (r.recordId !== recordId) return r;
@@ -568,6 +677,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           };
         })
       );
+    };
 
     const cancelBehaviorRecord: StoreValue["cancelBehaviorRecord"] = (recordId, reason) =>
       setBehaviorRecords((prev) =>
@@ -861,6 +971,26 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         ...(evidence && evidence.length > 0 && { evidence }),
       }));
       setBehaviorRecords((prev) => [...created, ...prev]);
+
+      const rule = behaviorRules.find((r) => r.ruleId === ruleId);
+      const refer = !!rule && ruleKind(rule) === "refer";
+      const delta = refer ? 0 : (rule?.scoreDelta ?? 0);
+      for (const studentId of studentIds) {
+        const before = behaviorWatchLevelOf(studentId);
+        const after = behaviorWatchLevelOf(studentId, { delta, at: occurredAt });
+        notifyWatchRaised(studentId, before, after, ROLE_INFO[role].user.name, behaviorScoreOf(studentId, { delta, at: occurredAt }));
+        // กฎส่งต่อ: แจ้งครูที่ปรึกษาให้พิจารณาเปิด case (Alt-G)
+        const st = getStudent(studentId);
+        if (refer && st)
+          addStaffEvent({
+            kind: "refer_recorded",
+            title: `${st.fullName} ถูกบันทึกตามกฎส่งต่อ`,
+            body: `${rule?.name} · บันทึกโดย ${ROLE_INFO[role].user.name} · พิจารณาเปิด case ช่วยเหลือ`,
+            href: "/dashboard",
+            at: now,
+            to: { homeroomOf: st.roomName },
+          });
+      }
     };
 
     const createAppointment: StoreValue["createAppointment"] = (studentId, proposedDate) => {
@@ -1234,6 +1364,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       watchWithdrawalPending,
       resolveWatchWithdrawal,
       watchDecisions,
+      withdrawalWait,
+      staffNotifications,
+      notificationLog,
       caseOf,
       getDraft,
       saveDraft,
@@ -1294,7 +1427,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       fulfillRequest,
       logCitizenIdView,
     };
-  }, [role, screenings, redFlags, nineS, sdq, eq, reviews, behaviorRecords, rawAppointments, careCases, homeVisitRecords, accessLogs, assessmentWindows, behaviorRules, behaviorScoreConfig, drafts, screeningWatch, caseConsiderations, educationDocuments, documentRequests, dcAssessments, readNotifications, dcRounds, watchDecisions, registryCorrections, studentCards]);
+  }, [role, screenings, redFlags, nineS, sdq, eq, reviews, behaviorRecords, rawAppointments, careCases, homeVisitRecords, accessLogs, assessmentWindows, behaviorRules, behaviorScoreConfig, drafts, screeningWatch, caseConsiderations, staffEvents, notificationLog, educationDocuments, documentRequests, dcAssessments, readNotifications, dcRounds, watchDecisions, registryCorrections, studentCards]);
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }

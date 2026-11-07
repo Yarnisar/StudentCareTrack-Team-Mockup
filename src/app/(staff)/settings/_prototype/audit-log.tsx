@@ -30,6 +30,13 @@ export function useAuditEntries(): AuditEntry[] {
       detail: "บันทึกผลคัดกรอง 1 คน",
       by: s.screenedBy,
     })),
+    // บันทึกการส่งแจ้งเตือน (อีเมลและผู้รับตามระดับที่แอดมินกำหนด) ไม่ระบุชื่อนักเรียน
+    ...store.notificationLog.map((l) => ({
+      at: l.at,
+      action: "SEND_NOTIFICATION",
+      detail: `${l.channel} → ${l.to}: ${l.text}`,
+      by: "ระบบ",
+    })),
   ].sort((a, b) => b.at.localeCompare(a.at));
 }
 
@@ -44,7 +51,7 @@ export function AuditLogList({ entries }: { entries: AuditEntry[] }) {
           <span className="w-36 shrink-0 rounded-md bg-surface px-2 py-1 text-[11.5px] font-semibold text-muted-foreground">
             {entry.action}
           </span>
-          <span className="min-w-0 flex-1 truncate text-[13px]">{entry.detail}</span>
+          <span className="min-w-0 flex-1 text-[13px]">{entry.detail}</span>
           <span className="w-40 shrink-0 text-right text-[12px] text-muted-foreground">
             {entry.by}
           </span>
