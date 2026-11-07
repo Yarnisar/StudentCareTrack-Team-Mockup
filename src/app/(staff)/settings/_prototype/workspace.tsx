@@ -322,6 +322,16 @@ export function SettingsWorkspace({
                     />
                   </Field>
                   {win.kind === "home_visit" && (
+                    <Field label="วันปิดแก้ไขผลการเยี่ยมบ้านที่ส่งแล้ว">
+                      <Input
+                        type="date"
+                        value={win.editCloseDate ?? win.closeDate}
+                        min={win.openDate}
+                        onChange={(e) => proto.updateWindow(win.id, { editCloseDate: e.target.value })}
+                      />
+                    </Field>
+                  )}
+                  {win.kind === "home_visit" && (
                     <Field label="ระยะเวลารอนักเรียนหรือผู้ปกครองยืนยันผลการเยี่ยมบ้าน">
                       <Stepper
                         value={win.confirmWaitDays ?? 3}

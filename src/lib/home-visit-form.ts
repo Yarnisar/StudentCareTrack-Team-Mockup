@@ -409,6 +409,57 @@ export interface VisitForm {
   photos: string[];
   /** เหตุผลที่ถ่ายรูปบ้านไม่ได้ (id จาก PHOTO_REASON_OPTIONS) */
   photoReason: string;
+  /** ข้อมูลทะเบียนที่แก้เฉพาะการเยี่ยมครั้งนี้ ระบบไม่แก้ข้อมูลต้นทาง (UC5 Alt-D ข้อ 1) */
+  registryOverrides?: Partial<Record<"guardianName" | "guardianRelation" | "guardianPhone" | "address", string>>;
+}
+
+/** ชื่อหัวข้อสำหรับประวัติการแก้ไข (UC5 สถานการณ์ B ข้อ 10) */
+const VISIT_FIELD_LABEL: Partial<Record<keyof VisitForm, string>> = {
+  occupation: "อาชีพผู้ปกครอง",
+  education: "การศึกษาผู้ปกครอง",
+  members: "สมาชิกครัวเรือนและรายได้",
+  dependencies: "ภาระพึ่งพิง",
+  housingType: "ลักษณะที่อยู่อาศัย",
+  housingConditions: "สภาพที่อยู่อาศัย",
+  vehicles: "ยานพาหนะ",
+  farmland: "ที่ดินทำกิน",
+  hoursTogether: "เวลาที่อยู่ร่วมกัน",
+  relations: "ความสัมพันธ์ในครอบครัว",
+  caretakerWhenAway: "ผู้ดูแลเมื่อไม่อยู่บ้าน",
+  supportRequests: "ความช่วยเหลือที่ต้องการ",
+  welfareReceived: "สวัสดิการที่ได้รับ",
+  guardianConcern: "ความห่วงใยของผู้ปกครอง",
+  healthRisks: "สุขภาพ",
+  welfareRisks: "สวัสดิภาพและความปลอดภัย",
+  travelKm: "การเดินทาง",
+  travelHours: "การเดินทาง",
+  travelMinutes: "การเดินทาง",
+  travelMode: "การเดินทาง",
+  duties: "หน้าที่ในบ้าน",
+  hobbies: "งานอดิเรก",
+  substances: "สารเสพติด",
+  violence: "ความรุนแรง",
+  sexual: "พฤติกรรมทางเพศ",
+  gaming: "การติดเกม",
+  internet: "อินเทอร์เน็ต",
+  devices: "อุปกรณ์",
+  informant: "ผู้ให้ข้อมูล",
+  photoType: "รูปถ่าย",
+  canPhotoHome: "รูปถ่าย",
+  photos: "รูปถ่าย",
+  photoReason: "รูปถ่าย",
+  otherNotes: "ข้อความระบุเพิ่ม",
+  registryOverrides: "ข้อมูลพื้นฐานสำหรับการเยี่ยมครั้งนี้",
+};
+
+/** หัวข้อที่เปลี่ยนระหว่างผลเดิมกับผลที่แก้ (ไม่รวมสถานะภายในของฟอร์ม) */
+export function diffVisitForm(before: VisitForm | undefined, after: VisitForm): string[] {
+  if (!before) return ["บันทึกคำตอบทั้งแบบฟอร์ม"];
+  const changed = new Set<string>();
+  for (const key of Object.keys(VISIT_FIELD_LABEL) as (keyof VisitForm)[]) {
+    if (JSON.stringify(before[key] ?? null) !== JSON.stringify(after[key] ?? null)) changed.add(VISIT_FIELD_LABEL[key]!);
+  }
+  return [...changed];
 }
 
 export type ConfirmSection = "household" | "status";

@@ -24,6 +24,8 @@ export interface AssessmentWindow {
   kind: AssessmentKind;
   /** เยี่ยมบ้าน: ระยะเวลารอนักเรียนหรือผู้ปกครองยืนยันผลการเยี่ยม ค่าเริ่มต้น 3 วัน (UC4 Scenario A ข้อ 4) */
   confirmWaitDays?: number;
+  /** เยี่ยมบ้าน: วันปิดแก้ไขผลที่ส่งแล้ว (UC5 สถานการณ์ B ข้อ 3) */
+  editCloseDate?: string;
   label: string;
   round?: 1 | 2;
   /** วันเปิดให้ทำ (พ.ศ. yyyy-mm-dd) */
@@ -113,6 +115,7 @@ export const INITIAL_WINDOWS: AssessmentWindow[] = [
     kind: "home_visit",
     label: "รอบเยี่ยมบ้าน",
     confirmWaitDays: 3,
+    editCloseDate: "2570-03-27",
     openDate: "2569-12-01",
     closeDate: "2570-03-20",
     enabled: true,

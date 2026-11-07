@@ -47,7 +47,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
-import { previousVisitForms, SCHOOL_NAME } from "@/lib/mock-data";
+import { DEMO_TODAY, previousVisitForms, SCHOOL_NAME } from "@/lib/mock-data";
+import { useOnline } from "@/lib/use-online";
+import { REGISTRY_FIELD_LABEL, type RegistryField, type Student } from "@/lib/types";
 import { ROLE_INFO } from "@/lib/roles";
 import { resizeImage } from "@/lib/image";
 import { draftKey, useStore } from "@/lib/store";
@@ -65,6 +67,7 @@ import {
   formatMinutes,
   effectiveRelations,
   emptyMember,
+  diffVisitForm,
   finalizeVisitForm,
   FAMILY_MEMBERS,
   FARMLAND_OPTIONS,
@@ -124,6 +127,10 @@ export default function HomeVisitRecordPage({
   const student = appointment ? store.getStudent(appointment.studentId) : undefined;
   const screening = appointment ? store.latestScreening(appointment.studentId) : undefined;
   const previous = appointment ? previousVisitForms[appointment.studentId] : undefined;
+  /** มีผลที่ส่งแล้ว = แก้ไขผลเดิม (UC5 สถานการณ์ B) */
+  const existing = store.homeVisitRecords.find((r) => r.appointmentId === appointmentId);
+  const editCloseDate = store.assessmentWindows.find((w) => w.kind === "home_visit")?.editCloseDate;
+  const editClosed = !!existing && !!editCloseDate && DEMO_TODAY > editCloseDate;
 
   /* ---------------- ค่าเริ่มต้นที่ระบบกรอกให้อัตโนมัติ ---------------- */
 
@@ -162,7 +169,7 @@ export default function HomeVisitRecordPage({
 
   // ทุกช่องอยู่ในก้อนเดียว บันทึกเป็นร่างอัตโนมัติทุกครั้งที่เปลี่ยน (ไม่ต้องกดบันทึกร่าง)
   const draft = useDraft<VisitForm>(draftKey("home_visit", appointmentId), () =>
-    initialVisitForm(previous, {
+    existing?.form ?? initialVisitForm(previous, {
       guardianRelation: student?.guardianRelation,
       caretakerRelation: appointment?.caretakerRelation,
       caretakerName: appointment?.caretakerName,
@@ -177,13 +184,29 @@ export default function HomeVisitRecordPage({
   const [showRegistry, setShowRegistry] = useState(false);
   const missing = useMissingAnswers(setStep);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const [saved, setSaved] = useState<{ findings: string[]; poor: boolean } | null>(null);
+  const [saved, setSaved] = useState<{ findings: string[]; poor: boolean; changes?: string[] } | null>(null);
 
   if (!appointment || !student) {
     return (
       <div className="p-8">
         <p className="text-sm text-muted-foreground">ไม่พบนัดหมายเยี่ยมบ้าน</p>
       </div>
+    );
+  }
+
+  if (editClosed) {
+    return (
+      <>
+        <PageHeader title="แก้ไขผลการเยี่ยมบ้าน" subtitle={student.fullName} />
+        <div className="p-4 sm:p-8">
+          <p className="rounded-xl border border-border bg-card p-6 text-[13.5px]">
+            พ้นวันปิดแก้ไขผลการเยี่ยมบ้าน ({formatThaiDate(editCloseDate ?? "")}) ที่ผู้ดูแลระบบกำหนดแล้ว จึงแก้ไขผลไม่ได้
+          </p>
+          <LinkButton variant="outline" className="mt-4" href="/home-visits">
+            กลับไปรายการนัดหมาย
+          </LinkButton>
+        </div>
+      </>
     );
   }
 
@@ -307,7 +330,7 @@ export default function HomeVisitRecordPage({
     }
     const final = finalizeVisitForm(form);
     const findings = visitRiskFindings(final);
-    store.saveHomeVisit(appointmentId, {
+    const result = {
       householdMembers: members.map((m) => ({
         memberId: m.id,
         relation: m.relation,
@@ -323,7 +346,14 @@ export default function HomeVisitRecordPage({
       photoReason: photoReasonText(final),
       signedBy: signer.name,
       form: final,
-    });
+    };
+    if (existing) {
+      const changes = diffVisitForm(existing.form, final);
+      store.updateHomeVisit(appointmentId, result, changes);
+      setSaved({ findings, poor, changes });
+      return;
+    }
+    store.saveHomeVisit(appointmentId, result);
     setSaved({ findings, poor });
   };
 
@@ -335,6 +365,7 @@ export default function HomeVisitRecordPage({
         findings={saved.findings}
         poor={saved.poor}
         hasCase={store.caseOf(student.studentId)?.status === "active"}
+        changes={saved.changes}
       />
     );
   }
@@ -342,8 +373,12 @@ export default function HomeVisitRecordPage({
   return (
     <>
       <PageHeader
-        title="แบบบันทึกการเยี่ยมบ้านนักเรียน"
-        subtitle="แบบฟอร์มรวมการคัดกรองนักเรียนยากจน (4 หน้า) ตามแบบของ สพฐ."
+        title={existing ? "แก้ไขผลการเยี่ยมบ้าน" : "แบบบันทึกการเยี่ยมบ้านนักเรียน"}
+        subtitle={
+          existing
+            ? `แก้ได้ถึง ${formatThaiDate(editCloseDate ?? "")} · บันทึกแล้วระบบเก็บประวัติการแก้ไขและส่งคำขอยืนยันใหม่`
+            : "แบบฟอร์มรวมการคัดกรองนักเรียนยากจน (4 หน้า) ตามแบบของ สพฐ."
+        }
       />
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 md:p-8">
@@ -407,8 +442,9 @@ export default function HomeVisitRecordPage({
                 <AutoBadge source="registry" />
                 <span className="font-semibold">{student.fullName}</span>
                 <span className="text-muted-foreground">
-                  {student.roomName} เลขที่ {student.classNo} · ผู้ปกครอง {student.guardianName} (
-                  {student.guardianRelation}) · โทร {appointment.guardianPhone ?? student.guardianPhone}
+                  {student.roomName} เลขที่ {student.classNo} · ผู้ปกครอง {form.registryOverrides?.guardianName ?? student.guardianName} (
+                  {form.registryOverrides?.guardianRelation ?? student.guardianRelation}) · โทร{" "}
+                  {form.registryOverrides?.guardianPhone ?? appointment.guardianPhone ?? student.guardianPhone}
                 </span>
                 <button
                   type="button"
@@ -419,6 +455,13 @@ export default function HomeVisitRecordPage({
                   {showRegistry ? "ซ่อน" : "ดูข้อมูลทะเบียนทั้งหมด"}
                 </button>
               </div>
+              <RegistryMismatch
+                student={student}
+                overrides={form.registryOverrides ?? {}}
+                onApply={(field, value) =>
+                  set("registryOverrides", { ...(form.registryOverrides ?? {}), [field]: value })
+                }
+              />
               {showRegistry && (
               <div className="mb-4 grid gap-4 md:grid-cols-2">
                 <Field label="โรงเรียน" source="registry">
@@ -1513,12 +1556,15 @@ function VisitSaved({
   findings,
   poor,
   hasCase,
+  changes,
 }: {
   studentId: string;
   studentName: string;
   findings: string[];
   poor: boolean;
   hasCase: boolean;
+  /** มี = เป็นการแก้ไขผลที่ส่งแล้ว */
+  changes?: string[];
 }) {
   const atRisk = findings.length > 0 || poor;
 
@@ -1530,10 +1576,12 @@ function VisitSaved({
           <div className="rounded-xl border border-border bg-card p-6">
             <div className="flex items-center gap-3">
               <CheckCircle2 className="size-6 text-risk-green" />
-              <h2 className="text-[17px] font-bold">บันทึกผลการเยี่ยมบ้านแล้ว</h2>
+              <h2 className="text-[17px] font-bold">{changes ? "บันทึกการแก้ไขผลแล้ว" : "บันทึกผลการเยี่ยมบ้านแล้ว"}</h2>
             </div>
             <p className="mt-1.5 text-[13.5px] text-muted-foreground">
-              นัดหมายนี้เปลี่ยนสถานะเป็น “เสร็จสิ้น” และดูผลย้อนหลังได้ที่หน้าจัดการการเยี่ยมบ้าน
+              {changes
+                ? `เปลี่ยน: ${changes.length > 0 ? changes.join(", ") : "ไม่มีหัวข้อที่เปลี่ยน"} · เก็บประวัติการแก้ไขแล้ว และส่งคำขอให้นักเรียนหรือผู้ปกครองยืนยันใหม่โดยเริ่มนับเวลาใหม่`
+                : "ส่งคำขอให้นักเรียนหรือผู้ปกครองยืนยันว่าได้เยี่ยมจริงแล้ว ดูผลย้อนหลังได้ที่หน้าจัดการการเยี่ยมบ้าน"}
             </p>
           </div>
 
@@ -1582,6 +1630,99 @@ function VisitSaved({
         </div>
       </div>
     </>
+  );
+}
+
+/**
+ * ข้อมูลพื้นฐานไม่ตรงทะเบียน (UC5 Alt-D)
+ * แก้เฉพาะการเยี่ยมครั้งนี้ ระบบไม่แก้ข้อมูลต้นทาง เลือกส่งคำขอแก้ไปฝ่ายทะเบียนได้
+ * ส่งไม่ได้ (ออฟไลน์) เก็บไว้ให้แอดมินส่งออกไปให้ฝ่ายทะเบียน
+ */
+function RegistryMismatch({
+  student,
+  overrides,
+  onApply,
+}: {
+  student: Student;
+  overrides: Partial<Record<RegistryField, string>>;
+  onApply: (field: RegistryField, value: string) => void;
+}) {
+  const store = useStore();
+  const online = useOnline();
+  const [field, setField] = useState<RegistryField | null>(null);
+  const [value, setValue] = useState("");
+  const [request, setRequest] = useState(true);
+  const fields = Object.keys(REGISTRY_FIELD_LABEL) as RegistryField[];
+  const requests = store.registryCorrections.filter((r) => r.studentId === student.studentId);
+  const original = (f: RegistryField) => student[f];
+
+  return (
+    <div className="mb-4">
+      {Object.keys(overrides).length > 0 && (
+        <ul className="mb-2 space-y-1 text-[12.5px]">
+          {(Object.entries(overrides) as [RegistryField, string][]).map(([f, v]) => {
+            const req = requests.filter((r) => r.field === f).at(-1);
+            return (
+              <li key={f} className="rounded-md bg-surface px-3 py-1.5">
+                <b>{REGISTRY_FIELD_LABEL[f]}</b>: {original(f)} → {v} · ใช้เฉพาะการเยี่ยมครั้งนี้
+                {req && (req.status === "sent" ? " · ส่งคำขอแก้ไปฝ่ายทะเบียนแล้ว" : " · ส่งคำขอไม่สำเร็จ เก็บไว้ให้แอดมินส่งต่อ")}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      {field === null ? (
+        <button type="button" onClick={() => setField(fields[0])} className="text-[12.5px] font-semibold text-primary hover:underline">
+          ข้อมูลพื้นฐานไม่ตรงกับที่พบจริง?
+        </button>
+      ) : (
+        <div className="space-y-2 rounded-lg border border-border p-3">
+          <div className="flex flex-wrap gap-1.5">
+            {fields.map((f) => (
+              <button
+                key={f}
+                type="button"
+                aria-pressed={field === f}
+                onClick={() => {
+                  setField(f);
+                  setValue(overrides[f] ?? "");
+                }}
+                className={`rounded-md border px-2.5 py-1 text-[12.5px] ${field === f ? "border-primary bg-accent font-semibold text-primary" : "border-border"}`}
+              >
+                {REGISTRY_FIELD_LABEL[f]}
+              </button>
+            ))}
+          </div>
+          <div className="text-[12px] text-muted-foreground">ตามทะเบียน: {original(field)}</div>
+          <Input aria-label="ข้อมูลที่พบจริง" value={value} onChange={(e) => setValue(e.target.value)} placeholder="ข้อมูลที่พบจริง" />
+          <label className="flex items-center gap-2 text-[12.5px]">
+            <Checkbox checked={request} onCheckedChange={(v) => setRequest(!!v)} />
+            ส่งคำขอแก้ไขไปยังฝ่ายทะเบียน
+          </label>
+          <div className="flex gap-2">
+            <Button size="sm" variant="outline" onClick={() => setField(null)}>
+              ยกเลิก
+            </Button>
+            <Button
+              size="sm"
+              disabled={value.trim() === "" || value.trim() === original(field)}
+              onClick={() => {
+                onApply(field, value.trim());
+                if (request)
+                  store.requestRegistryCorrection(
+                    { studentId: student.studentId, field, from: original(field), to: value.trim() },
+                    online
+                  );
+                setField(null);
+                setValue("");
+              }}
+            >
+              ใช้สำหรับการเยี่ยมครั้งนี้
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 

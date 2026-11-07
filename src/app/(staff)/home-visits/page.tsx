@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { NewAppointmentDialog } from "./new-appointment";
 import { AppointmentStatusPanel } from "./status-panel";
 import { draftKey, useStore } from "@/lib/store";
+import { DEMO_TODAY } from "@/lib/mock-data";
 import { formatBaht, formatThaiDate, formatThaiTime } from "@/lib/format";
 import { APPOINTMENT_STATUS_LABEL, AppointmentStatus } from "@/lib/types";
 import { formatCaretaker } from "@/lib/home-visit-form";
@@ -32,6 +33,9 @@ export default function HomeVisitsPage() {
   const [selected, setSelected] = useState(store.appointments[0]?.appointmentId ?? "");
   const detailRef = useRef<HTMLDivElement>(null);
   const [creating, setCreating] = useState(false);
+  // แก้ผลที่ส่งแล้วได้ถึงวันปิดแก้ไขที่แอดมินกำหนด (UC5 สถานการณ์ B, Alt-E)
+  const editCloseDate = store.assessmentWindows.find((w) => w.kind === "home_visit")?.editCloseDate;
+  const editOpen = !editCloseDate || DEMO_TODAY <= editCloseDate;
   const [notice, setNotice] = useState("");
 
   const appointment = store.appointments.find((a) => a.appointmentId === selected);
@@ -206,6 +210,26 @@ export default function HomeVisitsPage() {
                           ผู้ให้ข้อมูล: {record.informantName} ({record.informantRelation}) ·
                           รับรองโดย {record.signedBy} เมื่อ {formatThaiDate(record.signedAt)}
                         </div>
+                        {(record.editHistory ?? []).length > 0 && (
+                          <div className="mt-3 rounded-lg bg-surface px-3 py-2 text-[12.5px]">
+                            <div className="font-semibold">ประวัติการแก้ไข</div>
+                            {record.editHistory!.map((h, i) => (
+                              <div key={i} className="text-muted-foreground">
+                                {formatThaiDate(h.at)} {formatThaiTime(h.at)} · {h.by} · {h.changes.join(", ") || "ไม่มีหัวข้อที่เปลี่ยน"}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {appointment.status !== "visit_disputed" &&
+                          (editOpen ? (
+                            <LinkButton size="sm" variant="outline" className="mt-3" href={`/home-visits/${appointment.appointmentId}/record`}>
+                              แก้ไขผลการเยี่ยมบ้าน
+                            </LinkButton>
+                          ) : (
+                            <p className="mt-3 text-[12px] text-muted-foreground">
+                              พ้นวันปิดแก้ไข ({formatThaiDate(editCloseDate ?? "")}) แล้ว จึงแก้ผลไม่ได้
+                            </p>
+                          ))}
                       </CardContent>
                     </Card>
 

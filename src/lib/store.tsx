@@ -44,6 +44,7 @@ import {
   CareCase,
   CaseUrgency,
   CareMethod,
+  RegistryCorrection,
   DcAssessment,
   DcLevel,
   DcSummary,
@@ -157,6 +158,17 @@ interface StoreValue {
     appointmentId: string,
     result: Omit<HomeVisitRecord, "recordId" | "appointmentId" | "studentId" | "signedAt">
   ) => HomeVisitRecord | null;
+  /**
+   * แก้ผลที่ส่งแล้ว เก็บประวัติการแก้ไข และส่งคำขอยืนยันใหม่โดยเริ่มนับเวลาใหม่ (UC5 สถานการณ์ B, UC4 Alt-F ข้อ 3)
+   */
+  updateHomeVisit: (
+    appointmentId: string,
+    result: Omit<HomeVisitRecord, "recordId" | "appointmentId" | "studentId" | "signedAt" | "editHistory">,
+    changes: string[]
+  ) => void;
+  /** คำขอแก้ข้อมูลทะเบียน (UC5 Alt-D) */
+  registryCorrections: RegistryCorrection[];
+  requestRegistryCorrection: (input: Omit<RegistryCorrection, "id" | "by" | "at" | "status">, delivered: boolean) => void;
   openCase: (
     studentId: string,
     supportType: SupportType,
@@ -272,6 +284,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       status: "open",
     },
   ]);
+  const [registryCorrections, setRegistryCorrections] = useState<RegistryCorrection[]>([]);
   const [watchDecisions, setWatchDecisions] = useState<StoreValue["watchDecisions"]>([]);
   const [readNotifications, setReadNotifications] = useState<string[]>([]);
   const [educationDocuments, setEducationDocuments] = useState<EducationDocument[]>(seedDocuments);
@@ -707,6 +720,34 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       return record;
     };
 
+    const updateHomeVisit: StoreValue["updateHomeVisit"] = (appointmentId, result, changes) => {
+      setHomeVisitRecords((prev) =>
+        prev.map((r) =>
+          r.appointmentId === appointmentId
+            ? {
+                ...r,
+                ...result,
+                editHistory: [...(r.editHistory ?? []), { by: CURRENT_TEACHER.name, at: nowThaiIso(), changes }],
+              }
+            : r
+        )
+      );
+      const waitDays = assessmentWindows.find((w) => w.kind === "home_visit")?.confirmWaitDays ?? 3;
+      patchAppointment(appointmentId, (a) => ({
+        ...a,
+        status: "awaiting_visit_confirmation",
+        visitConfirmDeadline: shiftDate(DEMO_TODAY, waitDays),
+        visitRespondedBy: undefined,
+      }));
+      clearDraft(draftKey("home_visit", appointmentId));
+    };
+
+    const requestRegistryCorrection: StoreValue["requestRegistryCorrection"] = (input, delivered) =>
+      setRegistryCorrections((prev) => [
+        ...prev,
+        { ...input, id: nextId("REG"), by: CURRENT_TEACHER.name, at: nowThaiIso(), status: delivered ? "sent" : "queued" },
+      ]);
+
     const openCase: StoreValue["openCase"] = (studentId, supportType, methods, goal, options) => {
       const record: CareCase = {
         caseId: nextId("CASE"),
@@ -957,6 +998,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       resolveReschedule,
       respondVisit,
       saveHomeVisit,
+      updateHomeVisit,
+      registryCorrections,
+      requestRegistryCorrection,
       openCase,
       openOrLinkCase,
       planCase,
@@ -985,7 +1029,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       fulfillRequest,
       logCitizenIdView,
     };
-  }, [role, screenings, redFlags, nineS, sdq, behaviorRecords, rawAppointments, careCases, homeVisitRecords, accessLogs, assessmentWindows, behaviorRules, behaviorScoreConfig, drafts, screeningWatch, educationDocuments, documentRequests, dcAssessments, readNotifications, dcRounds, watchDecisions]);
+  }, [role, screenings, redFlags, nineS, sdq, behaviorRecords, rawAppointments, careCases, homeVisitRecords, accessLogs, assessmentWindows, behaviorRules, behaviorScoreConfig, drafts, screeningWatch, educationDocuments, documentRequests, dcAssessments, readNotifications, dcRounds, watchDecisions, registryCorrections]);
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }

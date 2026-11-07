@@ -284,6 +284,33 @@ export interface HomeVisitRecord {
   signedAt: string;
   /** คำตอบทั้งแบบฟอร์ม (ข้อมูลตัวอย่างเดิมไม่มี) */
   form?: VisitForm;
+  /** ประวัติการแก้ไขผลที่ส่งแล้ว: ผู้แก้ไข วันเวลา และหัวข้อที่เปลี่ยน (UC5 สถานการณ์ B ข้อ 10) */
+  editHistory?: { by: string; at: string; changes: string[] }[];
+}
+
+/** ช่องข้อมูลทะเบียนที่ครูแจ้งว่าไม่ตรงได้ระหว่างเยี่ยมบ้าน (UC5 Alt-D) */
+export type RegistryField = "guardianName" | "guardianRelation" | "guardianPhone" | "address";
+
+export const REGISTRY_FIELD_LABEL: Record<RegistryField, string> = {
+  guardianName: "ชื่อผู้ปกครอง",
+  guardianRelation: "ความสัมพันธ์กับนักเรียน",
+  guardianPhone: "เบอร์โทรศัพท์",
+  address: "ที่อยู่",
+};
+
+/**
+ * คำขอแก้ข้อมูลทะเบียนที่ส่งไปฝ่ายทะเบียน (Team B) ระบบนี้ไม่แก้ข้อมูลต้นทางเอง
+ * ส่งไม่ได้ -> เก็บไว้ให้แอดมินส่งออกไปให้ฝ่ายทะเบียน (UC5 Alt-D ข้อ 2–3)
+ */
+export interface RegistryCorrection {
+  id: string;
+  studentId: string;
+  field: RegistryField;
+  from: string;
+  to: string;
+  by: string;
+  at: string;
+  status: "sent" | "queued";
 }
 
 /** 4 ประเภทการช่วยเหลือ ตามแนวทาง HERO OBEC CARE */

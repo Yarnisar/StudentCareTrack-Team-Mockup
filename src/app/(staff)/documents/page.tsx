@@ -15,10 +15,11 @@ import { Check, Download, FileText, Info, X } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { downloadCsv } from "@/lib/csv";
 import { formatThaiDate } from "@/lib/format";
 import { CURRENT_TERM, subjectSubmissions } from "@/lib/mock-data";
 import { useStore } from "@/lib/store";
-import { REFERRAL_STATUS_LABEL, type DcSummary, type DocumentType, type ReferralStatus, type Student } from "@/lib/types";
+import { REFERRAL_STATUS_LABEL, REGISTRY_FIELD_LABEL, type DcSummary, type DocumentType, type ReferralStatus, type Student } from "@/lib/types";
 
 interface DocSpec {
   code: DocumentType;
@@ -145,6 +146,7 @@ export default function DocumentsPage() {
             {!isAdmin && <RequestPp7 />}
             {isAdmin && <RequestQueue />}
             {isAdmin && <ReferralQueue />}
+            {isAdmin && <RegistryQueue />}
 
             <Card>
               <CardContent className="p-5">
@@ -448,6 +450,53 @@ function ReferralQueue() {
           })}
           {items.length === 0 && <p className="py-2 text-[12.5px] text-muted-foreground">ยังไม่มีเอกสารส่งต่อ</p>}
         </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+/**
+ * คำขอแก้ข้อมูลทะเบียนที่ส่งไปฝ่ายทะเบียนไม่สำเร็จ แอดมินส่งออกเป็นไฟล์ให้ฝ่ายทะเบียน (UC5 Alt-D ข้อ 3)
+ * เป็นข้อมูลทะเบียน ไม่ใช่ผลเยี่ยมบ้าน แอดมินจึงเห็นได้
+ */
+function RegistryQueue() {
+  const store = useStore();
+  const queued = store.registryCorrections.filter((r) => r.status === "queued");
+  if (queued.length === 0) return null;
+  return (
+    <Card>
+      <CardContent className="p-5">
+        <h2 className="text-[15.5px] font-bold">คำขอแก้ข้อมูลทะเบียนที่ส่งไม่สำเร็จ · {queued.length}</h2>
+        <p className="mb-2 text-[12px] text-muted-foreground">ส่งออกเป็นไฟล์แล้วนำไปให้ฝ่ายทะเบียนแก้ในระบบงานทะเบียน</p>
+        <div className="divide-y divide-border text-[13px]">
+          {queued.map((r) => (
+            <div key={r.id} className="py-2">
+              {store.getStudent(r.studentId)?.fullName} · {REGISTRY_FIELD_LABEL[r.field]}: {r.from} → {r.to}
+              <span className="block text-[11.5px] text-muted-foreground">แจ้งโดย {r.by} · {formatThaiDate(r.at)}</span>
+            </div>
+          ))}
+        </div>
+        <Button
+          size="sm"
+          variant="outline"
+          className="mt-2"
+          onClick={() =>
+            downloadCsv(
+              "registry-corrections.csv",
+              ["นักเรียน", "ช่องข้อมูล", "ตามทะเบียน", "ที่พบจริง", "ผู้แจ้ง", "วันที่"],
+              queued.map((r) => [
+                store.getStudent(r.studentId)?.fullName ?? r.studentId,
+                REGISTRY_FIELD_LABEL[r.field],
+                r.from,
+                r.to,
+                r.by,
+                formatThaiDate(r.at),
+              ])
+            )
+          }
+        >
+          ส่งออกให้ฝ่ายทะเบียน
+        </Button>
       </CardContent>
     </Card>
   );
