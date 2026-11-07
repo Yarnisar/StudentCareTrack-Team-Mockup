@@ -104,7 +104,8 @@ export function HomeroomOverview() {
         i.student.fullName,
         i.detail,
         i.due ? formatThaiDate(i.due) : "",
-      ])
+      ]),
+      store.logExport(`ภาพรวมห้อง ${CURRENT_TEACHER.roomName} · ${shown.length} รายการ`)
     );
 
   const listTitle = [
@@ -206,7 +207,6 @@ export function HomeroomOverview() {
                     <h2 className="text-[15px] font-bold">
                       {listTitle} · {shown.length} รายการ
                     </h2>
-                    <p className="mt-0.5 text-[12.5px] text-muted-foreground">เรียงจากเกินกำหนดก่อน กดรายการเพื่อไปทำต่อ</p>
                   </div>
                   {(process !== "all" || status !== "open") && (
                     <Button

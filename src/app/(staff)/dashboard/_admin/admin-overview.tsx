@@ -12,7 +12,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Bell, Check, ChevronLeft, ChevronRight, Download, FlaskConical, SlidersHorizontal } from "lucide-react";
+import { Bell, Check, ChevronLeft, ChevronRight, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { NativeSelect } from "@/components/ui/native-select";
@@ -66,7 +66,7 @@ const matches = (item: AdminItem, process: ProcessKey | "all", status: StatusFil
 const n = (v: number) => v.toLocaleString("th-TH");
 
 export function AdminOverview() {
-  const { assessmentWindows: windows } = useStore();
+  const { assessmentWindows: windows, logExport } = useStore();
   const [year, setYear] = useState(CURRENT_TERM.academicYear);
   const [semester, setSemester] = useState(CURRENT_TERM.semester);
   const [level, setLevel] = useState<number | "all">("all");
@@ -74,7 +74,6 @@ export function AdminOverview() {
   const [status, setStatus] = useState<StatusFilter>("open");
   const [process, setProcess] = useState<ProcessKey | "all">("all");
   const [pageSize, setPageSize] = useState(10);
-  const [showFilters, setShowFilters] = useState(false);
   const [showAllRooms, setShowAllRooms] = useState(false);
   // PROTOTYPE: การเตือนครูเป็นการจำลอง เก็บไว้ในหน้านี้เท่านั้น (room → เรื่องที่เตือน)
   const [reminded, setReminded] = useState<Record<string, string>>({});
@@ -96,9 +95,6 @@ export function AdminOverview() {
   const selectionLabel = [process === "all" ? null : PROCESS_LABEL[process], STATUS_FILTER_LABEL[status]]
     .filter(Boolean)
     .join(" · ");
-  const activeFilters =
-    Number(year !== CURRENT_TERM.academicYear || semester !== CURRENT_TERM.semester) + Number(level !== "all") + Number(room !== "all");
-
   // เรียงห้องจากงานที่ตรงกับการเลือกมากที่สุด
   const roomRows = rooms
     .map((r) => ({ room: r, own: items.filter((i) => i.student.room === r.room) }))
@@ -136,6 +132,7 @@ export function AdminOverview() {
 
   const exportCsv = () => {
     const count = (own: AdminItem[], p: ProcessKey, s: Status) => own.filter((i) => i.process === p && i.status === s).length;
+    const scopeText = selectedRoom ? `สถิติห้อง ${selectedRoom.room}` : level === "all" ? "สถิติรายห้องทั้งโรงเรียน" : `สถิติรายห้อง ม.${level}`;
     downloadCsv(
       `ภาพรวม-${selectedRoom ? selectedRoom.room.replace("/", "-") : level === "all" ? "ทั้งโรงเรียน" : `ม${level}`}-${CURRENT_TERM.termId}.csv`,
       [
@@ -155,7 +152,8 @@ export function AdminOverview() {
           (["done", "pending", "near_due", "overdue"] as Status[]).map((s) => count(own, p, s))
         ),
         count(own, "behavior", "watch"),
-      ])
+      ]),
+      logExport(`${scopeText} · ${CURRENT_TERM.label} (ไม่มีชื่อนักเรียน)`)
     );
   };
 
@@ -178,27 +176,11 @@ export function AdminOverview() {
             {termLabel}
             {!noData && <> · {n(students.length)} คน</>}
             {selectedRoom && <> · {selectedRoom.teacher}</>}
-            <span
-              title={`ข้อมูลจำลองทั้งโรงเรียน ${n(allStudents.length)} คน ใช้ทดสอบการแสดงข้อมูลจำนวนมาก ยังไม่เชื่อมกับข้อมูลในระบบ ทำงานในหน้าอื่นแล้วตัวเลขตรงนี้จะไม่เปลี่ยน ยกเว้นวันครบกำหนดที่อ่านจากช่วงเวลาในหน้าตั้งค่า`}
-              className="inline-flex cursor-help items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11.5px]"
-            >
-              <FlaskConical className="size-3" /> ข้อมูลจำลอง
-            </span>
           </p>
         </div>
-        <Button variant="outline" className="h-10" aria-expanded={showFilters} onClick={() => setShowFilters((v) => !v)}>
-          <SlidersHorizontal className="size-4" /> ตัวกรอง
-          {activeFilters > 0 && (
-            <span className="rounded-full bg-primary px-1.5 text-[11px] font-semibold text-primary-foreground">{activeFilters}</span>
-          )}
-        </Button>
-        <Button variant="outline" className="h-10" onClick={exportCsv} disabled={noData}>
-          <Download className="size-4" /> ส่งออกสรุปรายห้อง
-        </Button>
       </div>
 
-      {showFilters && (
-        <div className="mt-4 flex flex-wrap items-end gap-3 rounded-xl border border-border bg-surface p-4">
+      <div className="mt-4 flex flex-wrap items-end gap-3">
           <Filter label="ปีการศึกษา">
             <NativeSelect value={year} onChange={(e) => setYear(Number(e.target.value))} className="w-32">
               {YEARS.map((y) => (
@@ -255,8 +237,11 @@ export function AdminOverview() {
                 ))}
             </NativeSelect>
           </Filter>
-        </div>
-      )}
+        <span className="flex-1" />
+        <Button variant="outline" className="h-10" onClick={exportCsv} disabled={noData}>
+          <Download className="size-4" /> ส่งออกสรุปรายห้อง
+        </Button>
+      </div>
 
       {noData ? (
         <Card className="mt-5">
@@ -404,7 +389,6 @@ export function AdminOverview() {
                 <div className="flex flex-wrap items-end gap-3">
                   <div className="min-w-0 flex-1">
                     <h2 className="text-[15px] font-bold">ทุกห้อง · {n(rooms.length)} ห้อง</h2>
-                    <p className="mt-0.5 text-[12.5px] text-muted-foreground">กดห้องเพื่อดูตัวเลขของห้องนั้น</p>
                   </div>
                   <Filter label="เรียงตามสถานะ">
                     <NativeSelect

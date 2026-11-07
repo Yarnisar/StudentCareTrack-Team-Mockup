@@ -207,7 +207,7 @@ function StudentDetail({
       ]);
     }
     rows.push(["ความประพฤติ", "คะแนนความประพฤติ", behaviorScore]);
-    downloadCsv(`รายงานนักเรียน-${student.studentId}.csv`, ["หมวด", "รายการ", "ผล"], rows);
+    downloadCsv(`รายงานนักเรียน-${student.studentId}.csv`, ["หมวด", "รายการ", "ผล"], rows, store.logExport("ข้อมูลนักเรียนรายบุคคล 1 คน"));
   };
 
   return (
@@ -374,9 +374,6 @@ function StudentDetail({
           ) : (
             <p className="text-[12px] text-muted-foreground">ยังไม่มีการเปิดดูในรอบนี้</p>
           )}
-          <p className="mt-1.5 text-[11px] text-muted-foreground">
-            ต้นแบบเก็บประวัติในหน่วยความจำ รีเฟรชแล้วหาย
-          </p>
         </div>
       )}
     </CardContent>

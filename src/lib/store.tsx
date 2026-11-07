@@ -47,6 +47,7 @@ import { academicYearOfDate } from "./terms";
 import { isFor, type NotificationLogEntry, type StaffNotification } from "./staff-notifications";
 import {
   AccessLog,
+  ExportLogEntry,
   AppointmentStatus,
   AssessmentOutcome,
   BehaviorRecord,
@@ -93,6 +94,9 @@ interface StoreValue {
   homeVisitRecords: HomeVisitRecord[];
   /** ประวัติการเปิดดูเลขบัตรประชาชน เรียงใหม่สุดก่อน */
   accessLogs: AccessLog[];
+  exportLog: ExportLogEntry[];
+  /** บันทึกการส่งออกและคืนข้อมูลผู้ส่งออก/เวลา ไว้ใส่ในไฟล์ */
+  logExport: (scope: string) => [string, string][];
   /** ช่วงเวลาดำเนินงานที่แอดมินตั้งในหน้าตั้งค่า (UC4 Scenario A, UC9) */
   assessmentWindows: AssessmentWindow[];
   setAssessmentWindows: React.Dispatch<React.SetStateAction<AssessmentWindow[]>>;
@@ -332,6 +336,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [careCases, setCareCases] = useState<CareCase[]>(seedCareCases);
   const [homeVisitRecords, setHomeVisitRecords] = useState<HomeVisitRecord[]>(seedHomeVisitRecords);
   const [accessLogs, setAccessLogs] = useState<AccessLog[]>([]);
+  const [exportLog, setExportLog] = useState<ExportLogEntry[]>([]);
   const [assessmentWindows, setAssessmentWindows] = useState<AssessmentWindow[]>(INITIAL_WINDOWS);
   const [behaviorRules, setBehaviorRules] = useState<BehaviorRule[]>(seedBehaviorRules);
   const [behaviorScoreConfig, setBehaviorScoreConfig] = useState<BehaviorScoreConfig>(DEFAULT_BEHAVIOR_SCORE);
@@ -1367,6 +1372,22 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       );
     };
 
+    const logExport = (scope: string): [string, string][] => {
+      const entry: ExportLogEntry = {
+        logId: nextId("EXP"),
+        at: nowThaiIso(),
+        actorName: ROLE_INFO[role].user.name,
+        actorRole: ROLE_INFO[role].label,
+        scope,
+      };
+      setExportLog((prev) => [entry, ...prev]);
+      return [
+        ["ผู้ส่งออก", `${entry.actorName} (${entry.actorRole})`],
+        ["เวลาส่งออก", entry.at.replace("T", " ").slice(0, 16)],
+        ["ขอบเขตข้อมูล", scope],
+      ];
+    };
+
     const logCitizenIdView = (studentId: string) => {
       if (!canRevealCitizenId(role)) return false;
       setAccessLogs((prev) => [
@@ -1396,6 +1417,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       careCases,
       homeVisitRecords,
       accessLogs,
+      exportLog,
+      logExport,
       assessmentWindows,
       setAssessmentWindows,
       behaviorRules,
@@ -1487,7 +1510,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       fulfillRequest,
       logCitizenIdView,
     };
-  }, [role, screenings, redFlags, nineS, sdq, eq, reviews, behaviorRecords, rawAppointments, careCases, homeVisitRecords, accessLogs, assessmentWindows, behaviorRules, behaviorScoreConfig, drafts, screeningWatch, caseConsiderations, staffEvents, notificationLog, educationDocuments, documentRequests, dcAssessments, readNotifications, dcRounds, watchDecisions, registryCorrections, studentCards]);
+  }, [role, screenings, redFlags, nineS, sdq, eq, reviews, behaviorRecords, rawAppointments, careCases, homeVisitRecords, accessLogs, exportLog, assessmentWindows, behaviorRules, behaviorScoreConfig, drafts, screeningWatch, caseConsiderations, staffEvents, notificationLog, educationDocuments, documentRequests, dcAssessments, readNotifications, dcRounds, watchDecisions, registryCorrections, studentCards]);
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }

@@ -21,13 +21,11 @@ export default function LoginPage() {
 
         <div className="relative">
           <h2 className="max-w-md text-[34px] leading-snug font-bold text-white">
-            ระบบดูแลช่วยเหลือนักเรียน
-            <br />
-            แบบครบวงจร
+            ระบบคัดกรอง ประเมิน และติดตามการดูแลช่วยเหลือนักเรียนภายในสถานศึกษา
           </h2>
           <p className="mt-4 max-w-md text-[15.5px] leading-relaxed text-blue-100">
-            คัดกรอง ประเมิน บันทึกความประพฤติ เยี่ยมบ้าน และติดตามช่วยเหลือนักเรียนในที่เดียว
-            สำหรับครูประจำชั้นและบุคลากรโรงเรียน
+            คัดกรองและประเมินนักเรียน บันทึกความประพฤติ เยี่ยมบ้าน และติดตามการช่วยเหลือต่อเนื่องทุกภาคเรียน
+            สำหรับครู นักเรียน และผู้ปกครอง
           </p>
         </div>
 
@@ -37,9 +35,9 @@ export default function LoginPage() {
       </div>
 
       <div className="flex flex-1 items-center justify-center bg-card px-6">
-        <div className="w-full max-w-sm">
+        <div className="w-full max-w-md py-10">
           <h1 className="text-2xl font-bold">เข้าสู่ระบบ</h1>
-          <p className="mt-1.5 mb-8 text-sm text-muted-foreground">
+          <p className="mt-1.5 mb-6 text-sm text-muted-foreground">
             กรอกข้อมูลบัญชีของโรงเรียนเพื่อเข้าใช้งาน
           </p>
 
@@ -69,16 +67,13 @@ export default function LoginPage() {
             </RoleLink>
           </form>
 
-          <div className="my-7 flex items-center gap-3">
-            <span className="h-px flex-1 bg-border" />
-            <span className="text-xs text-muted-foreground">เลือกบทบาทเพื่อดูต้นแบบ</span>
-            <span className="h-px flex-1 bg-border" />
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            {ROLE_ORDER.map((role) => (
-              <RoleLink key={role} role={role} size="sm" variant="outline" />
-            ))}
+          {/* ต้นแบบ: ปุ่มเข้าแต่ละบทบาท (สลับบทบาทด้วยการออกจากระบบแล้วเลือกใหม่) */}
+          <div className="mt-8 border-t border-border pt-6">
+            <div className="flex flex-wrap justify-center gap-2">
+              {ROLE_ORDER.map((role) => (
+                <RoleLink key={role} role={role} variant="outline" className="h-9 rounded-full px-4 text-[13px] font-medium" />
+              ))}
+            </div>
           </div>
         </div>
       </div>

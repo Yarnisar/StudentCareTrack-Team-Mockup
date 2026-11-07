@@ -30,6 +30,13 @@ export function useAuditEntries(): AuditEntry[] {
       detail: "บันทึกผลคัดกรอง 1 คน",
       by: s.screenedBy,
     })),
+    // ประวัติการส่งออกรายงาน ไม่ระบุชื่อนักเรียน
+    ...store.exportLog.map((l) => ({
+      at: l.at,
+      action: "EXPORT_REPORT",
+      detail: `ส่งออกรายงาน · ${l.scope}`,
+      by: l.actorName,
+    })),
     // บันทึกการส่งแจ้งเตือน (อีเมลและผู้รับตามระดับที่แอดมินกำหนด) ไม่ระบุชื่อนักเรียน
     ...store.notificationLog.map((l) => ({
       at: l.at,

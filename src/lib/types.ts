@@ -512,6 +512,16 @@ export interface DocumentRequest {
  * บันทึกการเปิดดูข้อมูลส่วนบุคคลที่ซ่อนไว้ (ข้อ 2.1.10)
  * PROTOTYPE: เก็บในหน่วยความจำ · Project 2 ต้องเขียนที่ backend ให้แก้หรือลบไม่ได้
  */
+/** ประวัติการส่งออกรายงาน (UC1 Scenario B ข้อ 5, UC2 Scenario B ข้อ 4) แอดมินเห็นผู้ส่งออก ขอบเขต เวลา ไม่เห็นชื่อนักเรียน */
+export interface ExportLogEntry {
+  logId: string;
+  at: string;
+  actorName: string;
+  actorRole: string;
+  /** ขอบเขตข้อมูลที่ส่งออก เช่น "ภาพรวมห้อง ม.3/1" หรือ "ข้อมูลนักเรียนรายบุคคล 1 คน" */
+  scope: string;
+}
+
 export interface AccessLog {
   logId: string;
   studentId: string;
