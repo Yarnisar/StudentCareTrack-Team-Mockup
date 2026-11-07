@@ -24,6 +24,13 @@ import {
   type RuleKind,
 } from "@/lib/behavior-rules";
 import { formatThaiDate } from "@/lib/format";
+import { CURRENT_TERM } from "@/lib/mock-data";
+import { KIND_LABEL, targetLabel, targetsOverlap, type AssessmentKind, type WindowTarget } from "@/lib/periods";
+import { useStore } from "@/lib/store";
+import { termInfo, termInfoOf } from "@/lib/terms";
+import { windowStarted } from "@/lib/window-progress";
+import { allRooms, LEVELS } from "../../dashboard/_admin/school-data";
+import { NativeSelect } from "@/components/ui/native-select";
 import type { BehaviorRule, SdqRater } from "@/lib/types";
 import { AuditLogList, useAuditEntries } from "./audit-log";
 import { BehaviorScoreCard } from "./behavior-score-card";
@@ -70,9 +77,12 @@ export function SettingsWorkspace({
   const [selectedRule, setSelectedRule] = useState<string | null>(null);
   const entries = useAuditEntries();
   const confirm = useConfirm();
+  const store = useStore();
 
   const win = proto.windows.find((w) => w.id === selectedWindow) ?? null;
   const rule = proto.rules.find((r) => r.ruleId === selectedRule) ?? null;
+  /** จำนวนผู้ที่เริ่มตอบรอบนี้แล้ว มากกว่า 0 = ล็อกชนิดแบบประเมินและภาคเรียน (UC9 Scenario B ข้อ 4) */
+  const started = win ? windowStarted(store, win) : 0;
   const closePanel = () => {
     setSelectedWindow(null);
     setSelectedRule(null);
@@ -83,6 +93,22 @@ export function SettingsWorkspace({
       ? "วันเปิดให้ทำต้องไม่หลังวันปิดรับ"
       : win && win.label.trim() === ""
         ? "ต้องระบุชื่อที่แสดง"
+        : win && win.raters.length === 0
+          ? "ต้องเลือกผู้ตอบอย่างน้อย 1 กลุ่ม"
+          : win && win.target?.type === "room" && !win.target.room
+            ? "ต้องเลือกห้องเรียน"
+            : win &&
+                proto.windows.some(
+                  (o) =>
+                    o.id !== win.id &&
+                    o.enabled &&
+                    win.enabled &&
+                    o.kind === win.kind &&
+                    o.round === win.round &&
+                    (o.termId ?? CURRENT_TERM.termId) === (win.termId ?? CURRENT_TERM.termId) &&
+                    targetsOverlap(o.target, win.target)
+                )
+              ? "มีรอบนี้ของภาคเรียนและกลุ่มเป้าหมายเดียวกันอยู่แล้ว"
         : rule && !rule.cancelled && rule.name.trim() === ""
           ? "ต้องระบุชื่อพฤติกรรม"
           : "";
@@ -176,7 +202,12 @@ export function SettingsWorkspace({
                       selectedWindow === w.id ? "bg-accent" : ""
                     }`}
                   >
-                    <span className="min-w-0 flex-1 text-[13.5px] font-medium">{w.label}</span>
+                    <span className="min-w-0 flex-1 text-[13.5px] font-medium">
+                      {w.label}
+                      <span className="ml-2 text-[12px] font-normal text-muted-foreground">
+                        {termInfoOf(w.termId ?? CURRENT_TERM.termId).short} · {targetLabel(w.target)}
+                      </span>
+                    </span>
                     <span className="text-[12.5px] text-muted-foreground">
                       {formatThaiDate(w.openDate)} – {formatThaiDate(w.closeDate)}
                     </span>
@@ -302,6 +333,112 @@ export function SettingsWorkspace({
             <div className="flex-1 space-y-4 overflow-y-auto p-5">
               {win && (
                 <>
+                  {started > 0 && (
+                    <p className="rounded-lg bg-surface px-3 py-2.5 text-[12.5px] leading-relaxed">
+                      มีผู้ตอบแล้ว {started} รายการ จึงล็อกชนิดแบบประเมิน ภาคเรียน คำถามและเกณฑ์คะแนน แก้ได้เฉพาะช่วงเวลา กลุ่มเป้าหมาย และผู้ตอบ
+                    </p>
+                  )}
+                  <Field label="แบบประเมิน">
+                    <div className="flex flex-wrap gap-1.5">
+                      {(Object.keys(KIND_LABEL) as AssessmentKind[]).map((k) => (
+                        <ChoiceChip
+                          key={k}
+                          on={win.kind === k}
+                          disabled={started > 0}
+                          onClick={() =>
+                            proto.updateWindow(win.id, {
+                              kind: k,
+                              round: k === "sdq" ? 1 : undefined,
+                              label: k === "sdq" ? "SDQ รอบที่ 1" : KIND_LABEL[k],
+                              raters: k === "sdq" ? ["teacher", "student", "parent"] : k === "eq" ? ["student"] : ["teacher"],
+                            })
+                          }
+                        >
+                          {KIND_LABEL[k]}
+                        </ChoiceChip>
+                      ))}
+                    </div>
+                  </Field>
+                  {win.kind === "sdq" && (
+                    <Field label="รอบ">
+                      <div className="flex gap-1.5">
+                        {([1, 2] as const).map((r) => (
+                          <ChoiceChip
+                            key={r}
+                            on={win.round === r}
+                            disabled={started > 0}
+                            onClick={() => proto.updateWindow(win.id, { round: r, label: `SDQ รอบที่ ${r}` })}
+                          >
+                            รอบที่ {r}
+                          </ChoiceChip>
+                        ))}
+                      </div>
+                    </Field>
+                  )}
+                  <Field label="ภาคเรียน">
+                    <div className="flex flex-wrap gap-1.5">
+                      {[termInfo(CURRENT_TERM.academicYear, 1), termInfo(CURRENT_TERM.academicYear, 2), termInfo(CURRENT_TERM.academicYear + 1, 1)].map((t) => (
+                        <ChoiceChip
+                          key={t.termId}
+                          on={(win.termId ?? CURRENT_TERM.termId) === t.termId}
+                          disabled={started > 0}
+                          onClick={() => proto.updateWindow(win.id, { termId: t.termId })}
+                        >
+                          {t.short}
+                        </ChoiceChip>
+                      ))}
+                    </div>
+                  </Field>
+                  <Field label="กลุ่มเป้าหมาย">
+                    <div className="flex flex-wrap gap-1.5">
+                      {(
+                        [
+                          ["school", "ทั้งโรงเรียน"],
+                          ["level", "ระดับชั้น"],
+                          ["room", "ห้องเรียน"],
+                        ] as const
+                      ).map(([type, label]) => (
+                        <ChoiceChip
+                          key={type}
+                          on={(win.target?.type ?? "school") === type}
+                          onClick={() => {
+                            const next: WindowTarget =
+                              type === "school" ? { type: "school" } : type === "level" ? { type: "level", level: 3 } : { type: "room", room: "" };
+                            proto.updateWindow(win.id, { target: next });
+                          }}
+                        >
+                          {label}
+                        </ChoiceChip>
+                      ))}
+                    </div>
+                    {win.target?.type === "level" && (
+                      <NativeSelect
+                        className="mt-2 w-40"
+                        value={win.target.level}
+                        onChange={(e) => proto.updateWindow(win.id, { target: { type: "level", level: Number(e.target.value) } })}
+                      >
+                        {LEVELS.map((l) => (
+                          <option key={l} value={l}>
+                            ม.{l}
+                          </option>
+                        ))}
+                      </NativeSelect>
+                    )}
+                    {win.target?.type === "room" && (
+                      <NativeSelect
+                        className="mt-2 w-40"
+                        value={win.target.room}
+                        onChange={(e) => proto.updateWindow(win.id, { target: { type: "room", room: e.target.value } })}
+                      >
+                        <option value="">เลือกห้อง</option>
+                        {allRooms.map((r) => (
+                          <option key={r.room} value={r.room}>
+                            {r.room}
+                          </option>
+                        ))}
+                      </NativeSelect>
+                    )}
+                  </Field>
                   <Field label="ชื่อที่แสดง">
                     <Input value={win.label} onChange={(e) => proto.updateWindow(win.id, { label: e.target.value })} />
                   </Field>
@@ -567,16 +704,27 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-function ChoiceChip({ on, onClick, children }: { on: boolean; onClick: () => void; children: React.ReactNode }) {
+function ChoiceChip({
+  on,
+  onClick,
+  children,
+  disabled,
+}: {
+  on: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+  disabled?: boolean;
+}) {
   return (
     <button
       type="button"
       aria-pressed={on}
+      disabled={disabled}
       onClick={onClick}
       className={
         on
-          ? "rounded-lg border border-primary bg-accent px-3 py-1.5 text-[13px] font-semibold text-primary"
-          : "rounded-lg border border-border px-3 py-1.5 text-[13px] hover:bg-muted"
+          ? "rounded-lg border border-primary bg-accent px-3 py-1.5 text-[13px] font-semibold text-primary disabled:opacity-70"
+          : "rounded-lg border border-border px-3 py-1.5 text-[13px] hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent"
       }
     >
       {children}

@@ -5,7 +5,9 @@
  */
 
 import { formatThaiTime } from "@/lib/format";
-import { dueStatus, KIND_LABEL } from "@/lib/periods";
+import { CURRENT_TERM } from "@/lib/mock-data";
+import { dueStatus, KIND_LABEL, windowCoversRoom } from "@/lib/periods";
+import { TEACHER_ASSIGNMENTS } from "@/lib/roles";
 import type { useStore } from "@/lib/store";
 import { APPOINTMENT_STATUS_LABEL, CASE_URGENCY_LABEL, type Student } from "@/lib/types";
 import type { Item } from "./process-status";
@@ -51,7 +53,10 @@ export function calendarEvents(
 ): { events: CalendarEvent[]; periods: PeriodRange[] } {
   if (!hasData) return { events: [], periods: [] };
 
-  const windows = store.assessmentWindows.filter((w) => w.enabled);
+  const room = TEACHER_ASSIGNMENTS.homeroom?.homeroomRoom ?? "";
+  const windows = store.assessmentWindows.filter(
+    (w) => w.enabled && (w.termId ?? CURRENT_TERM.termId) === CURRENT_TERM.termId && windowCoversRoom(w, room)
+  );
   const periods = windows.map((w) => ({
     id: w.id,
     label: KIND_LABEL[w.kind] + (w.round ? ` รอบ ${w.round}` : ""),

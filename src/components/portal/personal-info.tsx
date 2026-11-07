@@ -51,6 +51,8 @@ export function PersonalInfo({ viewer, studentIds }: { viewer: "student" | "pare
     sdq: store.sdqOf(studentId),
     eq: store.eqOf(studentId),
     withdrawals: store.watchDecisions.filter((d) => d.studentId === studentId && d.withdraw),
+    windows: store.assessmentWindows,
+    room: student.roomName,
   });
   const unread = notifications.filter((n) => !store.readNotifications.includes(n.id)).length;
 

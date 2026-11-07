@@ -38,6 +38,8 @@ export default function ParentHomePage() {
     appointments: store.appointments.filter((a) => a.studentId === DEMO_STUDENT_ID),
     sdq: store.sdqOf(DEMO_STUDENT_ID),
     withdrawals: store.watchDecisions.filter((d) => d.studentId === DEMO_STUDENT_ID && d.withdraw),
+    windows: store.assessmentWindows,
+    room: student?.roomName,
   }).filter((n) => !store.readNotifications.includes(n.id)).length;
 
   if (!student) return null;

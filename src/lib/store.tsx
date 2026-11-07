@@ -37,7 +37,7 @@ import { nowThaiIso } from "./format";
 import { usePathname } from "next/navigation";
 import { DEFAULT_DC_CRITERIA, type DcRound } from "./dc-round";
 import { canRevealCitizenId, defaultRoleFor, recordableRooms, ROLE_INFO, TEACHER_ASSIGNMENTS, type Role } from "./roles";
-import { INITIAL_WINDOWS, shiftDate, windowFor, windowStatus, type AssessmentWindow } from "./periods";
+import { INITIAL_WINDOWS, KIND_HREF, KIND_LABEL, shiftDate, windowCoversRoom, windowFor, windowNotice, windowStatus, type AssessmentWindow } from "./periods";
 import { scoreEq, type EqAnswer, type EqAssessment } from "./eq";
 import { eqReviewInfo, sdqReviewInfo, type AssessmentReview, type ReviewKind } from "./assessment-review";
 import { sdqSummaryForParent } from "./portal";
@@ -664,6 +664,23 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             at: `${c.referral.preparedAt.slice(0, 10)}T08:00:00`,
             to: { role: "admin" },
           });
+      // UC9: แจ้งผู้ตอบเมื่อเปิดรอบ และเตือนก่อนปิดรอบ (ครูของห้องที่อยู่ในกลุ่มเป้าหมาย)
+      const rooms = [...new Set(students.map((st) => st.roomName))];
+      for (const w of assessmentWindows) {
+        const notice = windowNotice(w);
+        if (!notice || !w.raters.includes("teacher") || (w.termId ?? CURRENT_TERM.termId) !== CURRENT_TERM.termId) continue;
+        const name = w.label || KIND_LABEL[w.kind];
+        for (const room of rooms.filter((r) => windowCoversRoom(w, r)))
+          out.push({
+            id: `win-${w.id}-${notice}-${room}`,
+            kind: notice === "opened" ? "window_opened" : "window_closing",
+            title: notice === "opened" ? `เปิดรอบ ${name}` : `ใกล้ปิดรอบ ${name}`,
+            body: notice === "opened" ? `ทำได้ถึง ${w.closeDate}` : `ปิดรับ ${w.closeDate} ดูงานที่ยังไม่ทำที่หน้าภาพรวม`,
+            href: KIND_HREF[w.kind],
+            at: notice === "opened" ? `${w.openDate}T08:00:00` : `${DEMO_TODAY}T08:00:00`,
+            to: { homeroomOf: room },
+          });
+      }
       for (const [room, n] of Object.entries(overdueByRoom))
         out.push({
           id: `wdo-admin-${room}-${n}`,

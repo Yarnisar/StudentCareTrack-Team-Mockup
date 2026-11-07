@@ -99,7 +99,7 @@ export function processStatus(store: Store, termId: string): { items: Item[]; su
     base: Omit<Item, "process" | "status" | "due" | "windowId">,
     round?: 1 | 2
   ): Item => {
-    const w = windowFor(windows, kind, round);
+    const w = windowFor(windows, kind, round, base.student.roomName);
     const item: Item = { ...base, process, status: dueStatus(w?.closeDate), due: w?.closeDate, windowId: w?.id };
     // ปิดรับแล้ว: ไม่มีปุ่มให้ทำต่อ (UC9)
     if (w && isLocked(w)) return { ...item, href: undefined, action: undefined, locked: true };

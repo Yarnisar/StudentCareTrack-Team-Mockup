@@ -6,7 +6,8 @@
  */
 
 import { formatThaiDate, formatThaiTime } from "./format";
-import { DEMO_TODAY } from "./mock-data";
+import { CURRENT_TERM, DEMO_TODAY } from "./mock-data";
+import { KIND_LABEL, windowCoversRoom, windowNotice, type AssessmentWindow } from "./periods";
 import type { BehaviorRecord, BehaviorRule, HomeVisitAppointment, SdqAssessment } from "./types";
 import type { EqAssessment } from "./eq";
 
@@ -27,6 +28,9 @@ export function buildNotifications(input: {
   eq?: EqAssessment;
   /** ครูที่ปรึกษายืนยันถอนสถานะเฝ้าระวังแล้ว (UC8 สถานการณ์ C ข้อ 5) */
   withdrawals?: { at: string }[];
+  /** รอบประเมินที่แอดมินตั้ง และห้องของนักเรียน ใช้แจ้งเปิดรอบ/ใกล้ปิดรอบ (UC9 ข้อ 14, Alt-B) */
+  windows?: AssessmentWindow[];
+  room?: string;
 }): PortalNotification[] {
   const list: PortalNotification[] = [];
 
@@ -114,6 +118,23 @@ export function buildNotifications(input: {
       title: "มีแบบประเมิน EQ ที่ต้องทำ",
       body: "ทำได้ที่เมนูแบบประเมิน หรือเลือกไม่ทำก็ได้",
     });
+
+  // แจ้งเปิดรอบ และเตือนก่อนปิดรอบ เฉพาะผู้ตอบที่ยังไม่ได้ทำ (SDQ ฉบับของตน หรือ EQ ของนักเรียน)
+  for (const w of input.windows ?? []) {
+    const notice = windowNotice(w);
+    if (!notice || !w.raters.includes(input.viewer)) continue;
+    if ((w.termId ?? CURRENT_TERM.termId) !== CURRENT_TERM.termId) continue;
+    if (input.room && !windowCoversRoom(w, input.room)) continue;
+    const pending = w.kind === "sdq" ? !!own : w.kind === "eq" ? input.eq?.status === "pending" : false;
+    if (!pending) continue;
+    const name = w.label || KIND_LABEL[w.kind];
+    list.push({
+      id: `win-${w.id}-${notice}`,
+      at: notice === "opened" ? `${w.openDate}T08:00:00` : `${DEMO_TODAY}T08:00:00`,
+      title: notice === "opened" ? `เปิดรอบ ${name}` : `ใกล้ปิดรอบ ${name}`,
+      body: notice === "opened" ? `ทำได้ถึง ${formatThaiDate(w.closeDate)}` : `ปิดรับ ${formatThaiDate(w.closeDate)} ยังไม่ได้ทำ`,
+    });
+  }
 
   // แยกสถานะอ่านแล้วของนักเรียนกับผู้ปกครอง แม้เป็นเหตุการณ์เดียวกัน
   return list.map((n) => ({ ...n, id: `${input.viewer}:${n.id}` })).sort((a, b) => b.at.localeCompare(a.at));

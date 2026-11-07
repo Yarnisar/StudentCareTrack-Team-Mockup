@@ -9,10 +9,11 @@
  */
 
 import { useCallback, useMemo } from "react";
-import { DEMO_TODAY, behaviorRules as seedRules } from "@/lib/mock-data";
+import { CURRENT_TERM, DEMO_TODAY, behaviorRules as seedRules } from "@/lib/mock-data";
 import { DEFAULT_DELTA, ruleKind } from "@/lib/behavior-rules";
 import { INITIAL_WINDOWS, shiftDate, type AssessmentWindow, type WindowStatus } from "@/lib/periods";
 import { useStore } from "@/lib/store";
+import { termInfo } from "@/lib/terms";
 import type { BehaviorRule, SdqRater } from "@/lib/types";
 
 export {
@@ -59,8 +60,11 @@ export function useSettingsPrototype() {
       ...prev,
       {
         id,
-        kind: "sdq",
-        label: "ช่วงเวลาใหม่",
+        // รอบใหม่เริ่มที่ภาคเรียนถัดไป ยังไม่มีผู้ตอบ จึงแก้ชนิดแบบประเมินได้
+        kind: "screening",
+        termId: termInfo(CURRENT_TERM.academicYear + 1, 1).termId,
+        target: { type: "school" },
+        label: "คัดกรอง 6 มิติ",
         openDate: DEMO_TODAY,
         closeDate: shiftDate(DEMO_TODAY, 14),
         enabled: true,
