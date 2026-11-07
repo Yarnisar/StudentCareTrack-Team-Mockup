@@ -153,6 +153,8 @@ interface StoreValue {
     source?: BehaviorRecord["source"];
     backdateReason?: string;
   }) => void;
+  /** นักเรียนทั้งหมดที่ระบบรู้จัก ใช้บอกเหตุผลเมื่อค้นเจอรหัสที่อยู่นอกขอบเขต (ไม่ใช้แสดงรายชื่อ) */
+  directory: Student[];
   /** นักเรียนที่ครูคนนี้บันทึกพฤติกรรมได้ = ห้องที่เป็นครูประจำชั้น + ห้องที่สอน */
   recordableStudents: Student[];
   canRecordStudent: (studentId: string) => boolean;
@@ -365,6 +367,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     // ขอบเขตตามการมอบหมาย (UC8 ข้อ 6, ตารางขอบเขตสิทธิ์)
     const rooms = recordableRooms(role);
     const recordableStudents = [...students, ...otherStudents].filter((s) => rooms.includes(s.roomName));
+    const directory = [...students, ...otherStudents];
     const canRecordStudent = (studentId: string) => recordableStudents.some((s) => s.studentId === studentId);
     const homeroomRoom = TEACHER_ASSIGNMENTS[role]?.homeroomRoom;
     const behaviorVisible = (rec: BehaviorRecord) =>
@@ -1213,6 +1216,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       addBehaviorRecord,
       behaviorEditable,
       recordableStudents,
+      directory,
       canRecordStudent,
       behaviorVisible,
       updateBehaviorRecord,

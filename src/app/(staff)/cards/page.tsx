@@ -10,7 +10,8 @@
  * PROTOTYPE: ยังไม่สร้างไฟล์ PDF จริง QR เป็นภาพจำลอง และยังไม่จำลองกรณีระบบทะเบียนไม่ตอบสนอง (Alt-A)
  */
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { X } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { PseudoQr } from "@/components/shared/pseudo-qr";
@@ -31,8 +32,23 @@ const chip = (on: boolean) =>
     : "rounded-lg border border-border px-3 py-1.5 text-[13px] hover:bg-muted";
 
 export default function CardsPage() {
+  return (
+    <Suspense fallback={null}>
+      <CardsKeyed />
+    </Suspense>
+  );
+}
+
+function CardsKeyed() {
+  const params = useSearchParams();
+  return <CardsContent key={params.get("student") ?? ""} />;
+}
+
+function CardsContent() {
+  // มาจากช่องค้นหา (?student=รหัส): เลือกนักเรียนคนนั้นไว้ให้
+  const params = useSearchParams();
   const store = useStore();
-  const [picked, setPicked] = useState<string[]>([]);
+  const [picked, setPicked] = useState<string[]>(() => (params.get("student") ? [params.get("student")!] : []));
   const [type, setType] = useState<StudentCard["type"]>("new");
   const [reason, setReason] = useState("");
   const [otherReason, setOtherReason] = useState("");

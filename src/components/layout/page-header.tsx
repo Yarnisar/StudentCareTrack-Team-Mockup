@@ -1,4 +1,5 @@
-import { Bell, Search } from "lucide-react";
+import { Bell } from "lucide-react";
+import { GlobalSearch } from "./global-search";
 import type { ReactNode } from "react";
 
 export function PageHeader({
@@ -18,10 +19,7 @@ export function PageHeader({
       </div>
       <div className="flex shrink-0 items-center gap-4">
         {action}
-        <div className="hidden w-56 items-center gap-2 rounded-lg border border-border bg-surface px-3.5 py-2 text-[13.5px] text-muted-foreground lg:flex">
-          <Search className="size-4" />
-          <span>ค้นหานักเรียน...</span>
-        </div>
+        <GlobalSearch />
         <Bell className="size-5 shrink-0 text-muted-foreground" />
       </div>
     </header>

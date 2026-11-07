@@ -32,9 +32,15 @@ const VARIANTS = [
 export default function BehaviorPage() {
   return (
     <Suspense fallback={null}>
-      <BehaviorContent />
+      <BehaviorKeyed />
     </Suspense>
   );
+}
+
+/** ค้นหาจากหน้าเดิมแล้ว ?record= เปลี่ยน: สร้างหน้าใหม่เพื่อเปิดตัวบันทึกของนักเรียนคนใหม่ */
+function BehaviorKeyed() {
+  const params = useSearchParams();
+  return <BehaviorContent key={params.get("record") ?? ""} />;
 }
 
 function BehaviorContent() {
@@ -42,7 +48,8 @@ function BehaviorContent() {
   const variant = params.get("variant") ?? "A";
 
   const store = useStore();
-  const [recording, setRecording] = useState(false);
+  // มาจากช่องค้นหา (?record=รหัส): เปิดตัวบันทึกพร้อมเลือกนักเรียนไว้แล้ว
+  const [recording, setRecording] = useState<string | true | null>(() => params.get("record"));
 
   const records = useMemo(
     // ครูประจำชั้นเห็นทุกรายการของห้องตน ห้องที่สอนเห็นเฉพาะรายการที่ตนบันทึก (ตารางขอบเขตสิทธิ์)
@@ -67,7 +74,13 @@ function BehaviorContent() {
       {variant === "C" && <VariantC records={records} />}
 
       <PrototypeSwitcher variants={VARIANTS} />
-      {recording && <BehaviorRecorder onClose={() => setRecording(false)} />}
+      {recording && (
+        <BehaviorRecorder
+          key={String(recording)}
+          studentId={typeof recording === "string" ? recording : undefined}
+          onClose={() => setRecording(null)}
+        />
+      )}
     </>
   );
 }
