@@ -209,6 +209,11 @@ export default function StudentDetailPage({
               <div className="flex flex-wrap items-center gap-2.5">
                 <h2 className="text-xl font-bold">{student.fullName}</h2>
                 {risk && <RiskBadge group={risk} />}
+                {store.caseConsiderations[studentId] && !store.caseOf(studentId) && (
+                  <span className="rounded-md bg-muted px-2 py-0.5 text-[12px] font-semibold">
+                    พิจารณาแล้วยังไม่เปิด case · {store.caseConsiderations[studentId].reason}
+                  </span>
+                )}
                 {store.screeningWatch[studentId] && (
                   <span className="rounded-md bg-muted px-2 py-0.5 text-[12px] font-semibold">
                     เฝ้าดูผลคัดกรอง · {store.screeningWatch[studentId].reason}

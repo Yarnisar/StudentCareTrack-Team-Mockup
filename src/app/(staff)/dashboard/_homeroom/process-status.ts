@@ -11,6 +11,7 @@ import { CURRENT_TERM, DEMO_TODAY } from "@/lib/mock-data";
 import { dueStatus, isLocked, KIND_LABEL, windowFor, type AssessmentKind } from "@/lib/periods";
 import { draftKey, type useStore } from "@/lib/store";
 import { needsReview } from "@/lib/assessment-review";
+import { ruleKind } from "@/lib/behavior-rules";
 import { CASE_URGENCY_LABEL, SDQ_RATER_LABEL, type CaseUrgency, type Student } from "@/lib/types";
 
 type Store = ReturnType<typeof useStore>;
@@ -67,6 +68,8 @@ export interface Item {
   action?: string;
   /** ช่วงเวลาปิดรับแล้ว ครูส่งเพิ่มไม่ได้จนกว่าแอดมินจะขยายเวลา */
   locked?: boolean;
+  /** งานที่ให้ "พิจารณา" เปิด case ครูเลือกยังไม่เปิดพร้อมเหตุผลได้ (basis = เหตุที่พิจารณา) */
+  consider?: { basis: string };
 }
 
 export interface ProcessSummary {
@@ -275,15 +278,41 @@ export function processStatus(store: Store, termId: string): { items: Item[]; su
         href: `/care-cases?student=${id}`,
         action: "บันทึกการติดตาม",
       });
-    } else if (store.overallRiskOf(id) === "red") {
-      items.push({
-        process: "care",
-        status: "pending",
-        student,
-        detail: "ผลคัดกรองอยู่ในกลุ่มมีปัญหา แต่ยังไม่มีแผนช่วยเหลือ",
-        href: `/care-cases?student=${id}`,
-        action: "เปิด case",
+    } else {
+      // ยังไม่มี case ที่เปิดอยู่: รวมเหตุที่ควรพิจารณาเปิด case ไว้เป็นงานเดียวต่อนักเรียน
+      // กลุ่มมีปัญหาจากคัดกรอง (UC6) / เข้าสถานะเฝ้าระวังความประพฤติ (UC8 Alt-D ข้อ 2) / บันทึกตามกฎส่งต่อ (UC8 Alt-G)
+      const reasons: string[] = [];
+      const basis: string[] = [];
+      if (store.overallRiskOf(id) === "red") {
+        reasons.push("ผลคัดกรองอยู่ในกลุ่มมีปัญหา");
+        basis.push("red");
+      }
+      const level = store.behaviorWatchLevelOf(id);
+      if (level > 0) {
+        reasons.push(`เฝ้าระวังความประพฤติระดับ ${level}`);
+        basis.push(`watch${level}`);
+      }
+      const refers = store.behaviorOf(id).filter((r) => {
+        const rule = store.behaviorRules.find((x) => x.ruleId === r.ruleId);
+        return !r.cancelled && !!rule && ruleKind(rule) === "refer";
       });
+      if (refers.length > 0) {
+        reasons.push(`บันทึกตามกฎส่งต่อ ${refers.length} รายการ`);
+        basis.push(`refer:${refers.map((r) => r.recordId).sort().join(",")}`);
+      }
+      const key = basis.join("|");
+      // ครูพิจารณาแล้วเลือกยังไม่เปิด และยังไม่มีเหตุใหม่ จึงไม่แสดงซ้ำ
+      if (reasons.length > 0 && store.caseConsiderations[id]?.basis !== key) {
+        items.push({
+          process: "care",
+          status: "pending",
+          student,
+          detail: `ยังไม่มี case · ${reasons.join(" · ")}`,
+          href: `/care-cases?student=${id}${level > 0 || refers.length > 0 ? "&from=behavior" : ""}`,
+          action: "เปิด case",
+          consider: { basis: key },
+        });
+      }
     }
     for (const c of cases.filter((c) => c.status === "closed")) {
       items.push({ process: "care", status: "done", student, detail: `ปิด case เมื่อ ${formatThaiDate(c.closedAt ?? "")}` });

@@ -263,7 +263,14 @@ export function HomeroomOverview() {
   );
 }
 
+const CONSIDER_REASONS = ["ติดตามดูอาการก่อน", "คุยกับนักเรียน/ผู้ปกครองแล้ว", "มีการดูแลอยู่แล้วนอกระบบ"];
+
 function ItemRow({ item, showProcess }: { item: Item; showProcess: boolean }) {
+  const store = useStore();
+  const [asking, setAsking] = useState(false);
+  const [reason, setReason] = useState("");
+  const [other, setOther] = useState("");
+  const finalReason = reason === "อื่น ๆ" ? other.trim() : reason;
   return (
     <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border p-3.5">
       <span className={`w-28 shrink-0 rounded-md px-2.5 py-1 text-center text-[11.5px] font-semibold ${STATUS_TAG[item.status]}`}>
@@ -285,9 +292,16 @@ function ItemRow({ item, showProcess }: { item: Item; showProcess: boolean }) {
         </span>
       </span>
       {item.href && item.action ? (
-        <LinkButton href={item.href} variant="outline" size="sm">
-          {item.action} <ChevronRight className="size-4" />
-        </LinkButton>
+        <span className="flex shrink-0 items-center gap-1.5">
+          {item.consider && (
+            <Button variant="ghost" size="sm" aria-expanded={asking} onClick={() => setAsking((v) => !v)}>
+              ยังไม่เปิด
+            </Button>
+          )}
+          <LinkButton href={item.href} variant="outline" size="sm">
+            {item.action} <ChevronRight className="size-4" />
+          </LinkButton>
+        </span>
       ) : item.href ? (
         <LinkButton href={item.href} variant="ghost" size="sm">
           ดูรายละเอียด
@@ -300,6 +314,47 @@ function ItemRow({ item, showProcess }: { item: Item; showProcess: boolean }) {
         </span>
       ) : (
         item.status !== "done" && <span className="text-[12px] text-muted-foreground">รอผู้อื่นดำเนินการ</span>
+      )}
+      {asking && item.consider && (
+        <div className="w-full rounded-lg bg-surface px-3.5 py-3">
+          <div className="text-[12.5px] font-semibold">เหตุผลที่ยังไม่เปิด case</div>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {[...CONSIDER_REASONS, "อื่น ๆ"].map((r) => (
+              <button
+                key={r}
+                type="button"
+                aria-pressed={reason === r}
+                onClick={() => setReason(r)}
+                className={
+                  reason === r
+                    ? "rounded-lg border border-primary bg-accent px-3 py-1.5 text-[12.5px] font-semibold text-primary"
+                    : "rounded-lg border border-border bg-card px-3 py-1.5 text-[12.5px] hover:bg-muted"
+                }
+              >
+                {r}
+              </button>
+            ))}
+          </div>
+          {reason === "อื่น ๆ" && (
+            <input
+              aria-label="เหตุผลอื่น"
+              value={other}
+              onChange={(e) => setOther(e.target.value)}
+              placeholder="ระบุเหตุผล"
+              className="mt-2 h-9 w-full rounded-lg border border-border bg-card px-3 text-[13px] outline-none focus:border-primary"
+            />
+          )}
+          <div className="mt-2.5 flex items-center gap-2">
+            <Button
+              size="sm"
+              disabled={finalReason === ""}
+              onClick={() => store.considerCase(item.student.studentId, item.consider!.basis, finalReason)}
+            >
+              บันทึกเหตุผล
+            </Button>
+            <span className="text-[12px] text-muted-foreground">ถ้ามีเหตุใหม่ เช่น ระดับเฝ้าระวังเพิ่ม งานนี้จะกลับมาให้พิจารณาอีก</span>
+          </div>
+        </div>
       )}
     </div>
   );

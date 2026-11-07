@@ -249,6 +249,12 @@ interface StoreValue {
   /** กลุ่มเสี่ยงที่ครูเลือกไม่เปิด case พร้อมเหตุผล แยกจากสถานะเฝ้าระวังด้านความประพฤติ (UC6 Alt-G) */
   screeningWatch: Record<string, { reason: string; at: string; by: string }>;
   setScreeningWatch: (studentId: string, reason: string) => void;
+  /**
+   * ครูที่ปรึกษาพิจารณาเปิด case จากเฝ้าระวังด้านความประพฤติ / บันทึกตามกฎส่งต่อ แล้วเลือกยังไม่เปิด (UC8 Alt-D ข้อ 2, Alt-G)
+   * basis คือเหตุที่พิจารณา ถ้ามีเหตุใหม่ (ระดับเฝ้าระวังเพิ่ม หรือมีบันทึกส่งต่อใหม่) งานจะกลับมาให้พิจารณาอีก
+   */
+  caseConsiderations: Record<string, { basis: string; reason: string; at: string; by: string }>;
+  considerCase: (studentId: string, basis: string, reason: string) => void;
   addFollowup: (caseId: string, actionTaken: string, result: string, nextFollowupDate: string) => void;
   setCaseUrgency: (caseId: string, urgency: CaseUrgency) => void;
   /** ปิด case พร้อมผลสรุป (UC11 Scenario C) */
@@ -349,6 +355,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [educationDocuments, setEducationDocuments] = useState<EducationDocument[]>(seedDocuments);
   const [documentRequests, setDocumentRequests] = useState<DocumentRequest[]>([]);
   const [screeningWatch, setScreeningWatchState] = useState<StoreValue["screeningWatch"]>({});
+  const [caseConsiderations, setCaseConsiderations] = useState<StoreValue["caseConsiderations"]>({});
 
   const value = useMemo<StoreValue>(() => {
     /**
@@ -653,6 +660,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         [studentId]: { reason, at: nowThaiIso().split("T")[0], by: CURRENT_TEACHER.name },
       }));
     };
+
+    const considerCase: StoreValue["considerCase"] = (studentId, basis, reason) =>
+      setCaseConsiderations((prev) => ({
+        ...prev,
+        [studentId]: { basis, reason, at: nowThaiIso().split("T")[0], by: ROLE_INFO[role].user.name },
+      }));
 
     const saveScreening: StoreValue["saveScreening"] = (studentId, checked) => {
       const record: Screening = {
@@ -1256,6 +1269,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       planCase,
       screeningWatch,
       setScreeningWatch,
+      caseConsiderations,
+      considerCase,
       addFollowup,
       setCaseUrgency,
       closeCase,
@@ -1279,7 +1294,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       fulfillRequest,
       logCitizenIdView,
     };
-  }, [role, screenings, redFlags, nineS, sdq, eq, reviews, behaviorRecords, rawAppointments, careCases, homeVisitRecords, accessLogs, assessmentWindows, behaviorRules, behaviorScoreConfig, drafts, screeningWatch, educationDocuments, documentRequests, dcAssessments, readNotifications, dcRounds, watchDecisions, registryCorrections, studentCards]);
+  }, [role, screenings, redFlags, nineS, sdq, eq, reviews, behaviorRecords, rawAppointments, careCases, homeVisitRecords, accessLogs, assessmentWindows, behaviorRules, behaviorScoreConfig, drafts, screeningWatch, caseConsiderations, educationDocuments, documentRequests, dcAssessments, readNotifications, dcRounds, watchDecisions, registryCorrections, studentCards]);
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }

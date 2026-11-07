@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
 import { useStore } from "@/lib/store";
+import { ruleKind } from "@/lib/behavior-rules";
 import { formatThaiDate } from "@/lib/format";
 import { DEMO_TODAY } from "@/lib/mock-data";
 import { daysBetween, shiftDate } from "@/lib/periods";
@@ -50,13 +51,15 @@ function CareCasesContent() {
   const from = searchParams.get("from");
 
   // เข้ามาพร้อม ?student= ของนักเรียนที่ยังไม่มี case -> เปิดฟอร์มสร้าง case ใหม่ (ไม่แสดง case ของคนอื่นแทน)
+  // เปิดจากงานของนักเรียนที่ไม่มี case ที่กำลังดำเนินการ (แม้เคยมี case ที่ปิดแล้ว) -> เปิดฟอร์มสร้าง case ใหม่ (UC11 สถานการณ์ A ข้อ 4)
+  const activeOf = (studentId: string) => store.careCases.find((c) => c.studentId === studentId && c.status === "active");
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>(() =>
     focusStudent
-      ? (store.caseOf(focusStudent)?.caseId ?? null)
+      ? (activeOf(focusStudent)?.caseId ?? store.caseOf(focusStudent)?.caseId ?? null)
       : (store.careCases[0]?.caseId ?? null)
   );
   const [newCaseFor, setNewCaseFor] = useState<string | null>(() =>
-    focusStudent && !store.caseOf(focusStudent) ? focusStudent : null
+    focusStudent && !activeOf(focusStudent) ? focusStudent : null
   );
 
   const activeCase = store.careCases.find((c) => c.caseId === selectedCaseId);
@@ -64,6 +67,17 @@ function CareCasesContent() {
 
   const triggerSourceFor = (studentId: string) => {
     if (from === "home_visit") return "ผลการเยี่ยมบ้าน";
+    if (from === "behavior") {
+      const level = store.behaviorWatchLevelOf(studentId);
+      const refers = store.behaviorOf(studentId).filter((r) => {
+        const rule = store.behaviorRules.find((x) => x.ruleId === r.ruleId);
+        return !r.cancelled && !!rule && ruleKind(rule) === "refer";
+      });
+      const names = [...new Set(refers.map((r) => store.behaviorRules.find((x) => x.ruleId === r.ruleId)?.name))].join(", ");
+      return [level > 0 && `เฝ้าระวังความประพฤติระดับ ${level}`, refers.length > 0 && `บันทึกตามกฎส่งต่อ: ${names}`]
+        .filter(Boolean)
+        .join(" · ");
+    }
     if (from !== "sdq") return undefined;
     const teacherSdq = store
       .sdqOf(studentId)
