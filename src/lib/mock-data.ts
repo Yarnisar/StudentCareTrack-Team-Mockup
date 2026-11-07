@@ -20,6 +20,7 @@ import {
   StudentCard,
 } from "./types";
 import { scoreEq, type EqAnswer, type EqAssessment } from "./eq";
+import type { NotificationLogEntry, StaffNotification } from "./staff-notifications";
 
 /**
  * วันที่อ้างอิงของต้นแบบ (ปี พ.ศ.)
@@ -497,6 +498,16 @@ export const studentCards: StudentCard[] = [
 ];
 
 export const behaviorRecords: BehaviorRecord[] = [
+  // ด.ญ. ชลิดา: เคยเฝ้าระวังระดับ 2 (คะแนน 60) แล้วคะแนนกลับเข้าเกณฑ์วันที่ 7 ก.พ. รอครูที่ปรึกษายืนยันถอนสถานะ และเลยกำหนดยืนยันแล้ว
+  { recordId: "BH-W1", studentId: "30160", ruleId: "BR-05", description: "ทะเลาะวิวาทกับเพื่อนในห้อง", occurredAt: "2570-02-01T09:10:00", recordedByName: "ครูสมหญิง ใจดี", source: "manual" },
+  { recordId: "BH-W2", studentId: "30160", ruleId: "BR-05", description: "ทะเลาะวิวาทซ้ำหลังเลิกเรียน", occurredAt: "2570-02-02T13:20:00", recordedByName: "ครูสมหญิง ใจดี", source: "manual" },
+  { recordId: "BH-W3", studentId: "30160", ruleId: "BR-04", description: "ใช้โทรศัพท์ระหว่างเรียนวิชาคณิตศาสตร์", occurredAt: "2570-02-03T10:05:00", recordedByName: "ครูสมหญิง ใจดี", source: "manual" },
+  { recordId: "BH-W4", studentId: "30160", ruleId: "BR-06", description: "ช่วยจัดงานกีฬาสี", occurredAt: "2570-02-05T14:00:00", recordedByName: "ครูสมหญิง ใจดี", source: "manual" },
+  { recordId: "BH-W5", studentId: "30160", ruleId: "BR-06", description: "ช่วยจัดห้องสมุด", occurredAt: "2570-02-06T14:30:00", recordedByName: "ครูสมหญิง ใจดี", source: "manual" },
+  { recordId: "BH-W6", studentId: "30160", ruleId: "BR-06", description: "ช่วยกิจกรรมจิตอาสา", occurredAt: "2570-02-07T15:00:00", recordedByName: "ครูสมหญิง ใจดี", source: "manual" },
+  // ด.ญ. ปาริชาติ: ทะเลาะวิวาท 2 ครั้ง คะแนนลงถึง 70 แล้วได้คะแนนบวกกลับมา 80 ยังอยู่ในสถานะเฝ้าระวังระดับ 1
+  { recordId: "BH-W7", studentId: "30140", ruleId: "BR-05", description: "ทะเลาะวิวาทกับเพื่อนต่างห้อง", occurredAt: "2570-02-10T09:30:00", recordedByName: "ครูสมหญิง ใจดี", source: "manual" },
+  { recordId: "BH-W8", studentId: "30140", ruleId: "BR-05", description: "ทะเลาะวิวาทซ้ำ", occurredAt: "2570-02-12T10:30:00", recordedByName: "ครูสมหญิง ใจดี", source: "manual" },
   // ห้องที่สอน (ม.3/2): ครูประจำชั้น ม.3/1 บันทึกในฐานะครูผู้สอน และครูผู้สอนวิทยาศาสตร์บันทึกอีกรายการ
   {
     recordId: "BH-O1",
@@ -817,3 +828,24 @@ export const previousVisitForms: Record<string, PreviousVisitForm> = {
 
 /** จำนวนนักเรียนทั้งห้องตามทะเบียน (ใช้แสดงในสถิติภาพรวม) */
 export const CLASS_SIZE = 38;
+
+/**
+ * การแจ้งเตือนเริ่มต้นของกระดิ่ง (รายการที่สร้างตอนเกิดเหตุ ข้อมูลตัวอย่างไม่เคยผ่านตอนนั้น จึงใส่ไว้ให้ตรงกับบันทึกด้านบน)
+ * ส่วนรายการตามเวลา (รอยืนยันถอน / เลยกำหนด) คำนวณจากข้อมูลเอง ไม่ต้องมี seed
+ */
+export const staffNotificationSeeds: StaffNotification[] = [
+  {
+    id: "NT-SEED-1",
+    kind: "watch_raised",
+    title: "ด.ญ. ปาริชาติ ใฝ่ดี เข้าสถานะเฝ้าระวัง",
+    body: "ระดับ 1 · คะแนนคงเหลือ 70 · บันทึกโดยครูสมหญิง ใจดี",
+    href: "/students/30140",
+    at: "2570-02-12T10:30:00",
+    to: { homeroomOf: "ม.3/1" },
+  },
+];
+
+export const notificationLogSeeds: NotificationLogEntry[] = [
+  { id: "NL-SEED-1", at: "2570-02-12T10:30:00", channel: "ในระบบ", to: "ครูที่ปรึกษา, ครูที่บันทึก, นักเรียน, ผู้ปกครอง", text: "นักเรียนห้อง ม.3/1 เข้าสถานะเฝ้าระวังระดับ 1" },
+  { id: "NL-SEED-2", at: "2570-02-12T10:30:00", channel: "อีเมล (จำลอง)", to: "ผู้ปกครอง", text: "นักเรียนห้อง ม.3/1 เข้าสถานะเฝ้าระวังระดับ 1" },
+];

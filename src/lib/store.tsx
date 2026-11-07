@@ -11,6 +11,8 @@ import {
   appointments as seedAppointments,
   behaviorRecords as seedBehaviorRecords,
   behaviorRules as seedBehaviorRules,  careCases as seedCareCases,
+  staffNotificationSeeds as seedStaffEvents,
+  notificationLogSeeds as seedNotificationLog,
   studentCards as seedCards,
   CURRENT_TEACHER,
   CURRENT_TERM,
@@ -363,8 +365,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [educationDocuments, setEducationDocuments] = useState<EducationDocument[]>(seedDocuments);
   const [documentRequests, setDocumentRequests] = useState<DocumentRequest[]>([]);
   const [screeningWatch, setScreeningWatchState] = useState<StoreValue["screeningWatch"]>({});
-  const [staffEvents, setStaffEvents] = useState<StaffNotification[]>([]);
-  const [notificationLog, setNotificationLog] = useState<NotificationLogEntry[]>([]);
+  const [staffEvents, setStaffEvents] = useState<StaffNotification[]>(seedStaffEvents);
+  const [notificationLog, setNotificationLog] = useState<NotificationLogEntry[]>(seedNotificationLog);
   const [caseConsiderations, setCaseConsiderations] = useState<StoreValue["caseConsiderations"]>({});
 
   const value = useMemo<StoreValue>(() => {
