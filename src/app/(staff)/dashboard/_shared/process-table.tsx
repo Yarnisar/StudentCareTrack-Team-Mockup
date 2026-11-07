@@ -23,55 +23,102 @@ const n = (v: number) => v.toLocaleString("th-TH");
 
 export const openCount = (row: ProcessSummary) => row.counts.pending + row.counts.near_due + row.counts.overdue;
 
+interface CloseInfo {
+  text: string;
+  /** ทุกรอบของกระบวนการนี้พ้นวันปิดแล้ว */
+  closed: boolean;
+  /** พ้นวันปิดและแอดมินตั้ง "ห้ามบันทึกย้อนหลัง" ไว้ → แบบฟอร์มปิดรับ ต้องขยายช่วงเวลาก่อน (UC9) */
+  locked: boolean;
+  /** ช่วงเวลาที่ปิดล่าสุด ใช้เปิดแผงในหน้าตั้งค่าตรงตัว */
+  windowId?: string;
+  date?: string;
+  detail: string;
+}
+
 /** วันปิดรอบที่ใกล้ที่สุดที่ยังไม่ผ่าน หรือวันปิดล่าสุดที่ผ่านไปแล้ว */
-function closeInfo(row: ProcessSummary): { text: string; closed: boolean; detail: string } {
-  if (row.process === "care") return { text: "ตามวันนัดติดตามของแต่ละ case", closed: false, detail: "" };
-  if (row.closes.length === 0) return { text: "ยังไม่ตั้งช่วงเวลา", closed: false, detail: "" };
+function closeInfo(row: ProcessSummary): CloseInfo {
+  if (row.process === "care") return { text: "ตามวันนัดติดตามของแต่ละ case", closed: false, locked: false, detail: "" };
+  if (row.closes.length === 0) return { text: "ยังไม่ตั้งช่วงเวลา", closed: false, locked: false, detail: "" };
   const detail = row.closes.map((c) => `${c.label} ${formatThaiDate(c.date)}`).join("\n");
   const sorted = [...row.closes].sort((a, b) => a.date.localeCompare(b.date));
   const upcoming = sorted.find((c) => c.date >= DEMO_TODAY);
-  if (!upcoming) return { text: `ปิดรอบแล้ว ${formatThaiDate(sorted.at(-1)!.date)}`, closed: true, detail };
+  if (!upcoming) {
+    // กระบวนการหนึ่งมีได้หลายช่วงเวลา (คัดกรอง = 6 มิติ → Red Flag → 9S): เลือกช่วงที่ปิดรับก่อน
+    // ไม่มีช่วงไหนปิดรับ เลือกช่วงแรก (ขั้นหลักของกระบวนการ) ปุ่มขยายเวลาจะเปิดแผงของช่วงนั้น
+    const target = sorted.find((c) => c.locked) ?? sorted[0];
+    return {
+      text: target.locked ? `ปิดรับแล้ว ${formatThaiDate(target.date)}` : `ปิดรอบแล้ว ${formatThaiDate(target.date)} · ส่งช้าได้`,
+      closed: true,
+      locked: target.locked,
+      windowId: target.id,
+      date: target.date,
+      detail,
+    };
+  }
   const left = daysBetween(DEMO_TODAY, upcoming.date);
-  return { text: left === 0 ? "ปิดรอบวันนี้" : `อีก ${left} วันปิดรอบ`, closed: false, detail };
+  return { text: left === 0 ? "ปิดรอบวันนี้" : `อีก ${left} วันปิดรอบ`, closed: false, locked: false, windowId: upcoming.id, detail };
 }
 
-/** เรื่องที่ต้องตามจากแต่ละกระบวนการ เรียงจากด่วนที่สุด: ค้างหลังปิดรอบ > เลยกำหนด > ใกล้ครบกำหนด */
+/** เรื่องที่ต้องตามจากแต่ละกระบวนการ เรียงจากด่วนที่สุด: ปิดรับแล้ว > ยังไม่เริ่มช่วยเหลือ / เลยกำหนด > ใกล้ครบกำหนด */
 export interface Concern {
   process: ProcessKey;
   status: Status;
   count: number;
   headline: string;
   note: string;
-  /** รอบปิดแล้ว ทางแก้คือขยายช่วงเวลา */
+  /** พ้นวันปิดแล้ว */
   closed: boolean;
+  /** ปิดรับแล้ว ส่งเพิ่มไม่ได้ ทางแก้คือขยายช่วงเวลา */
+  locked: boolean;
+  windowId?: string;
 }
 
-export function concernsOf(summaries: ProcessSummary[]): Concern[] {
+/** แอดมินแก้ได้ด้วยการขยายช่วงเวลา ส่วนครูทำได้แค่ติดต่อแอดมิน ข้อความจึงต่างกัน */
+export function concernsOf(summaries: ProcessSummary[], audience: "admin" | "teacher" = "admin"): Concern[] {
   const list: (Concern & { rank: number })[] = [];
   for (const row of summaries) {
     if (row.process === "behavior") continue;
     const info = closeInfo(row);
     const label = PROCESS_LABEL[row.process];
+    const care = row.process === "care";
+    const base = { process: row.process, closed: info.closed, locked: info.locked, windowId: info.windowId };
     if (row.counts.overdue > 0) {
-      const care = row.process === "care";
+      const date = info.date ? formatThaiDate(info.date) : "";
       list.push({
-        process: row.process,
+        ...base,
         status: "overdue",
         count: row.counts.overdue,
         headline: care ? `${label} เลยวันนัด` : `${label}ยังค้าง`,
-        note: care ? "case ที่เลยวันนัดติดตามครั้งถัดไปแล้ว" : info.closed ? `${info.text} ยังทำไม่เสร็จ` : "เลยวันครบกำหนดแล้วยังไม่เสร็จ",
-        closed: info.closed,
-        rank: info.closed ? 0 : 1,
+        note: care
+          ? "case ที่เลยวันนัดติดตามครั้งถัดไปแล้ว"
+          : info.locked
+            ? audience === "admin"
+              ? `ปิดรับแล้วเมื่อ ${date} ครูส่งเพิ่มไม่ได้จนกว่าจะขยายช่วงเวลา`
+              : `ปิดรับแล้วเมื่อ ${date} ส่งเพิ่มไม่ได้ ติดต่อแอดมินเพื่อขอขยายช่วงเวลา`
+            : info.closed
+              ? `ปิดรอบแล้วเมื่อ ${date} แต่ยังรับส่งช้าได้`
+              : "เลยวันครบกำหนดแล้วยังไม่เสร็จ",
+        rank: info.locked ? 0 : 1,
       });
     } else if (row.counts.near_due > 0) {
       list.push({
-        process: row.process,
+        ...base,
         status: "near_due",
         count: row.counts.near_due,
         headline: `${label}ใกล้ครบกำหนด`,
-        note: row.process === "care" ? "case ที่ใกล้วันนัดติดตาม" : `${info.text} ยังทำไม่เสร็จ`,
-        closed: false,
+        note: care ? "case ที่ใกล้วันนัดติดตาม" : `${info.text} ยังทำไม่เสร็จ`,
         rank: 2,
+      });
+    }
+    // กลุ่มมีปัญหาที่ยังไม่เริ่มช่วยเหลือ ด่วนพอ ๆ กับการเลยวันนัด แม้ยังไม่มีวันครบกำหนด
+    if (care && row.counts.pending > 0) {
+      list.push({
+        ...base,
+        status: "pending",
+        count: row.counts.pending,
+        headline: "การช่วยเหลือที่ยังไม่เริ่ม",
+        note: "กลุ่มมีปัญหาที่ยังไม่มีแผนช่วยเหลือ หรือ case ที่ยังไม่กำหนดวันติดตาม",
+        rank: 1,
       });
     }
   }
@@ -91,17 +138,20 @@ export function FocusBox({
   unit,
   actions,
   onPickOther,
+  audience = "admin",
 }: {
   concerns: Concern[];
   unit: (c: Concern) => string;
   actions: (c: Concern) => React.ReactNode;
   onPickOther: (c: Concern) => void;
+  audience?: "admin" | "teacher";
 }) {
   const [top, ...rest] = concerns;
+  const urgent = audience === "admin" ? "ต้องตัดสินใจ" : "ต้องรีบทำ";
   if (!top) {
     return (
       <div className="rounded-2xl border border-border bg-surface px-6 py-5">
-        <div className="text-[12.5px] font-semibold text-muted-foreground">ต้องตัดสินใจ</div>
+        <div className="text-[12.5px] font-semibold text-muted-foreground">{urgent}</div>
         <p className="mt-1 text-[17px] font-bold">ยังไม่มีงานที่ใกล้ครบหรือเลยกำหนด</p>
       </div>
     );
@@ -112,7 +162,7 @@ export function FocusBox({
       className="rounded-2xl border border-primary/20 border-l-4 border-l-primary bg-accent px-6 py-5"
     >
       <div className="text-[12.5px] font-semibold text-primary">
-        {top.status === "overdue" ? "ต้องตัดสินใจ" : "ใกล้ครบกำหนด"}
+        {top.status === "near_due" ? "ใกล้ครบกำหนด" : urgent}
       </div>
       <div className="mt-1 flex flex-wrap items-end gap-x-6 gap-y-4">
         <div className="min-w-0 flex-1">
@@ -130,7 +180,7 @@ export function FocusBox({
           ถัดไป
           {rest.map((c) => (
             <button
-              key={c.process}
+              key={`${c.process}-${c.status}`}
               type="button"
               onClick={() => onPickOther(c)}
               className="rounded-full border border-primary/25 bg-white px-2.5 py-0.5 font-medium text-primary hover:bg-blue-50"
@@ -189,9 +239,15 @@ export function ProcessCards({
             </span>
             {care ? (
               <span className="mt-3 text-[12.5px] text-muted-foreground">
-                เปิดอยู่ {n(open)} case
-                {row.counts.near_due > 0 && ` · ใกล้วันนัด ${n(row.counts.near_due)}`}
-                {row.counts.done > 0 && ` · ปิดแล้ว ${n(row.counts.done)}`}
+                {/* ตัวเลขหลักเป็น "case เปิดอยู่" แล้ว ไม่พูดซ้ำ */}
+                {[
+                  row.counts.overdue > 0 && `เปิดอยู่ ${n(open)}`,
+                  row.counts.pending > 0 && `ยังไม่เริ่ม ${n(row.counts.pending)}`,
+                  row.counts.near_due > 0 && `ใกล้วันนัด ${n(row.counts.near_due)}`,
+                  row.counts.done > 0 && `ปิดแล้ว ${n(row.counts.done)}`,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
               </span>
             ) : (
               <>
@@ -205,7 +261,7 @@ export function ProcessCards({
             )}
             <span
               title={info.detail || undefined}
-              className={`mt-auto pt-3 text-[12px] ${info.closed ? "font-semibold text-foreground" : "text-muted-foreground"}`}
+              className={`mt-auto pt-3 text-[12px] ${info.locked ? "font-semibold text-foreground" : "text-muted-foreground"}`}
             >
               {info.text}
             </span>
@@ -251,7 +307,7 @@ export function RiskPanel({
         <Legend dot={<RiskDot group="red" />} label="กลุ่มมีปัญหา" value={risk.red} strong />
         <Legend dot={<RiskDot group="amber" />} label="กลุ่มเสี่ยง" value={risk.amber} strong />
         <Legend dot={<RiskDot group="green" />} label="ปกติ" value={risk.green} />
-        <Legend dot={<span className="inline-block size-2.5 rounded-full bg-muted-foreground/30" />} label="ยังไม่มีผล" value={none} />
+        <Legend dot={<span className="inline-block size-2.5 rounded-full bg-muted-foreground/30" />} label="ยังไม่ได้คัดกรอง" value={none} />
       </dl>
       {behavior && (
         <div className="mt-4 flex items-center justify-between gap-3 border-t border-border pt-3 text-[13px]">

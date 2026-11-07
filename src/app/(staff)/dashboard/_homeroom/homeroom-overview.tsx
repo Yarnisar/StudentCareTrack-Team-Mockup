@@ -22,6 +22,7 @@ import { useStore } from "@/lib/store";
 import {
   concernsOf,
   FOCUS_PRIMARY,
+  FOCUS_SECONDARY,
   Filter,
   FocusBox,
   ProcessCards,
@@ -167,12 +168,17 @@ export function HomeroomOverview() {
           {/* ① เรื่องที่ด่วนที่สุด */}
           <div className="mt-5">
             <FocusBox
-              concerns={concernsOf(summaries)}
+              audience="teacher"
+              concerns={concernsOf(summaries, "teacher")}
               unit={(c) => (c.process === "care" ? "case" : "คน")}
               onPickOther={(c) => showList(c.process, c.status)}
               actions={(c) => (
-                <button type="button" className={FOCUS_PRIMARY} onClick={() => showList(c.process, c.status)}>
-                  ดูรายชื่อและทำต่อ <ChevronRight className="size-4" />
+                <button
+                  type="button"
+                  className={c.locked ? FOCUS_SECONDARY : FOCUS_PRIMARY}
+                  onClick={() => showList(c.process, c.status)}
+                >
+                  {c.locked ? "ดูรายชื่อ" : "ดูรายชื่อและทำต่อ"} <ChevronRight className="size-4" />
                 </button>
               )}
             />
@@ -282,6 +288,12 @@ function ItemRow({ item, showProcess }: { item: Item; showProcess: boolean }) {
         <LinkButton href={item.href} variant="ghost" size="sm">
           ดูรายละเอียด
         </LinkButton>
+      ) : item.locked ? (
+        <span className="text-right text-[12px] text-muted-foreground">
+          ปิดรับแล้ว
+          <br />
+          ติดต่อแอดมินเพื่อขยายเวลา
+        </span>
       ) : (
         item.status !== "done" && <span className="text-[12px] text-muted-foreground">รอผู้อื่นดำเนินการ</span>
       )}

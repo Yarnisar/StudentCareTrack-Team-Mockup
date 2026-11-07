@@ -49,7 +49,7 @@ export const INITIAL_WINDOWS: AssessmentWindow[] = [
     openDate: "2569-11-01",
     closeDate: "2569-11-30",
     enabled: true,
-    lockAfterClose: true,
+    lockAfterClose: false,
     remindDaysBefore: 7,
     raters: ["teacher"],
   },
@@ -60,7 +60,7 @@ export const INITIAL_WINDOWS: AssessmentWindow[] = [
     openDate: "2569-12-01",
     closeDate: "2569-12-15",
     enabled: true,
-    lockAfterClose: true,
+    lockAfterClose: false,
     remindDaysBefore: 3,
     raters: ["teacher"],
   },
@@ -148,6 +148,16 @@ export function windowFor(
     candidates.find((w) => windowStatus(w) === "open") ??
     [...candidates].sort((a, b) => b.closeDate.localeCompare(a.closeDate))[0]
   );
+}
+
+/** พ้นวันปิดและตั้ง "ห้ามบันทึกย้อนหลัง" ไว้ → แบบฟอร์มปิดรับ (UC9) */
+export const isLocked = (w: AssessmentWindow, today: string = DEMO_TODAY) =>
+  windowStatus(w, today) === "closed" && w.lockAfterClose;
+
+/** ช่วงเวลาของงานชนิดนี้ที่ปิดรับแล้ว ไม่มี = ยังส่งได้ (เปิดอยู่ ส่งช้าได้ หรือยังไม่ตั้งช่วงเวลา) */
+export function lockedWindowFor(windows: AssessmentWindow[], kind: AssessmentKind, round?: 1 | 2) {
+  const w = windowFor(windows, kind, round);
+  return w && isLocked(w) ? w : undefined;
 }
 
 /** บวก/ลบวันบนสตริงวันที่ พ.ศ. */

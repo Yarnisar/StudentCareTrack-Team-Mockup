@@ -65,7 +65,8 @@ export function SettingsWorkspace({
   const tabParam = params.get("tab");
   const tab: Tab = TABS.some((t) => t.key === tabParam) ? (tabParam as Tab) : "windows";
 
-  const [selectedWindow, setSelectedWindow] = useState<string | null>(null);
+  // มาจากปุ่ม "ขยายช่วงเวลา" ในหน้าภาพรวม → เปิดแผงของช่วงเวลานั้นทันที
+  const [selectedWindow, setSelectedWindow] = useState<string | null>(() => params.get("window"));
   const [selectedRule, setSelectedRule] = useState<string | null>(null);
   const entries = useAuditEntries();
   const confirm = useConfirm();

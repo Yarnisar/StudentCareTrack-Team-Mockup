@@ -104,6 +104,8 @@ export function AdminOverview() {
     .map((r) => ({ room: r, own: items.filter((i) => i.student.room === r.room) }))
     .map(({ room: r, own }) => ({ room: r, own, selected: own.filter((i) => matches(i, process, status)).length }))
     .sort((a, b) => b.selected - a.selected || a.room.room.localeCompare(b.room.room, "th"));
+  // ทุกกระบวนการรวมกัน คนเดียวนับได้หลายงาน จึงไม่ใช้หน่วย "คน"
+  const roomUnit = process === "all" ? "งาน" : process === "care" ? "case" : "คน";
   const topRooms = roomRows.filter((r) => r.selected > 0).slice(0, TOP_ROOMS);
   const roomPager = usePagination(roomRows, pageSize);
 
@@ -277,22 +279,33 @@ export function AdminOverview() {
                 const list = roomsWith(c);
                 const topic = `${PROCESS_LABEL[c.process]}${STATUS_LABEL[c.status]}`;
                 const allSent = list.length > 0 && list.every((r) => reminded[r.room] === topic);
+                const extend = (primary: boolean) => (
+                  <Link
+                    href={`/settings?tab=windows${c.windowId ? `&window=${c.windowId}` : ""}`}
+                    className={primary ? FOCUS_PRIMARY : FOCUS_SECONDARY}
+                  >
+                    ขยายช่วงเวลา <ChevronRight className="size-4" />
+                  </Link>
+                );
                 return (
                   <>
-                    {c.closed && (
-                      <Link href="/settings?tab=windows" className={FOCUS_PRIMARY}>
-                        ขยายช่วงเวลา <ChevronRight className="size-4" />
-                      </Link>
+                    {/* ปิดรับแล้ว: ครูส่งไม่ได้ เตือนไปก็ไม่มีประโยชน์ ต้องขยายช่วงเวลาก่อน */}
+                    {c.locked ? (
+                      extend(true)
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          className={FOCUS_PRIMARY}
+                          disabled={allSent || list.length === 0}
+                          onClick={() => remind(list, topic)}
+                        >
+                          {allSent ? <Check className="size-4" /> : <Bell className="size-4" />}
+                          {allSent ? `เตือนครูแล้ว ${n(list.length)} ห้อง` : `เตือนครู ${n(list.length)} ห้อง`}
+                        </button>
+                        {c.closed && extend(false)}
+                      </>
                     )}
-                    <button
-                      type="button"
-                      className={c.closed ? FOCUS_SECONDARY : FOCUS_PRIMARY}
-                      disabled={allSent || list.length === 0}
-                      onClick={() => remind(list, topic)}
-                    >
-                      {allSent ? <Check className="size-4" /> : <Bell className="size-4" />}
-                      {allSent ? `เตือนครูแล้ว ${n(list.length)} ห้อง` : `เตือนครู ${n(list.length)} ห้อง`}
-                    </button>
                     {!selectedRoom && (
                       <button type="button" className={FOCUS_SECONDARY} onClick={() => pick(c.process, c.status)}>
                         ดูห้องที่ค้าง
@@ -350,7 +363,8 @@ export function AdminOverview() {
                         <span className="w-14 shrink-0 text-[15px] font-bold">{r.room}</span>
                         <span className="min-w-0 flex-1 truncate text-[13px] text-muted-foreground">{r.teacher}</span>
                         <span className="shrink-0 text-[13px]">
-                          ค้าง <b className="text-[17px] tabular-nums">{n(selected)}</b>
+                          {status === "done" ? "ทำแล้ว" : status === "watch" ? "เฝ้าระวัง" : "ค้าง"}{" "}
+                          <b className="text-[17px] tabular-nums">{n(selected)}</b> {roomUnit}
                         </span>
                       </button>
                       <RemindButton

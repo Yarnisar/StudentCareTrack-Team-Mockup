@@ -4,6 +4,8 @@ import { use, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CheckCircle2, ChevronLeft, Info } from "lucide-react";
+import { WindowLocked } from "@/components/shared/window-locked";
+import { lockedWindowFor } from "@/lib/periods";
 import { PageHeader } from "@/components/layout/page-header";
 import { RiskBadge } from "@/components/shared/risk-badge";
 import { AutosaveStatus } from "@/components/assessment/autosave-status";
@@ -112,6 +114,21 @@ export default function ScreeningFormPage({
       <div className="p-8">
         <p className="text-sm text-muted-foreground">ไม่พบข้อมูลนักเรียน</p>
       </div>
+    );
+  }
+
+  // ปิดรับแล้ว (UC9): ส่งเพิ่มไม่ได้จนกว่าแอดมินจะขยายช่วงเวลา
+  const locked = lockedWindowFor(store.assessmentWindows, "screening");
+  if (locked) {
+    return (
+      <>
+        <PageHeader title="คัดกรองนักเรียน" subtitle={CURRENT_TERM.label} />
+        <div className="flex-1 overflow-y-auto p-4 sm:p-8">
+          <div className="mx-auto max-w-3xl">
+            <WindowLocked window={locked} backHref="/screening" backLabel="กลับไปรายชื่อนักเรียน" />
+          </div>
+        </div>
+      </>
     );
   }
 

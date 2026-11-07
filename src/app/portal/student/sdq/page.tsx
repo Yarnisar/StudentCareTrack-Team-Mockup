@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { HeartHandshake } from "lucide-react";
+import { WindowLocked } from "@/components/shared/window-locked";
+import { lockedWindowFor } from "@/lib/periods";
 import { MobileShell } from "@/components/layout/mobile-shell";
 import { SdqForm } from "@/components/assessment/sdq-form";
 import { LinkButton } from "@/components/ui/link-button";
@@ -19,6 +21,9 @@ export default function StudentSdqPage() {
     store
       .sdqOf(DEMO_STUDENT_ID)
       .find((s) => s.rater === "student" && s.round === 1)?.status === "completed";
+
+  // ปิดรับแล้ว (UC9) นักเรียนติดต่อครูประจำชั้น
+  const lockedSdq = lockedWindowFor(store.assessmentWindows, "sdq");
 
   return (
     <MobileShell
@@ -51,6 +56,8 @@ export default function StudentSdqPage() {
               </LinkButton>
             </CardContent>
           </Card>
+        ) : lockedSdq ? (
+          <WindowLocked window={lockedSdq} contact="ครูประจำชั้น" backHref="/portal/student" backLabel="กลับหน้าข้อมูลของฉัน" />
         ) : (
           <SdqForm
             studentId={DEMO_STUDENT_ID}

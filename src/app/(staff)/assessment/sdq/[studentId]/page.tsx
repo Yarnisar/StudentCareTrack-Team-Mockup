@@ -3,6 +3,8 @@
 import { Suspense, use, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Sparkles } from "lucide-react";
+import { WindowLocked } from "@/components/shared/window-locked";
+import { lockedWindowFor } from "@/lib/periods";
 import { PageHeader } from "@/components/layout/page-header";
 import { StepIndicator } from "@/components/assessment/step-indicator";
 import { SdqForm } from "@/components/assessment/sdq-form";
@@ -33,6 +35,21 @@ function SdqContent({ studentId }: { studentId: string }) {
   if (!student) return <p className="p-8 text-sm text-muted-foreground">ไม่พบข้อมูลนักเรียน</p>;
 
   const set = store.sdqOf(studentId).filter((s) => s.round === 1);
+
+  // ปิดรับแล้ว (UC9) — PROTOTYPE: SDQ ในระบบผูกรอบ 1 ตายตัว จึงตรวจกับช่วงเวลา SDQ ที่เปิดอยู่ปัจจุบัน
+  const locked = lockedWindowFor(store.assessmentWindows, "sdq");
+  if (locked && set.find((s) => s.rater === "teacher")?.status !== "completed") {
+    return (
+      <>
+        <PageHeader title="แบบประเมิน SDQ" subtitle={CURRENT_TERM.label} />
+        <div className="flex-1 overflow-y-auto p-4 sm:p-8">
+          <div className="mx-auto max-w-3xl">
+            <WindowLocked window={locked} backHref={`/students/${studentId}`} backLabel="กลับไปหน้านักเรียน" />
+          </div>
+        </div>
+      </>
+    );
+  }
 
   const triggerText =
     from === "red-flag"

@@ -8,7 +8,7 @@
 
 import { formatThaiDate } from "@/lib/format";
 import { CURRENT_TERM, DEMO_TODAY } from "@/lib/mock-data";
-import { dueStatus, KIND_LABEL, windowFor, type AssessmentKind } from "@/lib/periods";
+import { dueStatus, isLocked, KIND_LABEL, windowFor, type AssessmentKind } from "@/lib/periods";
 import { draftKey, type useStore } from "@/lib/store";
 import { CASE_URGENCY_LABEL, SDQ_RATER_LABEL, type CaseUrgency, type Student } from "@/lib/types";
 
@@ -64,12 +64,14 @@ export interface Item {
   href?: string;
   /** ไม่มี = รอคนอื่นทำ ครูยังไม่ต้องลงมือ */
   action?: string;
+  /** ช่วงเวลาปิดรับแล้ว ครูส่งเพิ่มไม่ได้จนกว่าแอดมินจะขยายเวลา */
+  locked?: boolean;
 }
 
 export interface ProcessSummary {
   process: ProcessKey;
-  /** วันปิดของแต่ละช่วงเวลาในกระบวนการนี้ */
-  closes: { label: string; date: string }[];
+  /** วันปิดของแต่ละช่วงเวลาในกระบวนการนี้ (locked = ตั้งห้ามบันทึกย้อนหลัง) */
+  closes: { id: string; label: string; date: string; locked: boolean }[];
   counts: Record<Status, number>;
   /** จำนวนหน่วยทั้งหมดของกระบวนการ (คน หรือ case) */
   total: number;
@@ -93,7 +95,10 @@ export function processStatus(store: Store, termId: string): { items: Item[]; su
     round?: 1 | 2
   ): Item => {
     const w = windowFor(windows, kind, round);
-    return { ...base, process, status: dueStatus(w?.closeDate), due: w?.closeDate, windowId: w?.id };
+    const item: Item = { ...base, process, status: dueStatus(w?.closeDate), due: w?.closeDate, windowId: w?.id };
+    // ปิดรับแล้ว: ไม่มีปุ่มให้ทำต่อ (UC9)
+    if (w && isLocked(w)) return { ...item, href: undefined, action: undefined, locked: true };
+    return item;
   };
 
   for (const student of store.students) {
@@ -155,8 +160,8 @@ export function processStatus(store: Store, termId: string): { items: Item[]; su
             .join(" · "),
           ...(teacherPending && { href: `/assessment/sdq/${id}`, action: "ทำ SDQ" }),
         };
-        // ครบกำหนดตามช่วงเวลาของ SDQ รอบนั้น
-        items.push(open("assessment", "sdq", base, pending[0].round));
+        // ครบกำหนดตามช่วงเวลา SDQ ที่เปิดอยู่ — PROTOTYPE: SDQ ในระบบผูกรอบ 1 ตายตัว ยังแยกตามรอบจริงไม่ได้
+        items.push(open("assessment", "sdq", base));
       }
     }
 
@@ -282,7 +287,12 @@ export function processStatus(store: Store, termId: string): { items: Item[]; su
       process,
       closes: windows
         .filter((w) => w.enabled && (PROCESS_KINDS[process] ?? []).includes(w.kind))
-        .map((w) => ({ label: KIND_LABEL[w.kind] + (w.round ? ` รอบ ${w.round}` : ""), date: w.closeDate })),
+        .map((w) => ({
+          id: w.id,
+          label: KIND_LABEL[w.kind] + (w.round ? ` รอบ ${w.round}` : ""),
+          date: w.closeDate,
+          locked: w.lockAfterClose,
+        })),
       counts,
       total: process === "behavior" ? store.students.length : own.length,
       unit: process === "care" ? "รายการ" : "คน",

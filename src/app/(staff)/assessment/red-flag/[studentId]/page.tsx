@@ -3,6 +3,8 @@
 import { use } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle } from "lucide-react";
+import { WindowLocked } from "@/components/shared/window-locked";
+import { lockedWindowFor } from "@/lib/periods";
 import { PageHeader } from "@/components/layout/page-header";
 import { StepIndicator } from "@/components/assessment/step-indicator";
 import { AutosaveStatus } from "@/components/assessment/autosave-status";
@@ -37,6 +39,21 @@ export default function RedFlagPage({ params }: { params: Promise<{ studentId: s
   );
 
   if (!student) return <p className="p-8 text-sm text-muted-foreground">ไม่พบข้อมูลนักเรียน</p>;
+
+  // ปิดรับแล้ว (UC9)
+  const locked = lockedWindowFor(store.assessmentWindows, "red_flag");
+  if (locked) {
+    return (
+      <>
+        <PageHeader title="แบบคัดกรอง Red Flag" subtitle={CURRENT_TERM.label} />
+        <div className="flex-1 overflow-y-auto p-4 sm:p-8">
+          <div className="mx-auto max-w-3xl">
+            <WindowLocked window={locked} backHref={`/students/${studentId}`} backLabel="กลับไปหน้านักเรียน" />
+          </div>
+        </div>
+      </>
+    );
+  }
 
   const answer = (id: string, value: boolean) => {
     draft.update((prev) => ({ ...prev, [id]: value }));

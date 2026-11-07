@@ -212,7 +212,12 @@ export function adminSummaries(
       process,
       closes: windows
         .filter((w) => w.enabled && (PROCESS_KINDS[process] ?? []).includes(w.kind))
-        .map((w) => ({ label: KIND_LABEL[w.kind] + (w.round ? ` รอบ ${w.round}` : ""), date: w.closeDate })),
+        .map((w) => ({
+          id: w.id,
+          label: KIND_LABEL[w.kind] + (w.round ? ` รอบ ${w.round}` : ""),
+          date: w.closeDate,
+          locked: w.lockAfterClose,
+        })),
       counts,
       total: process === "behavior" ? students.length : own.length,
       unit: process === "care" ? "รายการ" : "คน",
