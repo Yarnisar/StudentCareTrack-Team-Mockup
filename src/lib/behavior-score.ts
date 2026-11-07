@@ -60,6 +60,9 @@ export interface ScoreItem {
   at: string;
 }
 
+/** ห่างเกณฑ์เฝ้าระวังระดับ 1 ไม่เกินกี่คะแนนถือว่า "ใกล้เกณฑ์" — PROTOTYPE: เพิ่มเอง ไม่อยู่ในรายงาน ค่าตัวอย่างรอทีมยืนยัน */
+export const NEAR_WATCH_POINTS = 10;
+
 export function clampScore(score: number, cfg: BehaviorScoreConfig): number {
   const capped = cfg.ceiling === null ? score : Math.min(score, cfg.ceiling);
   return Math.max(capped, cfg.minScore);

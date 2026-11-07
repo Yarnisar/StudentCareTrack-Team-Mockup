@@ -1,12 +1,8 @@
 "use client";
 
 /**
- * หน้าการจัดการความประพฤติ
- *
- * PROTOTYPE: หน้านี้กำลังโฮสต์แบบร่าง 3 แบบของการจัดวางรายการบันทึก
- * เพื่อตอบคำถามว่า "จัดวางอย่างไรให้ชื่อพฤติกรรมและรายละเอียดเหตุการณ์ไม่ถูกตัด"
- * สลับด้วย ?variant=A|B|C จากแถบลอยด้านล่าง (แสดงเฉพาะตอน dev)
- * เมื่อเลือกแบบได้แล้ว ให้ยุบเหลือแบบเดียวและลบโฟลเดอร์ _prototype/ ทิ้ง
+ * หน้าการจัดการความประพฤติ: รายการบันทึกตามขอบเขตสิทธิ์
+ * (ครูประจำชั้นเห็นทุกรายการของห้องตน ห้องที่สอนเห็นเฉพาะรายการที่ตนบันทึก)
  * ปุ่ม "บันทึกพฤติกรรม" เปิดตัวบันทึกตัวเดียว ใช้ได้ทั้งที่โต๊ะและครูเวรหน้าประตู (behavior-recorder.tsx)
  */
 
@@ -14,20 +10,11 @@ import { Suspense, useMemo, useState } from "react";
 import { ScanLine } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { PageHeader } from "@/components/layout/page-header";
-import { PrototypeSwitcher } from "@/components/prototype/prototype-switcher";
 import { Button } from "@/components/ui/button";
 import { CURRENT_TERM } from "@/lib/mock-data";
 import { useStore } from "@/lib/store";
 import { BehaviorRecorder } from "./behavior-recorder";
-import { VariantA, VARIANT_A_NAME } from "./_prototype/variant-a";
-import { VariantB, VARIANT_B_NAME } from "./_prototype/variant-b";
-import { VariantC, VARIANT_C_NAME } from "./_prototype/variant-c";
-
-const VARIANTS = [
-  { key: "A", name: VARIANT_A_NAME },
-  { key: "B", name: VARIANT_B_NAME },
-  { key: "C", name: VARIANT_C_NAME },
-];
+import { RecordsTable } from "./records-table";
 
 export default function BehaviorPage() {
   return (
@@ -45,8 +32,6 @@ function BehaviorKeyed() {
 
 function BehaviorContent() {
   const params = useSearchParams();
-  const variant = params.get("variant") ?? "A";
-
   const store = useStore();
   // มาจากช่องค้นหา (?record=รหัส): เปิดตัวบันทึกพร้อมเลือกนักเรียนไว้แล้ว
   const [recording, setRecording] = useState<string | true | null>(() => params.get("record"));
@@ -69,11 +54,7 @@ function BehaviorContent() {
         }
       />
 
-      {variant === "A" && <VariantA records={records} />}
-      {variant === "B" && <VariantB records={records} />}
-      {variant === "C" && <VariantC records={records} />}
-
-      <PrototypeSwitcher variants={VARIANTS} />
+      <RecordsTable records={records} />
       {recording && (
         <BehaviorRecorder
           key={String(recording)}

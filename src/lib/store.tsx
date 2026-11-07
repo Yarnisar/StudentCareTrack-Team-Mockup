@@ -122,6 +122,8 @@ interface StoreValue {
   behaviorOf: (studentId: string) => BehaviorRecord[];
   /** คะแนนความประพฤติปัจจุบัน ใส่ extra เพื่อดูคะแนนหลังบันทึกรายการใหม่ (UC8 ข้อ 11) */
   behaviorScoreOf: (studentId: string, extra?: { delta: number; at: string }) => number;
+  /** คะแนนสะสม ณ เวลานั้น (นับรายการที่เกิดถึงเวลานั้น) ใช้แสดงคะแนนหลังแต่ละบันทึก */
+  behaviorScoreAt: (studentId: string, at: string) => number;
   /** ระดับเฝ้าระวังด้านความประพฤติ 0 = ไม่อยู่ในสถานะ ใส่ extra เพื่อดูระดับหลังบันทึก (UC8 ข้อ 16) */
   behaviorWatchLevelOf: (studentId: string, extra?: { delta: number; at: string }) => number;
   /** ถึงเกณฑ์เฝ้าระวังด้านความประพฤติหรือไม่ */
@@ -464,6 +466,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const items = scoreItems(studentId);
       return runningScore(extra ? [...items, extra] : items, behaviorScoreConfig);
     };
+
+    const behaviorScoreAt = (studentId: string, at: string) =>
+      runningScore(scoreItems(studentId).filter((i) => i.at <= at), behaviorScoreConfig);
 
     /** ระดับตามคะแนนตอนนี้ */
     const currentWatchLevel = (studentId: string, extra?: { delta: number; at: string }) =>
@@ -1201,6 +1206,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       confirmReview,
       behaviorOf,
       behaviorScoreOf,
+      behaviorScoreAt,
       behaviorWatchLevelOf,
       isBehaviorWatch,
       watchWithdrawalPending,
