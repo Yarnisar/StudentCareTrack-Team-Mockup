@@ -19,7 +19,7 @@ import { useStore } from "@/lib/store";
 
 const TIMES = ["15:30", "16:00", "16:30", "17:00"];
 /** นัดที่ยังค้างอยู่ นักเรียนคนนั้นจึงนัดซ้ำไม่ได้ (นัดที่ถูกแจ้งว่าไม่ได้เยี่ยมจริงนัดใหม่ได้) */
-const OPEN_STATUSES = ["pending", "confirmed", "reschedule_requested", "awaiting_visit_confirmation"];
+const OPEN_STATUSES = ["pending", "confirmed", "reschedule_requested", "awaiting_visit_confirmation", "visit_confirmed"];
 
 export function NewAppointmentDialog({
   onClose,

@@ -5,6 +5,7 @@
  * - สถานการณ์ C: ให้ข้อมูลติดต่อและเวลาที่สะดวก
  * - สถานการณ์ D: ยืนยันนัด (คนใดคนหนึ่งยืนยันได้) หรือขอเปลี่ยนวันพร้อมเหตุผล (Alt-C) วันเดิมยังมีผลระหว่างรอครูพิจารณา
  * - สถานการณ์ E: หลังครูบันทึกผล ยืนยันว่าได้เยี่ยมจริงภายในเวลาที่กำหนด หรือแจ้งว่าไม่ได้เยี่ยม (Alt-E)
+ *   ยืนยันแล้วยังไม่ปิดงานจนครบกำหนด อีกฝ่ายยังแจ้งว่าไม่ได้เยี่ยมได้ (ข้อเสนอแก้ Scenario E ข้อ 6)
  * นัดที่ยกเลิกแล้วไม่แสดงปุ่มยืนยัน
  */
 
@@ -22,7 +23,7 @@ import { DEMO_TODAY } from "@/lib/mock-data";
 import { useStore } from "@/lib/store";
 import { APPOINTMENT_STATUS_LABEL } from "@/lib/types";
 
-const ACTIVE = ["pending", "confirmed", "reschedule_requested", "awaiting_visit_confirmation", "visit_disputed"];
+const ACTIVE = ["pending", "confirmed", "reschedule_requested", "awaiting_visit_confirmation", "visit_confirmed", "visit_disputed"];
 /** PROTOTYPE: ตัวเลือกเป็นข้อเสนอ */
 const CONVENIENT_TIMES = ["หลังเลิกเรียน 15:30–17:00 น.", "หลัง 18:00 น.", "วันเสาร์–อาทิตย์"];
 const TIMES = ["15:30", "16:00", "16:30", "17:00"];
@@ -182,6 +183,27 @@ export function AppointmentView({ viewer, studentId }: { viewer: "student" | "pa
                 ยืนยันว่าได้เยี่ยมจริง
               </Button>
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {appointment.status === "visit_confirmed" && (
+        <Card>
+          <CardContent className="p-5">
+            <h2 className="text-[15px] font-bold">ยืนยันว่าได้เยี่ยมบ้านจริงแล้ว</h2>
+            <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">
+              ยืนยันโดย {appointment.visitRespondedBy} · ปิดงานเมื่อครบกำหนด {formatThaiDate(appointment.visitConfirmDeadline ?? "")}
+              {" "}ถ้าไม่ได้มีการเยี่ยมบ้านจริง ยังแจ้งครูได้จนถึงวันนั้น
+            </p>
+            <Button
+              variant="outline"
+              className="mt-4 h-11 w-full"
+              onClick={() => {
+                if (window.confirm("แจ้งครูว่าไม่ได้มีการเยี่ยมบ้านจริงใช่ไหม การยืนยันเดิมจะถูกยกเลิก")) store.respondVisit(appointment.appointmentId, false, me);
+              }}
+            >
+              ไม่ได้เยี่ยมจริง
+            </Button>
           </CardContent>
         </Card>
       )}

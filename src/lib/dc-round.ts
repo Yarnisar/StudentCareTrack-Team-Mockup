@@ -23,6 +23,8 @@ export interface DcRound {
   /** วันปิดส่งผล (พ.ศ. yyyy-mm-dd) */
   deadline: string;
   status: "draft" | "open";
+  /** ประวัติการเลื่อนวันปิดส่งผลหลังรอบมีผลแล้ว (ข้อเสนอแก้ Scenario B ข้อ 4 และ Alt-A) */
+  deadlineChanges?: { from: string; to: string; reason: string; at: string }[];
 }
 
 /**

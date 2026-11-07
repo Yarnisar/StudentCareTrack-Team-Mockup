@@ -147,7 +147,10 @@ interface StoreValue {
   requestReschedule: (appointmentId: string, date: string, reason: string, by: string) => void;
   /** ครูพิจารณาคำขอเปลี่ยนวัน: รับวันใหม่ หรือคงวันเดิม (Alt-C ข้อ 3) */
   resolveReschedule: (appointmentId: string, accept: boolean) => void;
-  /** ยืนยันว่าได้เยี่ยมจริง (Scenario E) หรือแจ้งว่าไม่ได้เยี่ยม (Alt-E) */
+  /**
+   * ยืนยันว่าได้เยี่ยมจริง (Scenario E) หรือแจ้งว่าไม่ได้เยี่ยม (Alt-E)
+   * ยืนยันแล้วยังไม่ปิดงานจนครบกำหนด การแจ้งว่าไม่ได้เยี่ยมระหว่างนั้นยกเลิกการยืนยันเดิม
+   */
   respondVisit: (appointmentId: string, visited: boolean, by: string) => void;
   /** บันทึกผลการเยี่ยมบ้าน ปิดนัดหมายเป็น "เสร็จสิ้น" และลบร่าง */
   saveHomeVisit: (
@@ -286,6 +289,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         return { ...a, status: "confirmed", confirmedBy: "ระบบ (ถึงวันนัดโดยไม่มีผู้ยืนยัน)", reschedule: undefined };
       if (a.status === "awaiting_visit_confirmation" && a.visitConfirmDeadline && DEMO_TODAY > a.visitConfirmDeadline)
         return { ...a, status: "completed_no_response" };
+      // มีผู้ยืนยันแล้วและไม่มีใครแจ้งว่าไม่ได้เยี่ยมจนครบกำหนด -> ปิดงาน
+      if (a.status === "visit_confirmed" && a.visitConfirmDeadline && DEMO_TODAY > a.visitConfirmDeadline)
+        return { ...a, status: "completed" };
       return a;
     });
 
@@ -674,7 +680,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const respondVisit: StoreValue["respondVisit"] = (appointmentId, visited, by) =>
       patchAppointment(appointmentId, (a) => ({
         ...a,
-        status: visited ? "completed" : "visit_disputed",
+        status: visited ? "visit_confirmed" : "visit_disputed",
         visitRespondedBy: by,
       }));
 

@@ -46,6 +46,14 @@ export function AppointmentStatusPanel({ appointmentId, onReschedule }: { appoin
       </div>
     );
 
+  if (a.status === "visit_confirmed")
+    return (
+      <div className={box}>
+        {a.visitRespondedBy} ยืนยันว่าได้เยี่ยมบ้านจริงแล้ว · ปิดงานเมื่อครบกำหนด {formatThaiDate(a.visitConfirmDeadline ?? "")}
+        <span className="block text-[12px] text-muted-foreground">ระหว่างนี้นักเรียนหรือผู้ปกครองยังแจ้งว่าไม่ได้เยี่ยมจริงได้</span>
+      </div>
+    );
+
   if (a.status === "visit_disputed")
     return (
       <div className={box}>
@@ -58,7 +66,7 @@ export function AppointmentStatusPanel({ appointmentId, onReschedule }: { appoin
     );
 
   if (a.status === "completed" && a.visitRespondedBy)
-    return <div className={box}>{a.visitRespondedBy} ยืนยันว่าได้เยี่ยมบ้านจริงแล้ว · ปิดงานเยี่ยมบ้าน</div>;
+    return <div className={box}>{a.visitRespondedBy} ยืนยันว่าได้เยี่ยมบ้านจริง · ครบกำหนดแล้ว ปิดงานเยี่ยมบ้าน</div>;
 
   if (a.status === "completed_no_response")
     return <div className={box}>ครบระยะเวลายืนยันโดยไม่มีผู้ตอบ ระบบปิดงานเป็น “ยืนยันโดยไม่มีผู้ตอบกลับ”</div>;

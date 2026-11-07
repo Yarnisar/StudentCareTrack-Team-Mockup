@@ -215,6 +215,8 @@ export type AppointmentStatus =
   | "reschedule_requested"
   /** ครูบันทึกผลแล้ว รอนักเรียนหรือผู้ปกครองยืนยันว่าได้เยี่ยมจริง (UC4 Scenario E) */
   | "awaiting_visit_confirmation"
+  /** มีผู้ยืนยันแล้ว ระบบปิดงานเมื่อครบกำหนด ระหว่างนั้นอีกฝ่ายยังแจ้งว่าไม่ได้เยี่ยมได้ (ข้อเสนอแก้ Scenario E ข้อ 6) */
+  | "visit_confirmed"
   /** นักเรียนหรือผู้ปกครองแจ้งว่าไม่ได้เยี่ยมจริง ครูต้องตรวจสอบและนัดใหม่ (Alt-E) */
   | "visit_disputed"
   /** ครบระยะเวลาโดยไม่มีผู้ตอบ ระบบปิดงานเอง (Alt-F) */
@@ -227,6 +229,7 @@ export const APPOINTMENT_STATUS_LABEL: Record<AppointmentStatus, string> = {
   confirmed: "ยืนยันแล้ว",
   reschedule_requested: "ขอเปลี่ยนวันเวลา",
   awaiting_visit_confirmation: "รอยืนยันว่าได้เยี่ยมจริง",
+  visit_confirmed: "ยืนยันแล้ว รอครบกำหนด",
   visit_disputed: "แจ้งว่าไม่ได้เยี่ยมจริง",
   completed_no_response: "ยืนยันโดยไม่มีผู้ตอบกลับ",
   completed: "เสร็จสิ้น",

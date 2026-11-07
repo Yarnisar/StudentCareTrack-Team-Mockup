@@ -4,7 +4,8 @@
  * ตั้งค่าการประเมินคุณลักษณะอันพึงประสงค์ (UC12)
  * - สถานการณ์ A: เลือกรอบตามภาคเรียน เห็นคุณลักษณะ 8 ข้อและระดับผล สร้างเกณฑ์ วิธีสรุปผลรวม และวันปิดส่งผล
  *   ตรวจข้อมูล (Alt-B) แล้วยืนยันเปิดใช้ให้ครูที่ปรึกษา
- * - สถานการณ์ B: แก้เกณฑ์ของรอบเดิม ถ้ารอบนั้นมีผลประเมินแล้วแก้ไม่ได้ ให้เลือกภาคเรียนสำหรับรอบใหม่ (Alt-A)
+ * - สถานการณ์ B: แก้เกณฑ์ของรอบเดิม ถ้ารอบนั้นมีผลประเมินแล้วล็อกเกณฑ์และวิธีสรุปผล ให้สร้างรอบของภาคเรียนใหม่ (Alt-A)
+ *   แต่ยังเลื่อนวันปิดส่งผลออกได้พร้อมเหตุผล เพราะไม่กระทบผลของใคร (ข้อเสนอแก้รายงาน ตามแนวของ UC9 สถานการณ์ B)
  */
 
 import { useState } from "react";
@@ -86,7 +87,7 @@ function RoundView({ round, onNewRound }: { round: DcRound; onNewRound: () => vo
       <CardContent className="space-y-3 p-6">
         <p className="flex items-start gap-2 rounded-lg bg-surface px-3 py-2.5 text-[13px]">
           <Lock className="mt-0.5 size-4 shrink-0" />
-          รอบนี้มีผลประเมินแล้ว จึงแก้เกณฑ์ไม่ได้ ถ้าต้องการเปลี่ยนเกณฑ์ให้สร้างรอบของภาคเรียนใหม่
+          รอบนี้มีผลประเมินแล้ว จึงแก้เกณฑ์และวิธีสรุปผลไม่ได้ ถ้าต้องการเปลี่ยนให้สร้างรอบของภาคเรียนใหม่ ส่วนวันปิดส่งผลเลื่อนออกได้
         </p>
         <LevelLegend />
         <div className="divide-y divide-border rounded-lg border border-border">
@@ -99,9 +100,8 @@ function RoundView({ round, onNewRound }: { round: DcRound; onNewRound: () => vo
             </div>
           ))}
         </div>
-        <div className="text-[13px]">
-          วิธีสรุปผลรวม: {DC_SUMMARY_METHOD_LABEL[round.method]} · วันปิดส่งผล {formatThaiDate(round.deadline)}
-        </div>
+        <div className="text-[13px]">วิธีสรุปผลรวม: {DC_SUMMARY_METHOD_LABEL[round.method]}</div>
+        <ExtendDeadline round={round} />
         <Button variant="outline" onClick={onNewRound}>
           สร้างรอบสำหรับภาคเรียนใหม่
         </Button>
@@ -237,5 +237,73 @@ function RoundForm({ termId, termLabel, saved }: { termId: string; termLabel: st
         )}
       </CardContent>
     </Card>
+  );
+}
+
+/** เลื่อนวันปิดส่งผลออกได้อย่างเดียว ต้องระบุเหตุผล และแจ้งครูที่ปรึกษา */
+function ExtendDeadline({ round }: { round: DcRound }) {
+  const store = useStore();
+  const [date, setDate] = useState("");
+  const [reason, setReason] = useState("");
+  const [message, setMessage] = useState("");
+  const later = date !== "" && date > round.deadline;
+  const canSave = later && reason.trim() !== "";
+
+  return (
+    <div className="rounded-lg border border-border p-3">
+      <div className="text-[13px]">
+        วันปิดส่งผล <b>{formatThaiDate(round.deadline)}</b>
+      </div>
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        <Input
+          type="date"
+          aria-label="วันปิดส่งผลใหม่"
+          value={date}
+          min={round.deadline}
+          onChange={(e) => {
+            setDate(e.target.value);
+            setMessage("");
+          }}
+          className="h-9 w-44"
+        />
+        <Input
+          aria-label="เหตุผลที่เลื่อน"
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          placeholder="เหตุผลที่เลื่อน (จำเป็น)"
+          className="h-9 min-w-0 flex-1"
+        />
+        <Button
+          size="sm"
+          disabled={!canSave}
+          onClick={() => {
+            store.saveDcRound({
+              ...round,
+              deadline: date,
+              deadlineChanges: [
+                ...(round.deadlineChanges ?? []),
+                { from: round.deadline, to: date, reason: reason.trim(), at: DEMO_TODAY },
+              ],
+            });
+            setMessage(`เลื่อนเป็น ${formatThaiDate(date)} แล้ว · แจ้งครูที่ปรึกษาเรื่องวันปิดใหม่แล้ว`);
+            setDate("");
+            setReason("");
+          }}
+        >
+          เลื่อนวันปิด
+        </Button>
+      </div>
+      {date !== "" && !later && <p className="mt-1 text-[12px] text-destructive">เลื่อนออกได้อย่างเดียว เลือกวันหลัง {formatThaiDate(round.deadline)}</p>}
+      {message && <p role="status" className="mt-2 text-[12.5px] text-primary">{message}</p>}
+      {(round.deadlineChanges ?? []).length > 0 && (
+        <ul className="mt-2 space-y-0.5 text-[12px] text-muted-foreground">
+          {round.deadlineChanges!.map((c, i) => (
+            <li key={i}>
+              {formatThaiDate(c.at)}: เลื่อนจาก {formatThaiDate(c.from)} เป็น {formatThaiDate(c.to)} · {c.reason}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }

@@ -20,6 +20,7 @@ const STATUS_STYLE: Record<AppointmentStatus, string> = {
   confirmed: "bg-accent text-primary",
   reschedule_requested: "border border-dashed border-foreground/40 text-foreground",
   awaiting_visit_confirmation: "border border-border text-foreground",
+  visit_confirmed: "bg-accent text-primary",
   visit_disputed: "border border-dashed border-foreground/40 text-foreground",
   completed_no_response: "bg-muted text-muted-foreground",
   completed: "bg-muted text-muted-foreground",
