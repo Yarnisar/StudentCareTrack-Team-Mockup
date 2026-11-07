@@ -190,9 +190,6 @@ export function BehaviorScoreCard() {
             {message}
           </p>
         )}
-        <p className="mt-3 text-[11.5px] text-muted-foreground">
-          คะแนนของเกณฑ์เฝ้าระวังแต่ละระดับเป็นค่าตัวอย่าง รอโรงเรียนกำหนด
-        </p>
       </CardContent>
     </Card>
   );

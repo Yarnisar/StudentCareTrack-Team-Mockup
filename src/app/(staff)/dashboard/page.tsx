@@ -23,11 +23,7 @@ export default function DashboardPage() {
     <>
       <PageHeader
         title="ภาพรวมการดูแลช่วยเหลือนักเรียน"
-        subtitle={
-          isAdmin
-            ? "สรุปเป็นจำนวน ไม่แสดงรายชื่อนักเรียน"
-            : `${CURRENT_TERM.label} · ${ROLE_INFO.homeroom.user.title} · แสดง ${store.students.length} จาก ${CLASS_SIZE} คน`
-        }
+        subtitle={isAdmin ? CURRENT_TERM.label : `${CURRENT_TERM.label} · ${ROLE_INFO.homeroom.user.title} · แสดง ${store.students.length} จาก ${CLASS_SIZE} คน`}
       />
       {isAdmin ? <AdminOverview /> : <HomeroomOverview />}
     </>

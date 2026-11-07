@@ -52,7 +52,6 @@ export default function HomeVisitsPage() {
     <>
       <PageHeader
         title="จัดการการเยี่ยมบ้าน"
-        subtitle="นัดหมาย ยืนยัน และบันทึกผลตามแบบฟอร์มการเยี่ยมบ้านนักเรียน"
         action={
           <Button onClick={() => setCreating(true)}>
             <Plus className="size-4" /> สร้างนัดหมาย

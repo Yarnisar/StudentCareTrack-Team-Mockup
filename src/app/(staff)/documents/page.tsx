@@ -40,7 +40,7 @@ const DOCS: DocSpec[] = [
     code: "ปพ.4",
     name: "แบบแสดงผลการพัฒนาคุณลักษณะอันพึงประสงค์",
     purpose: "แสดงผลการพัฒนาคุณลักษณะอันพึงประสงค์ 8 ประการของนักเรียนรายบุคคล",
-    dataSources: ["ผลประเมินคุณลักษณะอันพึงประสงค์ในระบบนี้ (UC13)", "ข้อมูลพื้นฐานนักเรียนจากงานทะเบียน"],
+    dataSources: ["ผลประเมินคุณลักษณะอันพึงประสงค์ในระบบนี้", "ข้อมูลพื้นฐานนักเรียนจากงานทะเบียน"],
     makers: ["admin", "homeroom"],
     per: "student",
   },
@@ -111,7 +111,7 @@ export default function DocumentsPage() {
         <div className="mb-5 flex items-start gap-3 rounded-xl border border-border bg-card px-4 py-3.5">
           <Info className="size-5 shrink-0 text-primary" />
           <p className="text-[13px] leading-relaxed text-muted-foreground">
-            ระบบนี้จัดทำ ปพ.3–7 เป็นร่างเอกสารจากข้อมูลทะเบียน (Team B) ผลการเรียน (Team A) และผลประเมินคุณลักษณะในระบบนี้
+            ระบบนี้จัดทำ ปพ.3–7 เป็นร่างเอกสารจากข้อมูลทะเบียน ผลการเรียน และผลประเมินคุณลักษณะในระบบนี้
             การตรวจรับรองและลงนามเป็นไปตามระเบียบของสถานศึกษา ส่วน ปพ.1 และ ปพ.2 อยู่ในระบบงานทะเบียน
           </p>
         </div>
@@ -290,7 +290,7 @@ function Generator({ doc }: { doc: DocSpec }) {
             </div>
           )}
           {ready.length === 0 && (
-            <p className="mt-3 text-[12.5px] text-muted-foreground">ยังไม่มีข้อมูลที่พร้อมจัดทำ ตรวจสอบหรือแก้ไขในระบบต้นทางก่อน (Alt-B)</p>
+            <p className="mt-3 text-[12.5px] text-muted-foreground">ยังไม่มีข้อมูลที่พร้อมจัดทำ ตรวจสอบหรือแก้ไขในระบบทะเบียนก่อน</p>
           )}
 
           {done && (

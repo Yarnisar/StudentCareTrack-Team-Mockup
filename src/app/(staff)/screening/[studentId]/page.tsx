@@ -160,7 +160,7 @@ export default function ScreeningFormPage({
     <>
       <PageHeader
         title="คัดกรองนักเรียน"
-        subtitle={`ประเมินความเสี่ยง 6 มิติ · ${CURRENT_TERM.label}`}
+        subtitle={CURRENT_TERM.label}
       />
 
       <div className="flex-1 overflow-y-auto p-4 sm:p-8">

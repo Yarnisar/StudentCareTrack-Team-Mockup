@@ -8,7 +8,7 @@ import { PORTAL_STUDENT_ID } from "@/lib/mock-data";
 
 export default function StudentHomePage() {
   return (
-    <MobileShell title="ข้อมูลของฉัน" subtitle="ข้อมูลส่วนบุคคล ความประพฤติ และการแจ้งเตือน" role="student" brand>
+    <MobileShell title="ข้อมูลของฉัน" role="student" brand>
       <PersonalInfo viewer="student" studentIds={[PORTAL_STUDENT_ID]} />
     </MobileShell>
   );

@@ -52,7 +52,7 @@ function BehaviorContent() {
     <>
       <PageHeader
         title="การจัดการความประพฤติ"
-        subtitle={`บันทึกและติดตามพฤติกรรมนักเรียน · ${CURRENT_TERM.label}`}
+        subtitle={CURRENT_TERM.label}
         action={
           <Button onClick={() => setRecording(true)}>
             <ScanLine className="size-4" /> บันทึกพฤติกรรม

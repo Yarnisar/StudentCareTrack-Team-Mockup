@@ -38,7 +38,7 @@ export default function CharacteristicsPage() {
 
   return (
     <>
-      <PageHeader title="คุณลักษณะอันพึงประสงค์" subtitle={`ครูที่ปรึกษาประเมิน 8 ประการ · ห้อง ${CURRENT_TEACHER.roomName} · ${CURRENT_TERM.label}`} />
+      <PageHeader title="คุณลักษณะอันพึงประสงค์" subtitle={`ห้อง ${CURRENT_TEACHER.roomName} · ${CURRENT_TERM.label}`} />
 
       <div className="flex-1 overflow-y-auto p-4 sm:p-8">
         <p className="mb-4 rounded-xl border border-border bg-card px-4 py-3 text-[13px]">

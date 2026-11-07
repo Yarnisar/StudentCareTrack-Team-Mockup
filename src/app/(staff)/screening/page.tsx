@@ -17,16 +17,13 @@ export default function ScreeningListPage() {
     <>
       <PageHeader
         title="การคัดกรองนักเรียน"
-        subtitle={`ประเมินความเสี่ยง 6 มิติ ตามแนวทาง HERO OBEC CARE · ${CURRENT_TERM.label}`}
+        subtitle={CURRENT_TERM.label}
       />
 
       <div className="flex-1 overflow-y-auto p-4 sm:p-8">
         <Card>
           <CardContent className="p-6">
-            <h2 className="mb-1 text-[15.5px] font-bold">รายชื่อนักเรียนในห้องที่รับผิดชอบ</h2>
-            <p className="mb-4 text-xs text-muted-foreground">
-              เลือกนักเรียนเพื่อเริ่มคัดกรอง หรือคัดกรองซ้ำในรอบภาคเรียนปัจจุบัน
-            </p>
+            <h2 className="mb-4 text-[15.5px] font-bold">รายชื่อนักเรียนในห้องที่รับผิดชอบ</h2>
 
             <div className="divide-y divide-border">
               {store.students.map((student) => {

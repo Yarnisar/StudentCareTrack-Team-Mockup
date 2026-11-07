@@ -8,7 +8,7 @@ import { PARENT_CHILDREN } from "@/lib/mock-data";
 
 export default function ParentChildPage() {
   return (
-    <MobileShell title="ข้อมูลบุตรหลาน" subtitle="ข้อมูลส่วนบุคคล ความประพฤติ และการแจ้งเตือน" role="parent" back="/portal/parent">
+    <MobileShell title="ข้อมูลบุตรหลาน" role="parent" back="/portal/parent">
       <PersonalInfo viewer="parent" studentIds={PARENT_CHILDREN} />
     </MobileShell>
   );

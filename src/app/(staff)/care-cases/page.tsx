@@ -96,7 +96,6 @@ function CareCasesContent() {
     <>
       <PageHeader
         title="ติดตามและช่วยเหลือนักเรียน"
-        subtitle="แผนการช่วยเหลือและประวัติการติดตามผล"
       />
 
       <div className="flex-1 overflow-y-auto p-4 sm:p-8">
@@ -399,7 +398,7 @@ function CaseActions({ caseId, hasReferral }: { caseId: string; hasReferral: boo
     <div className="space-y-3 pb-4">
       {mode === "none" && (
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="text-[13px] text-muted-foreground">การเปลี่ยนแปลงทั้งหมดถูกบันทึกใน audit log ของระบบ</p>
+          <p className="text-[13px] text-muted-foreground">ระบบเก็บประวัติการเปลี่ยนแปลงทุกครั้ง</p>
           <div className="flex flex-wrap gap-2">
             {!hasReferral && (
               <Button variant="outline" onClick={() => setMode("referral")}>

@@ -18,7 +18,7 @@ export default function AssessmentPage() {
     <>
       <PageHeader
         title="การประเมิน"
-        subtitle={`Red Flag → 9S → SDQ (ครู / นักเรียน / ผู้ปกครอง) และ EQ · ${CURRENT_TERM.label}`}
+        subtitle={CURRENT_TERM.label}
       />
 
       <div className="flex-1 overflow-y-auto p-4 sm:p-8">
