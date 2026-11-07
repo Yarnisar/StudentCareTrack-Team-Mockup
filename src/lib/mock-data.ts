@@ -831,7 +831,7 @@ export const careCases: CareCase[] = [
     goal: "ส่งต่อครูแนะแนวเพื่อประเมินเชิงลึกด้านสุขภาพจิต และติดตามพฤติกรรมการมาสาย",
     targetDate: "2570-03-15",
     urgency: "high",
-    nextFollowupDate: "2570-02-21",
+    nextFollowupDate: "2570-02-18",
     followups: [
       {
         followupId: "FU-010",
@@ -839,7 +839,7 @@ export const careCases: CareCase[] = [
         result: "ครูแนะแนวรับเรื่องแล้ว นัดพบนักเรียนสัปดาห์หน้า",
         followupDate: "2570-02-14",
         recordedByName: CURRENT_TEACHER.name,
-        nextFollowupDate: "2570-02-21",
+        nextFollowupDate: "2570-02-18",
       },
     ],
   },

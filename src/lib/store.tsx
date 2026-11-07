@@ -608,6 +608,57 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           overdueByRoom[st.roomName] = (overdueByRoom[st.roomName] ?? 0) + 1;
         }
       }
+      // UC11 Alt-B: ใกล้ถึง/เลยวันติดตามของ case ที่เปิดอยู่ (แอดมินได้รับเฉพาะจำนวน ไม่ระบุชื่อนักเรียน)
+      const followupOverdueByRoom: Record<string, number> = {};
+      for (const c of careCases) {
+        if (c.status !== "active" || !c.nextFollowupDate) continue;
+        const st = students.find((x) => x.studentId === c.studentId);
+        if (!st) continue;
+        const href = `/care-cases?student=${c.studentId}`;
+        if (c.nextFollowupDate < DEMO_TODAY) {
+          out.push({
+            id: `fo-${c.caseId}-${c.nextFollowupDate}`,
+            kind: "followup_overdue",
+            title: `เลยวันติดตาม ${st.fullName}`,
+            body: `${c.caseId} · ครบกำหนด ${c.nextFollowupDate} ยังไม่บันทึกผลติดตาม`,
+            href,
+            at: `${c.nextFollowupDate}T08:00:00`,
+            to: { homeroomOf: st.roomName },
+          });
+          followupOverdueByRoom[st.roomName] = (followupOverdueByRoom[st.roomName] ?? 0) + 1;
+        } else if (c.nextFollowupDate <= shiftDate(DEMO_TODAY, 3)) {
+          out.push({
+            id: `fd-${c.caseId}-${c.nextFollowupDate}`,
+            kind: "followup_due",
+            title: `ใกล้ถึงวันติดตาม ${st.fullName}`,
+            body: `${c.caseId} · นัดติดตาม ${c.nextFollowupDate}`,
+            href,
+            at: `${DEMO_TODAY}T08:00:00`,
+            to: { homeroomOf: st.roomName },
+          });
+        }
+      }
+      for (const [room, n] of Object.entries(followupOverdueByRoom))
+        out.push({
+          id: `fo-admin-${room}-${n}`,
+          kind: "followup_overdue_admin",
+          title: "มี case ติดตามช่วยเหลือเลยกำหนด",
+          body: `ห้อง ${room} · ${n} case · เตือนครูที่ปรึกษาแล้ว`,
+          at: `${DEMO_TODAY}T08:00:00`,
+          to: { role: "admin" },
+        });
+      // UC11 Scenario D: ครูส่งเอกสารส่งต่อ → แจ้งแอดมินให้เก็บรักษา (เห็นเลขเอกสารและผู้ส่ง ไม่เห็นชื่อนักเรียน)
+      for (const c of careCases)
+        if (c.referral && c.referral.status === "awaiting_admin")
+          out.push({
+            id: `rf-${c.referral.referralId}`,
+            kind: "referral_sent",
+            title: "มีเอกสารส่งต่อรอรับเก็บรักษา",
+            body: `${c.referral.referralId} · ส่งโดย ${c.referral.sentByName}`,
+            href: "/documents",
+            at: `${c.referral.preparedAt.slice(0, 10)}T08:00:00`,
+            to: { role: "admin" },
+          });
       for (const [room, n] of Object.entries(overdueByRoom))
         out.push({
           id: `wdo-admin-${room}-${n}`,
