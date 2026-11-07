@@ -16,6 +16,8 @@ import { recordScoreText, ruleKind } from "@/lib/behavior-rules";
 import { formatThaiDate } from "@/lib/format";
 import { buildNotifications } from "@/lib/portal-notifications";
 import { useStore } from "@/lib/store";
+import { CURRENT_TERM } from "@/lib/mock-data";
+import { academicYearOfDate } from "@/lib/terms";
 
 type Section = "info" | "behavior" | "notifications";
 
@@ -35,7 +37,8 @@ export function PersonalInfo({ viewer, studentIds }: { viewer: "student" | "pare
   const student = store.getStudent(studentId);
   if (!student) return null;
 
-  const behaviors = store.behaviorOf(studentId);
+  // คะแนนเริ่มใหม่ทุกปีการศึกษา แสดงเฉพาะรายการของปีปัจจุบัน
+  const behaviors = store.behaviorOf(studentId).filter((b) => academicYearOfDate(b.occurredAt) === CURRENT_TERM.academicYear);
   const score = store.behaviorScoreOf(studentId);
   const watchLevel = store.behaviorWatchLevelOf(studentId);
   const ceiling = store.behaviorScoreConfig.ceiling;

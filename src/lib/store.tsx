@@ -43,6 +43,7 @@ import { eqReviewInfo, sdqReviewInfo, type AssessmentReview, type ReviewKind } f
 import { sdqSummaryForParent } from "./portal";
 import { DEFAULT_BEHAVIOR_SCORE, lastRecoveryAt, peakWatchLevel, runningScore, WATCH_NOTIFY_LABEL, watchLevelOf, type BehaviorScoreConfig } from "./behavior-score";
 import { ruleKind } from "./behavior-rules";
+import { academicYearOfDate } from "./terms";
 import { isFor, type NotificationLogEntry, type StaffNotification } from "./staff-notifications";
 import {
   AccessLog,
@@ -412,14 +413,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     };
 
     const sdqOf = (studentId: string) => sdq.filter((s) => s.studentId === studentId);
-    const eqOf = (studentId: string) => eq.find((e) => e.studentId === studentId);
+    const eqOf = (studentId: string) => eq.find((e) => e.studentId === studentId && e.termId === CURRENT_TERM.termId);
     const reviewOf = (studentId: string, kind: ReviewKind) =>
       reviews
         .filter((r) => r.studentId === studentId && r.kind === kind && (kind !== "sdq" || (r.round ?? 1) === sdqRound))
         .sort((a, b) => b.reviewedAt.localeCompare(a.reviewedAt))[0];
     const sdqWindow = windowFor(assessmentWindows, "sdq");
     const sdqRound: 1 | 2 = sdqWindow?.round ?? 1;
-    const sdqSetOf = (studentId: string, round: 1 | 2 = sdqRound) => sdqOf(studentId).filter((x) => x.round === round);
+    const sdqSetOf = (studentId: string, round: 1 | 2 = sdqRound) =>
+      sdqOf(studentId).filter((x) => x.round === round && x.termId === CURRENT_TERM.termId);
     const sdqReview: StoreValue["sdqReview"] = (studentId) => {
       const review = reviewOf(studentId, "sdq");
       const roundClosed = !!sdqWindow && windowStatus(sdqWindow) === "closed";
@@ -486,15 +488,20 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const rule = behaviorRules.find((r) => r.ruleId === rec.ruleId);
       return rec.cancelled || !rule || rule.cancelled ? 0 : (rec.scoreDelta ?? rule.scoreDelta);
     };
-    const scoreItems = (studentId: string) => behaviorOf(studentId).map((rec) => ({ delta: recordDelta(rec), at: rec.occurredAt }));
+    /** คะแนนเริ่มใหม่ทุกปีการศึกษา จึงนับเฉพาะรายการของปีที่ระบุ (ค่าเริ่มต้น = ปีปัจจุบัน) */
+    const scoreItems = (studentId: string, year: number = CURRENT_TERM.academicYear) =>
+      behaviorOf(studentId)
+        .filter((rec) => academicYearOfDate(rec.occurredAt) === year)
+        .map((rec) => ({ delta: recordDelta(rec), at: rec.occurredAt }));
 
     const behaviorScoreOf = (studentId: string, extra?: { delta: number; at: string }) => {
       const items = scoreItems(studentId);
       return runningScore(extra ? [...items, extra] : items, behaviorScoreConfig);
     };
 
+    // คะแนน ณ เวลานั้น คิดในปีการศึกษาของเวลานั้น
     const behaviorScoreAt = (studentId: string, at: string) =>
-      runningScore(scoreItems(studentId).filter((i) => i.at <= at), behaviorScoreConfig);
+      runningScore(scoreItems(studentId, academicYearOfDate(at)).filter((i) => i.at <= at), behaviorScoreConfig);
 
     /** ระดับตามคะแนนตอนนี้ */
     const currentWatchLevel = (studentId: string, extra?: { delta: number; at: string }) =>
@@ -636,7 +643,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           .sort()
           .at(-1) ?? "";
       const others = behaviorOf(rec.studentId)
-        .filter((r) => r.recordId !== recordId)
+        .filter((r) => r.recordId !== recordId && academicYearOfDate(r.occurredAt) === academicYearOfDate(rec.occurredAt))
         .map((r) => ({ delta: recordDelta(r), at: r.occurredAt }));
       const after =
         change === "cancel"
@@ -792,7 +799,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           checkedItemIds: checked[dimension] ?? [],
         })),
       };
-      setScreenings((prev) => [record, ...prev.filter((s) => s.studentId !== studentId)]);
+      setScreenings((prev) => [record, ...prev.filter((s) => !(s.studentId === studentId && s.termId === record.termId))]);
       clearDraft(draftKey("screening", studentId));
       // มีมิติที่มีปัญหา (แดง) -> ระบบเปิดหรือเชื่อม case เอง (UC6 ข้อ 13)
       const red = record.results.filter((r) => r.group === "red").map((r) => DIMENSION_LABEL[r.dimension]);
@@ -854,7 +861,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       ];
       setSdq((prev) => {
         const existing = new Set(
-          prev.filter((s) => s.studentId === studentId && s.round === sdqRound).map((s) => s.rater)
+          prev.filter((s) => s.studentId === studentId && s.round === sdqRound && s.termId === CURRENT_TERM.termId).map((s) => s.rater)
         );
         const created = raters
           .filter((r) => !existing.has(r.rater))
@@ -884,7 +891,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
       setSdq((prev) => {
         const idx = prev.findIndex(
-          (s) => s.studentId === studentId && s.rater === rater && s.round === sdqRound
+          (s) => s.studentId === studentId && s.rater === rater && s.round === sdqRound && s.termId === CURRENT_TERM.termId
         );
         const base: SdqAssessment =
           idx >= 0

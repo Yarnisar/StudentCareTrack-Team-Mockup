@@ -6,7 +6,8 @@ import { MobileShell } from "@/components/layout/mobile-shell";
 import { Card, CardContent } from "@/components/ui/card";
 import { useStore } from "@/lib/store";
 import { formatThaiDate, formatThaiTime } from "@/lib/format";
-import { dcCriteria } from "@/lib/mock-data";
+import { CURRENT_TERM, dcCriteria } from "@/lib/mock-data";
+import { academicYearOfDate } from "@/lib/terms";
 import { dcSummaryForParent } from "@/lib/portal";
 import { buildNotifications } from "@/lib/portal-notifications";
 import { SDQ_PORTAL_LABEL } from "@/lib/types";
@@ -31,7 +32,7 @@ export default function ParentHomePage() {
 
   const unread = buildNotifications({
     viewer: "parent",
-    behaviors: store.behaviorOf(DEMO_STUDENT_ID),
+    behaviors: store.behaviorOf(DEMO_STUDENT_ID).filter((b) => academicYearOfDate(b.occurredAt) === CURRENT_TERM.academicYear),
     rules: store.behaviorRules,
     watchLevel: store.behaviorWatchLevelOf(DEMO_STUDENT_ID),
     appointments: store.appointments.filter((a) => a.studentId === DEMO_STUDENT_ID),

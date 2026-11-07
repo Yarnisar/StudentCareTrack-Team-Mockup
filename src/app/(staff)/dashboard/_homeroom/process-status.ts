@@ -11,6 +11,7 @@ import { CURRENT_TERM, DEMO_TODAY } from "@/lib/mock-data";
 import { dueStatus, isLocked, KIND_LABEL, windowFor, type AssessmentKind } from "@/lib/periods";
 import { draftKey, type useStore } from "@/lib/store";
 import { needsReview } from "@/lib/assessment-review";
+import { termOfDate } from "@/lib/terms";
 import { ruleKind } from "@/lib/behavior-rules";
 import { CASE_URGENCY_LABEL, SDQ_RATER_LABEL, type CaseUrgency, type Student } from "@/lib/types";
 
@@ -363,7 +364,7 @@ export function processStatus(store: Store, termId: string): { items: Item[]; su
       unit: process === "care" ? "รายการ" : "คน",
       recorded:
         process === "behavior"
-          ? store.behaviorRecords.filter((r) => studentIds.has(r.studentId)).length
+          ? store.behaviorRecords.filter((r) => studentIds.has(r.studentId) && termOfDate(r.occurredAt).termId === termId).length
           : undefined,
     };
   });

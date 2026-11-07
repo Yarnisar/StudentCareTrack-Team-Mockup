@@ -13,6 +13,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { CURRENT_TERM } from "@/lib/mock-data";
 import { useStore } from "@/lib/store";
+import { termOfDate } from "@/lib/terms";
 import { BehaviorRecorder } from "./behavior-recorder";
 import { RecordsTable } from "./records-table";
 
@@ -36,10 +37,15 @@ function BehaviorContent() {
   // มาจากช่องค้นหา (?record=รหัส): เปิดตัวบันทึกพร้อมเลือกนักเรียนไว้แล้ว
   const [recording, setRecording] = useState<string | true | null>(() => params.get("record"));
 
+  const { behaviorRecords, behaviorVisible } = store;
   const records = useMemo(
     // ครูประจำชั้นเห็นทุกรายการของห้องตน ห้องที่สอนเห็นเฉพาะรายการที่ตนบันทึก (ตารางขอบเขตสิทธิ์)
-    () => store.behaviorRecords.filter(store.behaviorVisible).sort((a, b) => b.occurredAt.localeCompare(a.occurredAt)),
-    [store.behaviorRecords, store.behaviorVisible]
+    // หน้านี้แสดงภาคเรียนปัจจุบัน ประวัติภาคก่อนดูในหน้าข้อมูลนักเรียน
+    () =>
+      behaviorRecords
+        .filter((r) => behaviorVisible(r) && termOfDate(r.occurredAt).termId === CURRENT_TERM.termId)
+        .sort((a, b) => b.occurredAt.localeCompare(a.occurredAt)),
+    [behaviorRecords, behaviorVisible]
   );
 
   return (
