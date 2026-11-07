@@ -86,7 +86,7 @@ export default function AssessmentPage() {
                         label="EQ"
                         state={(() => {
                           const e = store.eqOf(student.studentId);
-                          return !e ? "none" : e.status === "pending" ? "pending" : e.status === "declined" ? "none" : "ok";
+                          return !e ? "none" : e.status === "pending" ? "pending" : e.status === "declined" ? "none" : "done";
                         })()}
                         hint={store.eqOf(student.studentId)?.status === "declined" ? "ไม่ทำ" : "ส่งแล้ว"}
                       />
@@ -102,7 +102,9 @@ export default function AssessmentPage() {
                                 : rec.status === "completed"
                                   ? rec.level === "normal"
                                     ? "ok"
-                                    : "care"
+                                    : rec.level === "risk"
+                                      ? "risk"
+                                      : "care"
                                   : "pending"
                             }
                             hint={
@@ -115,13 +117,14 @@ export default function AssessmentPage() {
                       })}
                     </div>
 
-                    <LinkButton
-                      size="sm"
-                      variant="outline"
-                      href={`/assessment/red-flag/${student.studentId}`}
-                    >
-                      เริ่มประเมิน
-                    </LinkButton>
+                    {(() => {
+                      const next = nextStep(store, student.studentId);
+                      return (
+                        <LinkButton size="sm" variant={next.primary ? "outline" : "ghost"} href={next.href}>
+                          {next.label}
+                        </LinkButton>
+                      );
+                    })()}
                   </div>
                 );
               })}
@@ -139,13 +142,16 @@ function Chip({
   hint,
 }: {
   label: string;
-  state: "none" | "pending" | "ok" | "care";
+  state: "none" | "pending" | "done" | "ok" | "risk" | "care";
   hint?: string;
 }) {
+  // สถานะงาน (รอทำ / ส่งแล้ว) ใช้สีกลาง สีเขียว/แดงใช้เฉพาะผลประเมินที่บอกกลุ่ม (ปกติ / ควรดูแล)
   const styles = {
     none: "bg-muted text-muted-foreground",
-    pending: "bg-risk-amber-bg text-risk-amber",
+    pending: "border border-foreground/25 text-foreground",
+    done: "bg-muted text-foreground",
     ok: "bg-risk-green-bg text-risk-green",
+    risk: "bg-risk-amber-bg text-risk-amber",
     care: "bg-risk-red-bg text-risk-red",
   } as const;
 
@@ -201,4 +207,20 @@ function ReviewQueue() {
       </CardContent>
     </Card>
   );
+}
+
+/** ขั้นถัดไปที่ยังค้างของนักเรียนคนนี้: Red Flag → 9S → SDQ ฉบับครู → ตรวจผล */
+function nextStep(store: ReturnType<typeof useStore>, id: string): { href: string; label: string; primary: boolean } {
+  const redFlag = store.redFlags.find((r) => r.studentId === id);
+  const nineS = store.nineS.find((n) => n.studentId === id);
+  const teacherSdq = store.sdqSetOf(id).find((s) => s.rater === "teacher");
+  const review = needsReview(store.sdqReview(id).state) || needsReview(store.eqReview(id).state);
+  // มี SDQ แล้ว = ผ่านขั้น Red Flag / 9S มาแล้ว
+  if (teacherSdq?.status === "pending") return { href: `/assessment/sdq/${id}`, label: "ทำ SDQ", primary: true };
+  if (review) return { href: `/assessment/review/${id}`, label: "ตรวจผล", primary: true };
+  if (!teacherSdq) {
+    if (!redFlag) return { href: `/assessment/red-flag/${id}`, label: "ทำ Red Flag", primary: true };
+    if (redFlag.result !== "needs_care" && !nineS) return { href: `/assessment/nine-s/${id}`, label: "ทำ 9S", primary: true };
+  }
+  return { href: `/students/${id}`, label: "ดูผล", primary: false };
 }

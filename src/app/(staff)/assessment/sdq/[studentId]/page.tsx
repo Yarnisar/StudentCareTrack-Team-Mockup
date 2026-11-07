@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { CURRENT_TERM } from "@/lib/mock-data";
+import { formatThaiDate } from "@/lib/format";
 import { useStore } from "@/lib/store";
 import { SDQ_LEVEL_LABEL, SDQ_RATER_LABEL, SdqAssessment } from "@/lib/types";
 
@@ -31,14 +32,17 @@ function SdqContent({ studentId }: { studentId: string }) {
   const store = useStore();
   const student = store.getStudent(studentId);
   const [saved, setSaved] = useState<SdqAssessment | null>(null);
+  const [editing, setEditing] = useState(false);
 
   if (!student) return <p className="p-8 text-sm text-muted-foreground">ไม่พบข้อมูลนักเรียน</p>;
 
   const set = store.sdqSetOf(studentId);
 
-  // ปิดรับแล้ว (UC9) ตรวจกับช่วงเวลาของรอบปัจจุบัน
+  // ปิดรับแล้ว (UC9) ตรวจกับช่วงเวลาของรอบปัจจุบัน — ทั้งการตอบครั้งแรกและการแก้คำตอบ (UC10 Alt-A)
   const locked = lockedWindowFor(store.assessmentWindows, "sdq", store.sdqRound);
-  if (locked && set.find((s) => s.rater === "teacher")?.status !== "completed") {
+  const teacherRec = set.find((s) => s.rater === "teacher");
+  const teacherDone = teacherRec?.status === "completed";
+  if (locked && !teacherDone) {
     return (
       <>
         <PageHeader title="แบบประเมิน SDQ" subtitle={CURRENT_TERM.label} />
@@ -139,12 +143,42 @@ function SdqContent({ studentId }: { studentId: string }) {
                 </div>
               </CardContent>
             </Card>
+          ) : teacherDone && !editing ? (
+            // ส่งแล้ว: ไม่เปิดแบบฟอร์มว่างทับผลเดิม แก้คำตอบได้จนกว่าจะปิดรับ (UC10 ข้อ 8)
+            <Card>
+              <CardContent className="p-6">
+                <h2 className="text-[16px] font-bold">ส่งฉบับครูแล้ว</h2>
+                <p className="mt-1 text-[13px] text-muted-foreground">
+                  ส่งเมื่อ {formatThaiDate(teacherRec.assessedAt ?? "")}
+                  {(teacherRec.editHistory ?? []).length > 0 && ` · แก้คำตอบแล้ว ${teacherRec.editHistory!.length} ครั้ง`}
+                  {" · "}คะแนนรวม {teacherRec.totalDifficulties} ({teacherRec.level ? SDQ_LEVEL_LABEL[teacherRec.level] : "-"})
+                </p>
+                {locked && (
+                  <p className="mt-3 rounded-lg bg-surface px-3 py-2.5 text-[13px]">
+                    ปิดรับเมื่อ {formatThaiDate(locked.closeDate)} แล้ว จึงแก้คำตอบไม่ได้
+                  </p>
+                )}
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {!locked && (
+                    <Button variant="outline" onClick={() => setEditing(true)}>
+                      แก้คำตอบ
+                    </Button>
+                  )}
+                  <Button onClick={() => router.push(`/assessment/review/${studentId}`)}>ไปหน้าตรวจผล</Button>
+                </div>
+              </CardContent>
+            </Card>
           ) : (
             <SdqForm
               studentId={studentId}
               rater="teacher"
-              onExit={() => router.push(`/students/${studentId}`)}
-              onSubmit={(answers) => setSaved(store.saveSdq(studentId, "teacher", answers))}
+              initial={editing ? teacherRec?.answers : undefined}
+              submitLabel={editing ? "บันทึกคำตอบที่แก้ไข" : undefined}
+              onExit={() => (editing ? setEditing(false) : router.push(`/students/${studentId}`))}
+              onSubmit={(answers) => {
+                setSaved(store.saveSdq(studentId, "teacher", answers));
+                setEditing(false);
+              }}
             />
           )}
         </div>
