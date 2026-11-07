@@ -114,6 +114,17 @@ export function buildTimeline(store: Store, studentId: string): TimelineEvent[] 
     });
   }
 
+  // ---- ประวัติการแก้ไขผลคัดกรองและคำตอบแบบประเมิน (UC6, UC10)
+  for (const c of store.changeLog.filter((x) => x.ref === studentId && x.entity !== "rule"))
+    push({
+      id: `chg-${c.id}`,
+      at: c.at,
+      kind: "assessment",
+      title: c.summary,
+      detail: `${c.by} · ${c.changes.map((x) => `${x.label} ${x.from} → ${x.to}`).join(", ")}`,
+      href: tab("screening"),
+    });
+
   // ---- ความประพฤติ: ทุกรายการ + เหตุการณ์เฝ้าระวัง (คะแนนเริ่มใหม่ทุกปีการศึกษา)
   const cfg = store.behaviorScoreConfig;
   const first = cfg.watchLevels[0]?.atOrBelow;

@@ -1,5 +1,5 @@
 /**
- * การแจ้งเตือนของครูและแอดมิน (กระดิ่งที่หัวหน้า) ขั้นที่ 1–3: เหตุการณ์ของ UC8, UC11 (ติดตามใกล้/เลยกำหนด, เอกสารส่งต่อ) และ UC9 (เปิดรอบ, ใกล้ปิดรอบ)
+ * การแจ้งเตือนของครูและแอดมิน (กระดิ่งที่หัวหน้า) ขั้นที่ 1–3: เหตุการณ์ของ UC8, UC11 (ติดตามใกล้/เลยกำหนด, เอกสารส่งต่อ) UC9 (เปิดรอบ, ใกล้ปิดรอบ) และ UC10 (ผลประเมินรอตรวจ)
  * - เหตุการณ์ที่เกิดทันที (เข้า/ขึ้นระดับเฝ้าระวัง, บันทึกตามกฎส่งต่อ) สร้างตอนที่เกิด
  * - เหตุการณ์ตามเวลา (รอยืนยันถอนสถานะ, เลยกำหนดยืนยัน) คำนวณตอนเปิดหน้าเทียบกับวันสมมติ
  * - งานที่ต้องลงมือ (เปิด case, ตรวจผล) อยู่ในหน้าภาพรวม ไม่ซ้ำในกระดิ่ง
@@ -10,7 +10,7 @@
 
 import type { Role } from "./roles";
 
-export type StaffNotifyKind = "watch_raised" | "watch_pending" | "watch_overdue" | "watch_overdue_admin" | "refer_recorded" | "followup_due" | "followup_overdue" | "followup_overdue_admin" | "referral_sent" | "window_opened" | "window_closing";
+export type StaffNotifyKind = "watch_raised" | "watch_pending" | "watch_overdue" | "watch_overdue_admin" | "refer_recorded" | "followup_due" | "followup_overdue" | "followup_overdue_admin" | "referral_sent" | "window_opened" | "window_closing" | "review_pending";
 
 export interface StaffNotification {
   id: string;

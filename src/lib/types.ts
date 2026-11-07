@@ -512,6 +512,22 @@ export interface DocumentRequest {
  * บันทึกการเปิดดูข้อมูลส่วนบุคคลที่ซ่อนไว้ (ข้อ 2.1.10)
  * PROTOTYPE: เก็บในหน่วยความจำ · Project 2 ต้องเขียนที่ backend ให้แก้หรือลบไม่ได้
  */
+/**
+ * ประวัติการแก้ไข (ผู้แก้ไข วันเวลา รายละเอียดที่เปลี่ยน) ของกฎความประพฤติ (UC7) ผลคัดกรอง (UC6) และคำตอบแบบประเมิน (UC10)
+ * ผลเยี่ยมบ้าน (UC5) และบันทึกพฤติกรรม (UC8) เก็บประวัติไว้ในรายการนั้นเอง (editHistory)
+ * แอดมินเห็นเฉพาะกฎ ส่วนผลคัดกรองและคำตอบแสดงเป็นจำนวนโดยไม่มีชื่อนักเรียนหรือรายละเอียด (3.4.1)
+ */
+export interface ChangeLogEntry {
+  id: string;
+  at: string;
+  by: string;
+  entity: "rule" | "screening" | "assessment";
+  /** rule = ruleId · screening / assessment = studentId */
+  ref: string;
+  summary: string;
+  changes: { label: string; from: string; to: string }[];
+}
+
 /** ประวัติการส่งออกรายงาน (UC1 Scenario B ข้อ 5, UC2 Scenario B ข้อ 4) แอดมินเห็นผู้ส่งออก ขอบเขต เวลา ไม่เห็นชื่อนักเรียน */
 export interface ExportLogEntry {
   logId: string;

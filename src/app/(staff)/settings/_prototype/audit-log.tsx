@@ -30,6 +30,18 @@ export function useAuditEntries(): AuditEntry[] {
       detail: "บันทึกผลคัดกรอง 1 คน",
       by: s.screenedBy,
     })),
+    // ประวัติการแก้ไข: กฎแสดงรายละเอียด ส่วนผลคัดกรองและคำตอบแบบประเมินบอกแค่ว่ามีการแก้ ไม่ระบุนักเรียนหรือผล (3.4.1)
+    ...store.changeLog.map((c) => ({
+      at: c.at,
+      action: c.entity === "rule" ? "EDIT_RULE" : c.entity === "screening" ? "EDIT_SCREENING" : "EDIT_ASSESSMENT",
+      detail:
+        c.entity === "rule"
+          ? `${c.summary}: ${c.changes.map((x) => `${x.label} ${x.from} → ${x.to}`).join(", ")}`
+          : c.entity === "screening"
+            ? "แก้ผลคัดกรอง 1 คน"
+            : "แก้คำตอบแบบประเมิน 1 ราย",
+      by: c.by,
+    })),
     // ประวัติการส่งออกรายงาน ไม่ระบุชื่อนักเรียน
     ...store.exportLog.map((l) => ({
       at: l.at,

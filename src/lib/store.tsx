@@ -38,8 +38,8 @@ import { usePathname } from "next/navigation";
 import { DEFAULT_DC_CRITERIA, type DcRound } from "./dc-round";
 import { canRevealCitizenId, defaultRoleFor, recordableRooms, ROLE_INFO, TEACHER_ASSIGNMENTS, type Role } from "./roles";
 import { INITIAL_WINDOWS, KIND_HREF, KIND_LABEL, shiftDate, windowCoversRoom, windowFor, windowNotice, windowStatus, type AssessmentWindow } from "./periods";
-import { scoreEq, type EqAnswer, type EqAssessment } from "./eq";
-import { eqReviewInfo, sdqReviewInfo, type AssessmentReview, type ReviewKind } from "./assessment-review";
+import { EQ_DOMAIN_LABEL, EQ_DOMAINS, EQ_LEVEL_LABEL, scoreEq, type EqAnswer, type EqAssessment } from "./eq";
+import { eqReviewInfo, needsReview, sdqReviewInfo, type AssessmentReview, type ReviewKind } from "./assessment-review";
 import { sdqSummaryForParent } from "./portal";
 import { DEFAULT_BEHAVIOR_SCORE, lastRecoveryAt, peakWatchLevel, runningScore, WATCH_NOTIFY_LABEL, watchLevelOf, type BehaviorScoreConfig } from "./behavior-score";
 import { ruleKind } from "./behavior-rules";
@@ -47,6 +47,7 @@ import { academicYearOfDate } from "./terms";
 import { isFor, type NotificationLogEntry, type StaffNotification } from "./staff-notifications";
 import {
   AccessLog,
+  ChangeLogEntry,
   ExportLogEntry,
   AppointmentStatus,
   AssessmentOutcome,
@@ -64,6 +65,9 @@ import {
   EducationDocument,
   ReferralStatus,
   DIMENSION_LABEL,
+  RISK_LABEL,
+  SDQ_LEVEL_LABEL,
+  SDQ_RATER_LABEL,
   DIMENSION_ORDER,
   HomeVisitAppointment,
   HomeVisitRecord,
@@ -95,6 +99,15 @@ interface StoreValue {
   /** ประวัติการเปิดดูเลขบัตรประชาชน เรียงใหม่สุดก่อน */
   accessLogs: AccessLog[];
   exportLog: ExportLogEntry[];
+  changeLog: ChangeLogEntry[];
+  /** บันทึกประวัติการแก้ไข merge = รวมกับรายการเดิมของคนเดียวกันที่เพิ่งแก้ภายใน 5 นาที (พิมพ์ต่อเนื่องไม่แตกเป็นหลายรายการ) */
+  logChange: (
+    entity: ChangeLogEntry["entity"],
+    ref: string,
+    summary: string,
+    changes: ChangeLogEntry["changes"],
+    merge?: boolean
+  ) => void;
   /** บันทึกการส่งออกและคืนข้อมูลผู้ส่งออก/เวลา ไว้ใส่ในไฟล์ */
   logExport: (scope: string) => [string, string][];
   /** ช่วงเวลาดำเนินงานที่แอดมินตั้งในหน้าตั้งค่า (UC4 Scenario A, UC9) */
@@ -337,6 +350,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [homeVisitRecords, setHomeVisitRecords] = useState<HomeVisitRecord[]>(seedHomeVisitRecords);
   const [accessLogs, setAccessLogs] = useState<AccessLog[]>([]);
   const [exportLog, setExportLog] = useState<ExportLogEntry[]>([]);
+  const [changeLog, setChangeLog] = useState<ChangeLogEntry[]>([]);
   const [assessmentWindows, setAssessmentWindows] = useState<AssessmentWindow[]>(INITIAL_WINDOWS);
   const [behaviorRules, setBehaviorRules] = useState<BehaviorRule[]>(seedBehaviorRules);
   const [behaviorScoreConfig, setBehaviorScoreConfig] = useState<BehaviorScoreConfig>(DEFAULT_BEHAVIOR_SCORE);
@@ -456,6 +470,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const saveEq: StoreValue["saveEq"] = (studentId, answers) => {
       clearDraft(draftKey("eq", studentId));
       const at = nowThaiIso();
+      const prevEq = eqOf(studentId);
+      if (prevEq?.status === "completed") {
+        const next = scoreEq(answers).levels;
+        const diff = EQ_DOMAINS.map((d) => ({
+          label: `EQ ด้าน${EQ_DOMAIN_LABEL[d]}`,
+          from: prevEq.levels ? EQ_LEVEL_LABEL[prevEq.levels[d]] : "-",
+          to: next ? EQ_LEVEL_LABEL[next[d]] : "-",
+        })).filter((c) => c.from !== c.to);
+        logChange("assessment", studentId, "นักเรียนแก้คำตอบ EQ", diff.length > 0 ? diff : [{ label: "ผล EQ", from: "เดิม", to: "ไม่เปลี่ยน" }]);
+      }
       setEq((prev) =>
         prev.map((e) =>
           e.studentId === studentId
@@ -664,6 +688,45 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             at: `${c.referral.preparedAt.slice(0, 10)}T08:00:00`,
             to: { role: "admin" },
           });
+      // UC10: แจ้งครูที่ปรึกษาให้ตรวจผล SDQ / EQ (ตอบครบ, ปิดรอบแล้วมีผู้ไม่ตอบพร้อมบอกฝ่ายที่ยังไม่ตอบ, แก้คำตอบหลังตรวจ)
+      for (const st of students) {
+        const href = `/assessment/review/${st.studentId}`;
+        const sdqInfo = sdqReview(st.studentId);
+        if (needsReview(sdqInfo.state)) {
+          const set = sdqSetOf(st.studentId);
+          const missing = (["teacher", "student", "parent"] as const).filter(
+            (r) => !set.some((x) => x.rater === r && x.status === "completed")
+          );
+          const lastAt = set.map((x) => x.assessedAt ?? "").sort().at(-1) || `${DEMO_TODAY}T08:00:00`;
+          out.push({
+            id: `rv-sdq-${st.studentId}-${sdqInfo.state}-${lastAt}`,
+            kind: "review_pending",
+            title: `ผล SDQ รอตรวจ ${st.fullName}`,
+            body:
+              sdqInfo.state === "closed_incomplete"
+                ? `ปิดรอบแล้ว ยังไม่ตอบ: ${missing.map((r) => SDQ_RATER_LABEL[r]).join(", ")}`
+                : sdqInfo.state === "re_review"
+                  ? "มีการแก้คำตอบหลังตรวจ ต้องตรวจใหม่"
+                  : "ตอบครบ 3 ฝ่ายแล้ว ตรวจก่อนเปิดให้นักเรียนและผู้ปกครองเห็น",
+            href,
+            at: lastAt,
+            to: { homeroomOf: st.roomName },
+          });
+        }
+        const eqInfo = eqReview(st.studentId);
+        if (needsReview(eqInfo.state)) {
+          const e = eqOf(st.studentId);
+          out.push({
+            id: `rv-eq-${st.studentId}-${eqInfo.state}-${e?.assessedAt ?? ""}`,
+            kind: "review_pending",
+            title: `ผล EQ รอตรวจ ${st.fullName}`,
+            body: eqInfo.state === "re_review" ? "นักเรียนแก้คำตอบหลังตรวจ ต้องตรวจใหม่" : "นักเรียนทำเสร็จแล้ว ตรวจก่อนเปิดให้เห็นผล",
+            href,
+            at: e?.assessedAt ?? `${DEMO_TODAY}T08:00:00`,
+            to: { homeroomOf: st.roomName },
+          });
+        }
+      }
       // UC9: แจ้งผู้ตอบเมื่อเปิดรอบ และเตือนก่อนปิดรอบ (ครูของห้องที่อยู่ในกลุ่มเป้าหมาย)
       const rooms = [...new Set(students.map((st) => st.roomName))];
       for (const w of assessmentWindows) {
@@ -872,6 +935,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           checkedItemIds: checked[dimension] ?? [],
         })),
       };
+      const before = screenings.find((s) => s.studentId === studentId && s.termId === record.termId);
+      if (before) {
+        const diff = record.results
+          .map((r) => ({ label: DIMENSION_LABEL[r.dimension], from: RISK_LABEL[before.results.find((x) => x.dimension === r.dimension)?.group ?? "green"], to: RISK_LABEL[r.group] }))
+          .filter((c) => c.from !== c.to);
+        logChange("screening", studentId, "คัดกรองซ้ำ แก้ผลเดิมของภาคเรียนนี้", diff.length > 0 ? diff : [{ label: "ผลคัดกรอง", from: "เดิม", to: "ไม่เปลี่ยน" }]);
+      }
       setScreenings((prev) => [record, ...prev.filter((s) => !(s.studentId === studentId && s.termId === record.termId))]);
       clearDraft(draftKey("screening", studentId));
       // มีมิติที่มีปัญหา (แดง) -> ระบบเปิดหรือเชื่อม case เอง (UC6 ข้อ 13)
@@ -961,6 +1031,23 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const student = getStudent(studentId);
       clearDraft(draftKey(`sdq_${rater}`, studentId));
       let saved: SdqAssessment | undefined;
+      // แก้คำตอบที่ส่งแล้ว: เก็บผู้แก้ วันเวลา และผลที่เปลี่ยน
+      const prevSdq = sdq.find(
+        (x) => x.studentId === studentId && x.rater === rater && x.round === sdqRound && x.termId === CURRENT_TERM.termId
+      );
+      if (prevSdq?.status === "completed") {
+        const label = (l: SdqAssessment["level"]) => (l ? SDQ_LEVEL_LABEL[l] : "-");
+        const diff = [
+          { label: "คะแนนรวม", from: String(prevSdq.totalDifficulties ?? "-"), to: String(totalDifficulties) },
+          { label: "ระดับ", from: label(prevSdq.level), to: label(level) },
+        ].filter((c) => c.from !== c.to);
+        logChange(
+          "assessment",
+          studentId,
+          `แก้คำตอบ SDQ รอบที่ ${sdqRound} ฉบับ${SDQ_RATER_LABEL[rater]}`,
+          diff.length > 0 ? diff : [{ label: "ผล SDQ", from: "เดิม", to: "ไม่เปลี่ยน" }]
+        );
+      }
 
       setSdq((prev) => {
         const idx = prev.findIndex(
@@ -1389,6 +1476,30 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       );
     };
 
+    const logChange: StoreValue["logChange"] = (entity, ref, summary, changes, merge = false) => {
+      const by = ROLE_INFO[role].user.name;
+      const at = nowThaiIso();
+      const secs = (t: string) => {
+        const [h, m, sec] = t.slice(11, 19).split(":").map(Number);
+        return h * 3600 + m * 60 + sec;
+      };
+      setChangeLog((prev) => {
+        const last = prev.find((e) => e.entity === entity && e.ref === ref && e.by === by);
+        if (merge && last && secs(at) - secs(last.at) <= 300 && last.at.slice(0, 10) === at.slice(0, 10)) {
+          const merged = [...last.changes];
+          for (const c of changes) {
+            const i = merged.findIndex((m) => m.label === c.label);
+            if (i >= 0) merged[i] = { ...merged[i], to: c.to };
+            else merged.push(c);
+          }
+          const kept = merged.filter((c) => c.from !== c.to);
+          const rest = prev.filter((e) => e !== last);
+          return kept.length > 0 ? [{ ...last, at, changes: kept }, ...rest] : rest;
+        }
+        return [{ id: nextId("CHG"), at, by, entity, ref, summary, changes }, ...prev];
+      });
+    };
+
     const logExport = (scope: string): [string, string][] => {
       const entry: ExportLogEntry = {
         logId: nextId("EXP"),
@@ -1435,6 +1546,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       homeVisitRecords,
       accessLogs,
       exportLog,
+      changeLog,
+      logChange,
       logExport,
       assessmentWindows,
       setAssessmentWindows,
@@ -1527,7 +1640,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       fulfillRequest,
       logCitizenIdView,
     };
-  }, [role, screenings, redFlags, nineS, sdq, eq, reviews, behaviorRecords, rawAppointments, careCases, homeVisitRecords, accessLogs, exportLog, assessmentWindows, behaviorRules, behaviorScoreConfig, drafts, screeningWatch, caseConsiderations, staffEvents, notificationLog, educationDocuments, documentRequests, dcAssessments, readNotifications, dcRounds, watchDecisions, registryCorrections, studentCards]);
+  }, [role, screenings, redFlags, nineS, sdq, eq, reviews, behaviorRecords, rawAppointments, careCases, homeVisitRecords, accessLogs, exportLog, changeLog, assessmentWindows, behaviorRules, behaviorScoreConfig, drafts, screeningWatch, caseConsiderations, staffEvents, notificationLog, educationDocuments, documentRequests, dcAssessments, readNotifications, dcRounds, watchDecisions, registryCorrections, studentCards]);
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }

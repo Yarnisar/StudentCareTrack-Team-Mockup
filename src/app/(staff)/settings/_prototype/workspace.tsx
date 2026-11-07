@@ -23,7 +23,7 @@ import {
   ruleScoreText,
   type RuleKind,
 } from "@/lib/behavior-rules";
-import { formatThaiDate } from "@/lib/format";
+import { formatThaiDate, formatThaiDateTime } from "@/lib/format";
 import { CURRENT_TERM } from "@/lib/mock-data";
 import { KIND_LABEL, targetLabel, targetsOverlap, type AssessmentKind, type WindowTarget } from "@/lib/periods";
 import { useStore } from "@/lib/store";
@@ -31,7 +31,7 @@ import { termInfo, termInfoOf } from "@/lib/terms";
 import { windowStarted } from "@/lib/window-progress";
 import { allRooms, LEVELS } from "../../dashboard/_admin/school-data";
 import { NativeSelect } from "@/components/ui/native-select";
-import type { BehaviorRule, SdqRater } from "@/lib/types";
+import type { BehaviorRule, ChangeLogEntry, SdqRater } from "@/lib/types";
 import { AuditLogList, useAuditEntries } from "./audit-log";
 import { BehaviorScoreCard } from "./behavior-score-card";
 import { DcRoundSettings } from "./dc-round-settings";
@@ -643,6 +643,9 @@ export function SettingsWorkspace({
                   )}
                 </div>
               )}
+              {rule && (
+                <RuleHistory entries={store.changeLog.filter((c) => c.entity === "rule" && c.ref === rule.ruleId)} />
+              )}
               {panelError && <p className="text-[12.5px] text-destructive">{panelError}</p>}
             </div>
             <div className="flex gap-2 border-t border-border px-5 py-3.5">
@@ -691,6 +694,30 @@ function SectionHead({ title, hint, action }: { title: string; hint: string; act
         <p className="text-[12.5px] text-muted-foreground">{hint}</p>
       </div>
       {action}
+    </div>
+  );
+}
+
+/** ประวัติการแก้ไขกฎ (UC7): ใคร เมื่อไหร่ เปลี่ยนอะไรจากอะไรเป็นอะไร */
+function RuleHistory({ entries }: { entries: ChangeLogEntry[] }) {
+  if (entries.length === 0) return null;
+  return (
+    <div className="border-t border-border pt-4">
+      <div className="mb-2 text-[12.5px] font-semibold">ประวัติการแก้ไข</div>
+      <ul className="space-y-2.5">
+        {entries.map((e) => (
+          <li key={e.id} className="text-[12.5px]">
+            <div className="text-muted-foreground">
+              {formatThaiDateTime(e.at)} · {e.by}
+            </div>
+            {e.changes.map((c) => (
+              <div key={c.label}>
+                {c.label}: <span className="text-muted-foreground">{c.from}</span> → {c.to}
+              </div>
+            ))}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

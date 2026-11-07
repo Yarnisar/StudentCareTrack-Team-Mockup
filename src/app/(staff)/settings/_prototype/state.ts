@@ -10,7 +10,7 @@
 
 import { useCallback, useMemo } from "react";
 import { CURRENT_TERM, DEMO_TODAY, behaviorRules as seedRules } from "@/lib/mock-data";
-import { DEFAULT_DELTA, ruleKind } from "@/lib/behavior-rules";
+import { DEFAULT_DELTA, RULE_LEVEL_LABEL, recordersText, ruleKind } from "@/lib/behavior-rules";
 import { INITIAL_WINDOWS, shiftDate, type AssessmentWindow, type WindowStatus } from "@/lib/periods";
 import { useStore } from "@/lib/store";
 import { termInfo } from "@/lib/terms";
@@ -48,6 +48,7 @@ export function useSettingsPrototype() {
     setAssessmentWindows: setWindows,
     behaviorRules: rules,
     setBehaviorRules: setRules,
+    logChange,
   } = useStore();
 
   const updateWindow = useCallback((id: string, patch: Partial<AssessmentWindow>) => {
@@ -81,6 +82,23 @@ export function useSettingsPrototype() {
   }, [setWindows]);
 
   const updateRule = useCallback((ruleId: string, patch: Partial<BehaviorRule>) => {
+    // บันทึกประวัติ: เทียบค่าเดิมกับค่าใหม่ (พิมพ์ต่อเนื่องรวมเป็นรายการเดียว) กฎที่ยังไม่ตั้งชื่อถือว่ากำลังสร้าง ยังไม่บันทึก
+    const old = rules.find((r) => r.ruleId === ruleId);
+    if (old && old.name.trim() !== "") {
+      const fmt: Record<string, (r: BehaviorRule) => string> = {
+        name: (r) => r.name,
+        scoreDelta: (r) => String(r.scoreDelta),
+        severity: (r) => RULE_LEVEL_LABEL[r.severity],
+        isActive: (r) => (r.isActive ? "ใช้งาน" : "ปิดใช้งาน"),
+        recordableBy: (r) => recordersText(r),
+      };
+      const labels: Record<string, string> = { name: "ชื่อ", scoreDelta: "คะแนน", severity: "ระดับ", isActive: "สถานะ", recordableBy: "ผู้บันทึกได้" };
+      const changes = Object.keys(fmt)
+        .filter((k) => k in patch)
+        .map((k) => ({ label: labels[k], from: fmt[k](old), to: fmt[k]({ ...old, ...patch }) }))
+        .filter((c) => c.from !== c.to);
+      if (changes.length > 0) logChange("rule", ruleId, `แก้กฎ "${old.name}"`, changes, true);
+    }
     setRules((prev) =>
       prev.map((r) => {
         if (r.ruleId !== ruleId) return r;
@@ -94,7 +112,7 @@ export function useSettingsPrototype() {
         return next;
       })
     );
-  }, [setRules]);
+  }, [setRules, rules, logChange]);
 
   const addRule = useCallback((severity: BehaviorRule["severity"] = "minor") => {
     const ruleId = `BR-NEW-${++ruleSeq}`;
@@ -114,12 +132,14 @@ export function useSettingsPrototype() {
 
   /** ยกเลิกกฎพร้อมเหตุผล ย้อนกลับไม่ได้ (UC7 Scenario C) */
   const cancelRule = useCallback((ruleId: string, reason: string) => {
+    const old = rules.find((r) => r.ruleId === ruleId);
+    if (old) logChange("rule", ruleId, `ยกเลิกกฎ "${old.name}"`, [{ label: "สถานะ", from: "ใช้งาน", to: `ยกเลิก · ${reason}` }]);
     setRules((prev) =>
       prev.map((r) =>
         r.ruleId === ruleId ? { ...r, isActive: false, cancelled: { reason, at: DEMO_TODAY } } : r
       )
     );
-  }, [setRules]);
+  }, [setRules, rules, logChange]);
 
   const removeRule = useCallback((ruleId: string) => {
     setRules((prev) => prev.filter((r) => r.ruleId !== ruleId));
