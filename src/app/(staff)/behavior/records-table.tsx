@@ -13,6 +13,7 @@
 import { useState } from "react";
 import { Pencil, X } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { recordScoreDelta } from "@/lib/behavior-rules";
 import { NEAR_WATCH_POINTS, watchLevelOf } from "@/lib/behavior-score";
 import { formatThaiDate, formatThaiTime } from "@/lib/format";
 import { ROLE_INFO, TEACHER_ASSIGNMENTS } from "@/lib/roles";
@@ -57,6 +58,21 @@ export function RecordsTable({ records }: { records: BehaviorRecord[] }) {
     const reached = watchLevelOf(value, store.behaviorScoreConfig) > 0;
     const near = !reached && first !== undefined && value - first <= NEAR_WATCH_POINTS;
     return { value, reached, near };
+  };
+
+  // แถวล่าสุดของนักเรียนแต่ละคน (ไม่นับที่ยกเลิก) ใช้บอกสถานะ "รอยืนยันถอน" เพียงแถวเดียว
+  const latestId = new Map<string, string>();
+  for (const r of records) if (!r.cancelled && !latestId.has(r.studentId)) latestId.set(r.studentId, r.recordId);
+
+  /** สีและป้ายของแต่ละแถวตามคะแนนของแถวนั้นเอง จึงเห็นว่านักเรียนข้ามเกณฑ์ที่รายการไหน */
+  const rowRisk = (rec: BehaviorRecord): Risk | null => {
+    const r = remaining(rec);
+    if (!r) return null;
+    if (latestId.get(rec.studentId) === rec.recordId && store.watchWithdrawalPending(rec.studentId))
+      return { kind: "watch", text: "รอยืนยันถอนสถานะเฝ้าระวัง" };
+    if (r.reached) return { kind: "watch", text: `เฝ้าระวังระดับ ${watchLevelOf(r.value, store.behaviorScoreConfig)}` };
+    if (r.near && first !== undefined) return { kind: "near", text: `อีก ${r.value - first} คะแนนถึงเกณฑ์` };
+    return null;
   };
   const roomStudents = homeroom ? store.students.filter((s) => s.roomName === homeroom) : [];
   const watchStudents = roomStudents.filter((s) => riskOf(s.studentId)?.kind === "watch");
@@ -158,7 +174,7 @@ export function RecordsTable({ records }: { records: BehaviorRecord[] }) {
     const rule = ruleOf(rec.ruleId);
     return (
       <span className="inline-flex items-center gap-1.5">
-        <ScoreChip delta={rule?.scoreDelta ?? 0} cancelled={!!rule?.cancelled || !!rec.cancelled} />
+        <ScoreChip delta={recordScoreDelta(rec, rule)} cancelled={!!rule?.cancelled || !!rec.cancelled} />
         {editable(rec) ? <Pencil className="size-3.5 text-muted-foreground" aria-label="แก้ไขได้" /> : <span className="size-3.5" />}
       </span>
     );
@@ -234,7 +250,7 @@ export function RecordsTable({ records }: { records: BehaviorRecord[] }) {
           <div className="divide-y divide-border md:hidden">
             {shown.map((rec) => {
               const student = store.getStudent(rec.studentId);
-              const risk = riskOf(rec.studentId);
+              const risk = rowRisk(rec);
               const p = rowProps(rec);
               return (
                 <div key={rec.recordId} {...p} className={`flex gap-3 py-3 pl-3 ${toneRow(risk)} ${toneStripe(risk)} ${p.className}`}>
@@ -243,7 +259,7 @@ export function RecordsTable({ records }: { records: BehaviorRecord[] }) {
                     <div className="flex flex-wrap items-baseline gap-x-2">
                       <span className="text-[14px]">{studentName(rec)}</span>
                       <span className="text-[12px] text-muted-foreground">
-                        {student?.roomName} เลขที่ {student?.classNo}
+                        {student?.studentId} · {student?.roomName} เลขที่ {student?.classNo}
                       </span>
                     </div>
                     {riskTag(risk)}
@@ -274,7 +290,7 @@ export function RecordsTable({ records }: { records: BehaviorRecord[] }) {
             <tbody>
               {shown.map((rec) => {
                 const student = store.getStudent(rec.studentId);
-                const risk = riskOf(rec.studentId);
+                const risk = rowRisk(rec);
                 const p = rowProps(rec);
                 return (
                   <tr key={rec.recordId} {...p} className={`border-b border-border align-top ${toneRow(risk)} ${p.className}`}>
@@ -288,7 +304,7 @@ export function RecordsTable({ records }: { records: BehaviorRecord[] }) {
                         <div className="min-w-0">
                           {studentName(rec)}
                           <div className="text-[11.5px] text-muted-foreground">
-                            {student?.roomName} เลขที่ {student?.classNo}
+                            {student?.studentId} · {student?.roomName} เลขที่ {student?.classNo}
                           </div>
                           {riskTag(risk)}
                         </div>

@@ -50,6 +50,16 @@ export function ruleScoreText(rule: Pick<BehaviorRule, "severity" | "scoreDelta"
   return rule.scoreDelta > 0 ? `+${rule.scoreDelta}` : String(rule.scoreDelta);
 }
 
+/** คะแนนของรายการหนึ่ง ใช้ค่าที่เก็บไว้ตอนบันทึก ถ้าไม่มีใช้ค่าปัจจุบันของกฎ */
+export function recordScoreDelta(rec: { scoreDelta?: number }, rule?: Pick<BehaviorRule, "scoreDelta">): number {
+  return rec.scoreDelta ?? rule?.scoreDelta ?? 0;
+}
+
+/** ข้อความคะแนนของรายการ (เช่น -5) ตามค่าที่เก็บไว้ตอนบันทึก */
+export function recordScoreText(rec: { scoreDelta?: number }, rule: Pick<BehaviorRule, "severity" | "scoreDelta" | "cancelled">): string {
+  return ruleScoreText({ ...rule, scoreDelta: recordScoreDelta(rec, rule) });
+}
+
 export const RECORDER_ORDER: RuleRecorder[] = ["teacher", "discipline_head", "executive"];
 
 export const RECORDER_LABEL: Record<RuleRecorder, string> = {

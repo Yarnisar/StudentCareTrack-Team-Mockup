@@ -16,6 +16,7 @@ import { useStore } from "@/lib/store";
 import { formatThaiDate } from "@/lib/format";
 import { DEMO_TODAY } from "@/lib/mock-data";
 import { daysBetween, shiftDate } from "@/lib/periods";
+import { StudentId } from "@/components/shared/student-id";
 import {
   CARE_METHOD_LABEL,
   CASE_URGENCY_LABEL,
@@ -108,7 +109,10 @@ function CareCasesContent() {
                       }
                     >
                       <div className="flex items-center justify-between gap-2">
-                        <span className="truncate text-[13.5px] font-semibold">{s?.fullName}</span>
+                        <span className="flex min-w-0 items-baseline gap-2">
+                          {s && <StudentId id={s.studentId} />}
+                          <span className="truncate text-[13.5px] font-semibold">{s?.fullName}</span>
+                        </span>
                         {risk && <RiskBadge group={risk} short />}
                       </div>
                       <div className="mt-1 text-[11.5px] text-muted-foreground">

@@ -6,8 +6,9 @@ import { LinkButton } from "@/components/ui/link-button";
 import { Card, CardContent } from "@/components/ui/card";
 import { CURRENT_TERM } from "@/lib/mock-data";
 import { draftKey, useStore } from "@/lib/store";
-import { formatThaiDate, initialOf } from "@/lib/format";
+import { formatThaiDate } from "@/lib/format";
 import { DIMENSION_LABEL } from "@/lib/types";
+import { StudentId } from "@/components/shared/student-id";
 
 export default function ScreeningListPage() {
   const store = useStore();
@@ -39,9 +40,7 @@ export default function ScreeningListPage() {
 
                 return (
                   <div key={student.studentId} className="flex items-center gap-3 py-3">
-                    <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-bold text-muted-foreground">
-                      {initialOf(student.fullName)}
-                    </div>
+                    <StudentId id={student.studentId} className="w-14 text-sm" />
                     <div className="min-w-0 flex-1">
                       <div className="text-sm font-semibold">{student.fullName}</div>
                       <div className="truncate text-xs text-muted-foreground">

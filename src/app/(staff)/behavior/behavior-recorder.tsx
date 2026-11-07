@@ -17,7 +17,7 @@
  */
 
 import { useRef, useState } from "react";
-import { CheckCircle2, ChevronDown, ImagePlus, WifiOff, X } from "lucide-react";
+import { CheckCircle2, ChevronDown, ImagePlus, TriangleAlert, WifiOff, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -89,6 +89,13 @@ export function BehaviorRecorder({ onClose, studentId }: { onClose: () => void; 
     // รหัส 5 หลักที่ไม่อยู่ในห้องที่รับผิดชอบ: บอกเหตุผลแทนการเงียบ
     if (/^\d{5}$/.test(q)) scan(q);
   };
+  // นักเรียนที่มีบันทึกพฤติกรรมเดียวกันในวันเดียวกันอยู่แล้ว (ไม่นับที่ยกเลิก) ให้เตือนและยืนยันก่อนบันทึกซ้ำ
+  const duplicateCount = (studentId: string) =>
+    ruleId ? store.behaviorOf(studentId).filter((r) => r.ruleId === ruleId && !r.cancelled && r.occurredAt.slice(0, 10) === occurredOn).length : 0;
+  const dupStudents = entries.filter((e) => duplicateCount(e.studentId) > 0).map((e) => e.studentId);
+  const dupKey = `${ruleId}|${occurredOn}|${dupStudents.join(",")}`;
+  const [dupAck, setDupAck] = useState("");
+  const needDupAck = dupStudents.length > 0 && dupAck !== dupKey;
   const changeRule = () => {
     if (locked && !window.confirm(`ล้างรายการ ${entries.length} คนเพื่อเปลี่ยนพฤติกรรมไหม`)) return;
     if (locked) setEntries([]);
@@ -380,12 +387,19 @@ export function BehaviorRecorder({ onClose, studentId }: { onClose: () => void; 
                   const after = store.behaviorScoreOf(e.studentId, { delta: rule.scoreDelta, at });
                   const capped = !refer && after - before !== rule.scoreDelta;
                   const watch = watchChange(e.studentId);
+                  const dup = duplicateCount(e.studentId);
                   return (
                     <div key={e.studentId} className="flex items-center gap-2 py-2">
                       <div className="min-w-0 flex-1">
                         <div className="truncate text-[13.5px] font-medium">{s?.fullName}</div>
+                        {dup > 0 && (
+                          <div className="mt-0.5 flex items-start gap-1 text-[11.5px] font-semibold text-foreground">
+                            <TriangleAlert className="mt-px size-3.5 shrink-0" />
+                            มีบันทึก “{ruleName}” ของ{occurredOn === DEMO_TODAY ? "วันนี้" : formatThaiDate(occurredOn)}แล้ว {dup} รายการ
+                          </div>
+                        )}
                         <div className="text-[11.5px] text-muted-foreground">
-                          {s?.roomName} เลขที่ {s?.classNo} ·{" "}
+                          {s?.studentId} · {s?.roomName} เลขที่ {s?.classNo} ·{" "}
                           {refer ? `คะแนน ${before} (ไม่ปรับคะแนน)` : `คะแนน ${before} → ${after}`}
                           {capped && (rule.scoreDelta > 0 ? " (ถึงเพดานแล้ว)" : " (ถึงคะแนนต่ำสุดแล้ว)")}
                         </div>
@@ -525,8 +539,17 @@ export function BehaviorRecorder({ onClose, studentId }: { onClose: () => void; 
           {(!rule || entries.length === 0) && (
             <p className="mb-2 text-center text-[12.5px] text-muted-foreground">{!rule ? "เลือกพฤติกรรมก่อน" : "เลือกนักเรียนอย่างน้อย 1 คน"}</p>
           )}
-          <Button className="h-12 w-full text-[15px]" disabled={entries.length === 0 || !rule || !online || !!dateError} onClick={save}>
-            {entries.length === 0 ? "บันทึก" : `ตรวจแล้ว บันทึก ${entries.length} คน`}
+          {needDupAck && (
+            <p className="mb-2 text-center text-[12.5px] text-muted-foreground">
+              มี {dupStudents.length} คนที่อาจบันทึกซ้ำ ถ้าเป็นเหตุการณ์ใหม่ให้กดอีกครั้งเพื่อยืนยัน หรือเอาออกจากรายการ
+            </p>
+          )}
+          <Button
+            className="h-12 w-full text-[15px]"
+            disabled={entries.length === 0 || !rule || !online || !!dateError}
+            onClick={() => (needDupAck ? setDupAck(dupKey) : save())}
+          >
+            {entries.length === 0 ? "บันทึก" : needDupAck ? `บันทึกซ้ำ ${dupStudents.length} คน · กดเพื่อยืนยัน` : `ตรวจแล้ว บันทึก ${entries.length} คน`}
           </Button>
         </div>
       </div>

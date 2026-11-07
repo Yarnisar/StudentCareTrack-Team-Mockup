@@ -21,6 +21,7 @@ import { formatThaiDate } from "@/lib/format";
 import { CURRENT_TEACHER, CURRENT_TERM, DEMO_TODAY, dcCriteria } from "@/lib/mock-data";
 import { useStore } from "@/lib/store";
 import { DC_LEVEL_LABEL, type DcLevel } from "@/lib/types";
+import { StudentId } from "@/components/shared/student-id";
 
 const LEVELS: DcLevel[] = [3, 2, 1, 0];
 
@@ -69,7 +70,10 @@ export default function CharacteristicsPage() {
                       className={`w-full rounded-xl border p-3 text-left ${selected === s.studentId ? "border-primary bg-accent" : "border-border hover:bg-muted/50"}`}
                     >
                       <div className="flex items-center justify-between gap-2">
-                        <span className="truncate text-[13.5px] font-semibold">{s.fullName}</span>
+                        <span className="flex min-w-0 items-baseline gap-2">
+                          <StudentId id={s.studentId} />
+                          <span className="truncate text-[13.5px] font-semibold">{s.fullName}</span>
+                        </span>
                         {total != null && (
                           <span className="shrink-0 rounded-md bg-muted px-2 py-0.5 text-[11.5px] font-semibold">{DC_LEVEL_LABEL[total]}</span>
                         )}

@@ -39,6 +39,7 @@ import {
 } from "./process-status";
 import { calendarEvents } from "./calendar-events";
 import { HomeroomCalendar } from "./homeroom-calendar";
+import { StudentId } from "@/components/shared/student-id";
 
 /** "open" = ทุกอย่างที่ยังไม่เสร็จ (ค่าเริ่มต้น เพราะครูเปิดหน้านี้เพื่อหาว่าต้องทำอะไรต่อ) */
 type StatusFilter = Status | "open" | "all";
@@ -268,16 +269,19 @@ function ItemRow({ item, showProcess }: { item: Item; showProcess: boolean }) {
       <span className={`w-28 shrink-0 rounded-md px-2.5 py-1 text-center text-[11.5px] font-semibold ${STATUS_TAG[item.status]}`}>
         {STATUS_LABEL[item.status]}
       </span>
-      <span className="min-w-0 flex-1">
-        <span className="block text-[14px] font-semibold">
-          {item.student.fullName}
-          {showProcess && (
-            <span className="ml-2 text-[12px] font-normal text-muted-foreground">{PROCESS_LABEL[item.process]}</span>
-          )}
-        </span>
-        <span className="block text-[12px] text-muted-foreground">
-          เลขที่ {item.student.classNo} · {item.detail}
-          {item.due && item.status !== "done" && ` · ครบกำหนด ${formatThaiDate(item.due)}`}
+      <span className="flex min-w-0 flex-1 items-start gap-2.5">
+        <StudentId id={item.student.studentId} className="pt-0.5" />
+        <span className="min-w-0 flex-1">
+          <span className="block text-[14px] font-semibold">
+            {item.student.fullName}
+            {showProcess && (
+              <span className="ml-2 text-[12px] font-normal text-muted-foreground">{PROCESS_LABEL[item.process]}</span>
+            )}
+          </span>
+          <span className="block text-[12px] text-muted-foreground">
+            เลขที่ {item.student.classNo} · {item.detail}
+            {item.due && item.status !== "done" && ` · ครบกำหนด ${formatThaiDate(item.due)}`}
+          </span>
         </span>
       </span>
       {item.href && item.action ? (

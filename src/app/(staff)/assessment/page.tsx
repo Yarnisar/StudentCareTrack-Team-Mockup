@@ -6,8 +6,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { CURRENT_TERM } from "@/lib/mock-data";
 import { useStore } from "@/lib/store";
 import { SDQ_LEVEL_LABEL, SDQ_RATER_LABEL, SdqRater } from "@/lib/types";
-import { initialOf } from "@/lib/format";
 import { needsReview, REVIEW_STATE_LABEL } from "@/lib/assessment-review";
+import { StudentId } from "@/components/shared/student-id";
 
 const RATERS: SdqRater[] = ["teacher", "student", "parent"];
 
@@ -61,9 +61,7 @@ export default function AssessmentPage() {
 
                 return (
                   <div key={student.studentId} className="flex items-center gap-3 py-3">
-                    <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-bold text-muted-foreground">
-                      {initialOf(student.fullName)}
-                    </div>
+                    <StudentId id={student.studentId} className="w-14 text-sm" />
                     <div className="w-48 shrink-0">
                       <div className="text-sm font-semibold">{student.fullName}</div>
                       <div className="text-xs text-muted-foreground">
@@ -186,7 +184,9 @@ function ReviewQueue() {
         <div className="mt-3 divide-y divide-border">
           {rows.map(({ student, sdq, eq }) => (
             <div key={student.studentId} className="flex flex-wrap items-center gap-3 py-3">
-              <div className="min-w-0 flex-1">
+              <div className="flex min-w-0 flex-1 items-start gap-3">
+                <StudentId id={student.studentId} className="w-14 pt-0.5 text-sm" />
+                <div className="min-w-0 flex-1">
                 <div className="text-sm font-semibold">{student.fullName}</div>
                 <div className="mt-1 flex flex-wrap gap-1.5 text-[11.5px]">
                   {needsReview(sdq) && (
@@ -195,6 +195,7 @@ function ReviewQueue() {
                   {needsReview(eq) && (
                     <span className="rounded-md bg-muted px-2 py-0.5 font-semibold">EQ · {REVIEW_STATE_LABEL[eq]}</span>
                   )}
+                </div>
                 </div>
               </div>
               <LinkButton size="sm" href={`/assessment/review/${student.studentId}`}>

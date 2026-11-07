@@ -447,6 +447,10 @@ export function SettingsWorkspace({
                           proto.updateRule(rule.ruleId, { scoreDelta: ruleKind(rule) === "add" ? v : -v })
                         }
                       />
+                      <p className="mt-1.5 text-[12px] text-muted-foreground">
+                        แก้ค่านี้มีผลกับรายการที่บันทึกหลังจากนี้เท่านั้น
+                        {(ruleUsage[rule.ruleId] ?? 0) > 0 && ` รายการเดิม ${ruleUsage[rule.ruleId]} รายการคิดตามคะแนนเดิม`}
+                      </p>
                     </Field>
                   )}
                   <Field label="ผู้ที่บันทึกกฎนี้ได้">

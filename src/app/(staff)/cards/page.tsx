@@ -22,6 +22,7 @@ import { formatThaiDate } from "@/lib/format";
 import { ACADEMIC_YEAR_END, CURRENT_TERM, DEMO_TODAY, SCHOOL_NAME } from "@/lib/mock-data";
 import { useStore } from "@/lib/store";
 import { CARD_PHYSICAL_LABEL, type Student, type StudentCard } from "@/lib/types";
+import { StudentId } from "@/components/shared/student-id";
 
 /** PROTOTYPE: รายการเหตุผลเป็นข้อเสนอ */
 const REPLACE_REASONS = ["บัตรหาย", "บัตรชำรุด", "ข้อมูลบนบัตรเปลี่ยน"];
@@ -116,10 +117,13 @@ function CardsContent() {
                           checked={on}
                           onChange={() => setPicked((p) => (on ? p.filter((x) => x !== s.studentId) : [...p, s.studentId]))}
                         />
-                        <span className="min-w-0">
-                          <span className="block text-[13.5px] font-medium">{s.fullName}</span>
-                          <span className="block text-[11.5px] text-muted-foreground">
-                            {card ? `บัตร ${card.code} · หมดอายุ ${formatThaiDate(card.expiresAt)}` : "ยังไม่มีบัตรที่ใช้งานได้"}
+                        <span className="flex min-w-0 items-start gap-2.5">
+                          <StudentId id={s.studentId} className="pt-0.5" />
+                          <span className="min-w-0">
+                            <span className="block text-[13.5px] font-medium">{s.fullName}</span>
+                            <span className="block text-[11.5px] text-muted-foreground">
+                              {card ? `บัตร ${card.code} · หมดอายุ ${formatThaiDate(card.expiresAt)}` : "ยังไม่มีบัตรที่ใช้งานได้"}
+                            </span>
                           </span>
                         </span>
                       </label>

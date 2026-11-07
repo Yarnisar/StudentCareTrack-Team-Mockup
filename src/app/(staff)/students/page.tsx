@@ -7,8 +7,8 @@ import { RiskBadge } from "@/components/shared/risk-badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { CLASS_SIZE, CURRENT_TEACHER } from "@/lib/mock-data";
 import { useStore } from "@/lib/store";
-import { initialOf } from "@/lib/format";
 import { DIMENSION_LABEL } from "@/lib/types";
+import { StudentId } from "@/components/shared/student-id";
 
 export default function StudentsPage() {
   const store = useStore();
@@ -42,13 +42,11 @@ export default function StudentsPage() {
                   href={`/students/${student.studentId}`}
                   className="flex items-center gap-3 py-3 transition-colors hover:bg-muted/40"
                 >
-                  <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-bold text-muted-foreground">
-                    {initialOf(student.fullName)}
-                  </div>
+                  <StudentId id={student.studentId} className="w-14 text-sm" />
                   <div className="min-w-0 flex-1">
                     <div className="text-sm font-semibold">{student.fullName}</div>
                     <div className="truncate text-xs text-muted-foreground">
-                      {student.roomName} เลขที่ {student.classNo} · เลขประจำตัว {student.studentId}
+                      {student.roomName} เลขที่ {student.classNo}
                       {flagged ? ` · มิติที่พบ: ${flagged}` : ""}
                     </div>
                   </div>

@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { LinkButton } from "@/components/ui/link-button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { ruleKind, ruleScoreText } from "@/lib/behavior-rules";
+import { recordScoreDelta, recordScoreText, ruleKind } from "@/lib/behavior-rules";
 import { useStore } from "@/lib/store";
 import { BehaviorRecorder } from "../../behavior/behavior-recorder";
 import { REVIEW_STATE_LABEL } from "@/lib/assessment-review";
@@ -583,7 +583,7 @@ export default function StudentDetailPage({
                 <div className="divide-y divide-border">
                   {behaviors.map((rec) => {
                     const rule = store.behaviorRules.find((r) => r.ruleId === rec.ruleId);
-                    const positive = (rule?.scoreDelta ?? 0) > 0;
+                    const positive = recordScoreDelta(rec, rule) > 0;
                     const refer = rule ? ruleKind(rule) === "refer" : false;
                     return (
                       <div key={rec.recordId} className="flex items-center gap-3 py-2.5">
@@ -612,7 +612,7 @@ export default function StudentDetailPage({
                                 : "w-10 text-right text-sm font-bold text-risk-red"
                           }
                         >
-                          {rule ? ruleScoreText(rule) : ""}
+                          {rule ? recordScoreText(rec, rule) : ""}
                         </span>
                       </div>
                     );

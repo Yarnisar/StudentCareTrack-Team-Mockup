@@ -12,7 +12,7 @@
 import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { ruleKind, ruleScoreText } from "@/lib/behavior-rules";
+import { recordScoreText, ruleKind } from "@/lib/behavior-rules";
 import { formatThaiDate } from "@/lib/format";
 import { buildNotifications } from "@/lib/portal-notifications";
 import { useStore } from "@/lib/store";
@@ -155,7 +155,7 @@ export function PersonalInfo({ viewer, studentIds }: { viewer: "student" | "pare
                       </div>
                     </div>
                     <span className={`text-[13.5px] font-bold ${refer || rule?.cancelled || b.cancelled ? "text-muted-foreground" : ""} ${b.cancelled ? "line-through" : ""}`}>
-                      {rule ? ruleScoreText(rule) : ""}
+                      {rule ? recordScoreText(b, rule) : ""}
                     </span>
                   </div>
                 );

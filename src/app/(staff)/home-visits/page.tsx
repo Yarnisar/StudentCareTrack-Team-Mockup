@@ -14,6 +14,7 @@ import { DEMO_TODAY } from "@/lib/mock-data";
 import { formatBaht, formatThaiDate, formatThaiTime } from "@/lib/format";
 import { APPOINTMENT_STATUS_LABEL, AppointmentStatus } from "@/lib/types";
 import { formatCaretaker } from "@/lib/home-visit-form";
+import { StudentId } from "@/components/shared/student-id";
 
 /** สถานะใช้สีกลาง สีแดง/เหลือง/เขียวสงวนไว้สำหรับกลุ่มเสี่ยง */
 const STATUS_STYLE: Record<AppointmentStatus, string> = {
@@ -102,7 +103,10 @@ export default function HomeVisitsPage() {
                       }
                     >
                       <div className="flex items-center justify-between gap-2">
-                        <span className="truncate text-[13.5px] font-semibold">{s?.fullName}</span>
+                        <span className="flex min-w-0 items-baseline gap-2">
+                          {s && <StudentId id={s.studentId} />}
+                          <span className="truncate text-[13.5px] font-semibold">{s?.fullName}</span>
+                        </span>
                         <span
                           className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${STATUS_STYLE[a.status]}`}
                         >

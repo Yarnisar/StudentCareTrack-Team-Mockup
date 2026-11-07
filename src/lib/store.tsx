@@ -307,7 +307,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [sdq, setSdq] = useState<SdqAssessment[]>(seedSdq);
   const [eq, setEq] = useState<EqAssessment[]>(seedEq);
   const [reviews, setReviews] = useState<AssessmentReview[]>([]);
-  const [behaviorRecords, setBehaviorRecords] = useState<BehaviorRecord[]>(seedBehaviorRecords);
+  const [behaviorRecords, setBehaviorRecords] = useState<BehaviorRecord[]>(() =>
+    // ข้อมูลตัวอย่างถือว่าบันทึกไว้ด้วยค่ากฎตอนนี้ จึงเก็บคะแนน ณ ตอนบันทึกไว้เหมือนรายการที่บันทึกจริง
+    seedBehaviorRecords.map((r) => ({ ...r, scoreDelta: r.scoreDelta ?? seedBehaviorRules.find((x) => x.ruleId === r.ruleId)?.scoreDelta }))
+  );
   const [rawAppointments, setAppointments] = useState<HomeVisitAppointment[]>(seedAppointments);
   const [careCases, setCareCases] = useState<CareCase[]>(seedCareCases);
   const [homeVisitRecords, setHomeVisitRecords] = useState<HomeVisitRecord[]>(seedHomeVisitRecords);
@@ -459,8 +462,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const rule = behaviorRules.find((r) => r.ruleId === ruleId);
       return !rule || rule.cancelled ? 0 : rule.scoreDelta;
     };
-    const scoreItems = (studentId: string) =>
-      behaviorOf(studentId).map((rec) => ({ delta: rec.cancelled ? 0 : deltaOf(rec.ruleId), at: rec.occurredAt }));
+    /** คะแนนของรายการ: ใช้ค่าที่เก็บไว้ตอนบันทึก กฎถูกยกเลิกหรือรายการถูกยกเลิกไม่นับ */
+    const recordDelta = (rec: BehaviorRecord) => {
+      const rule = behaviorRules.find((r) => r.ruleId === rec.ruleId);
+      return rec.cancelled || !rule || rule.cancelled ? 0 : (rec.scoreDelta ?? rule.scoreDelta);
+    };
+    const scoreItems = (studentId: string) => behaviorOf(studentId).map((rec) => ({ delta: recordDelta(rec), at: rec.occurredAt }));
 
     const behaviorScoreOf = (studentId: string, extra?: { delta: number; at: string }) => {
       const items = scoreItems(studentId);
@@ -517,11 +524,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           .at(-1) ?? "";
       const others = behaviorOf(rec.studentId)
         .filter((r) => r.recordId !== recordId)
-        .map((r) => ({ delta: r.cancelled ? 0 : deltaOf(r.ruleId), at: r.occurredAt }));
+        .map((r) => ({ delta: recordDelta(r), at: r.occurredAt }));
       const after =
         change === "cancel"
           ? others
-          : [...others, { delta: deltaOf(change.ruleId), at: `${change.occurredOn}T${rec.occurredAt.split("T")[1] ?? "00:00:00"}` }];
+          : [...others, { delta: change.ruleId === rec.ruleId ? recordDelta(rec) : deltaOf(change.ruleId), at: `${change.occurredOn}T${rec.occurredAt.split("T")[1] ?? "00:00:00"}` }];
       const scoreAfter = runningScore(after, behaviorScoreConfig);
       const levelAfter = Math.max(watchLevelOf(scoreAfter, behaviorScoreConfig), peakWatchLevel(after, behaviorScoreConfig, lastWithdraw));
       return {
@@ -546,6 +553,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           return {
             ...r,
             ruleId: patch.ruleId,
+            scoreDelta: patch.ruleId === r.ruleId ? r.scoreDelta : behaviorRules.find((x) => x.ruleId === patch.ruleId)?.scoreDelta,
             occurredAt,
             description: patch.description,
             backdateReason: patch.backdateReason ?? r.backdateReason,
@@ -834,6 +842,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         occurredAt,
         recordedByName: ROLE_INFO[role].user.name,
         recordedAt: now,
+        scoreDelta: behaviorRules.find((r) => r.ruleId === ruleId)?.scoreDelta ?? 0,
         source,
         ...(backdateReason && { backdateReason }),
         ...(evidence && evidence.length > 0 && { evidence }),

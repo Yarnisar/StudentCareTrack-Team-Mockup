@@ -20,6 +20,7 @@ import { formatThaiDate } from "@/lib/format";
 import { CURRENT_TERM, subjectSubmissions } from "@/lib/mock-data";
 import { useStore } from "@/lib/store";
 import { REFERRAL_STATUS_LABEL, REGISTRY_FIELD_LABEL, type DcSummary, type DocumentType, type ReferralStatus, type Student } from "@/lib/types";
+import { StudentId } from "@/components/shared/student-id";
 
 interface DocSpec {
   code: DocumentType;
@@ -207,7 +208,7 @@ function Generator({ doc }: { doc: DocSpec }) {
   const targets =
     doc.per === "subject"
       ? subjectSubmissions.map((s) => ({ id: s.subject, label: s.subject, missing: s.submitted ? [] : [`${s.teacherName} ยังไม่ส่งผลในระบบวิชาการ`] }))
-      : store.students.map((s) => ({ id: s.studentId, label: `${s.fullName} · เลขที่ ${s.classNo}`, missing: missingFor(doc.code, s, store.dcResultOf(s.studentId)) }));
+      : store.students.map((s) => ({ id: s.studentId, label: `${s.studentId} ${s.fullName} · เลขที่ ${s.classNo}`, missing: missingFor(doc.code, s, store.dcResultOf(s.studentId)) }));
   const ready = targets.filter((t) => t.missing.length === 0);
   const notReady = targets.filter((t) => t.missing.length > 0);
   const chosen = ready.filter((t) => picked.includes(t.id));
@@ -358,6 +359,7 @@ function RequestPp7() {
               onClick={() => setStudentId(s.studentId)}
               className={`rounded-lg border px-2.5 py-1.5 text-[12.5px] ${studentId === s.studentId ? "border-primary bg-accent font-semibold text-primary" : "border-border hover:bg-muted"}`}
             >
+              <span className="mr-1.5 tabular-nums text-muted-foreground">{s.studentId}</span>
               {s.fullName}
             </button>
           ))}
@@ -377,7 +379,10 @@ function RequestPp7() {
           <div className="mt-3 divide-y divide-border">
             {mine.map((r) => (
               <div key={r.requestId} className="flex items-center gap-2 py-2 text-[12.5px]">
-                <span className="flex-1">{store.getStudent(r.studentId)?.fullName}</span>
+                <span className="flex flex-1 items-baseline gap-2">
+                  <StudentId id={r.studentId} />
+                  {store.getStudent(r.studentId)?.fullName}
+                </span>
                 <span className="text-muted-foreground">{r.status === "done" ? "แอดมินส่งกลับแล้ว" : "รอแอดมินจัดทำ"}</span>
               </div>
             ))}
@@ -399,10 +404,13 @@ function RequestQueue() {
         <div className="mt-2 divide-y divide-border">
           {pending.map((r) => (
             <div key={r.requestId} className="flex flex-wrap items-center gap-2 py-2.5 text-[13px]">
-              <span className="min-w-0 flex-1">
+              <span className="flex min-w-0 flex-1 items-start gap-2">
+                <StudentId id={r.studentId} className="pt-0.5" />
+                <span className="min-w-0">
                 {store.getStudent(r.studentId)?.fullName}
                 <span className="block text-[11.5px] text-muted-foreground">
                   ขอโดย {r.requestedByName} · {formatThaiDate(r.requestedAt)}
+                </span>
                 </span>
               </span>
               <Button size="sm" onClick={() => store.fulfillRequest(r.requestId)}>
