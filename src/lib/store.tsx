@@ -79,7 +79,6 @@ import {
   SdqAssessment,
   SdqRater,
   Student,
-  SupportType,
 } from "./types";
 
 interface StoreValue {
@@ -252,7 +251,6 @@ interface StoreValue {
   requestRegistryCorrection: (input: Omit<RegistryCorrection, "id" | "by" | "at" | "status">, delivered: boolean) => void;
   openCase: (
     studentId: string,
-    supportType: SupportType,
     methods: CareMethod[],
     goal: string,
     options: { urgency: CaseUrgency; nextFollowupDate: string; targetDate?: string; triggerSource?: string }
@@ -266,7 +264,6 @@ interface StoreValue {
   planCase: (
     caseId: string,
     plan: {
-      supportType: SupportType;
       careMethods: CareMethod[];
       goal: string;
       urgency: CaseUrgency;
@@ -884,11 +881,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         status: "active",
         openedAt: nowThaiIso().split("T")[0],
         closedAt: null,
-        supportType: "prevent",
         careMethods: [],
         goal: "",
         targetDate: "",
-        urgency: "medium",
+        urgency: "urgent",
         nextFollowupDate: "",
         followups: [],
       };
@@ -1288,7 +1284,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         { ...input, id: nextId("REG"), by: CURRENT_TEACHER.name, at: nowThaiIso(), status: delivered ? "sent" : "queued" },
       ]);
 
-    const openCase: StoreValue["openCase"] = (studentId, supportType, methods, goal, options) => {
+    const openCase: StoreValue["openCase"] = (studentId, methods, goal, options) => {
       const record: CareCase = {
         caseId: nextId("CASE"),
         studentId,
@@ -1296,7 +1292,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         status: "active",
         openedAt: nowThaiIso().split("T")[0],
         closedAt: null,
-        supportType,
         careMethods: methods,
         goal,
         targetDate: options.targetDate ?? "",

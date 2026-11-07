@@ -113,7 +113,7 @@ function buildSchool() {
         if ((risk === "red" && caseRoll < 0.7) || (risk === "amber" && caseRoll < 0.15)) {
           care = {
             status: rnd() < 0.15 ? "closed" : "active",
-            urgency: risk === "red" ? (rnd() < 0.6 ? "high" : "medium") : rnd() < 0.5 ? "medium" : "low",
+            urgency: risk === "red" ? "urgent" : rnd() < 0.5 ? "urgent" : "normal",
             nextFollowupDate: shiftDate(DEMO_TODAY, Math.floor(rnd() * 45) - 12),
           };
         }

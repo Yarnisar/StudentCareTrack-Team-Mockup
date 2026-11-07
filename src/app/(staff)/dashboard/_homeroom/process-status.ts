@@ -45,7 +45,7 @@ export const STATUS_COLUMNS = ["done", "pending", "near_due", "overdue"] as cons
 const STATUS_RANK: Record<Status, number> = { overdue: 0, near_due: 1, pending: 2, watch: 3, done: 4 };
 
 /** case ที่เร่งด่วนกว่าขึ้นก่อนเมื่อสถานะเท่ากัน */
-const URGENCY_RANK: Record<CaseUrgency, number> = { high: 0, medium: 1, low: 2 };
+const URGENCY_RANK: Record<CaseUrgency, number> = { urgent: 0, normal: 1 };
 
 /** ช่วงเวลาในหน้าตั้งค่าที่เป็นของแต่ละกระบวนการ (คัดกรองรวม Red Flag และ 9S ตาม UC6) */
 export const PROCESS_KINDS: Partial<Record<ProcessKey, AssessmentKind[]>> = {

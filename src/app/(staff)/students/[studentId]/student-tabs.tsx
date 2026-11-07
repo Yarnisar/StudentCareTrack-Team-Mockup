@@ -32,7 +32,6 @@ import {
   NineSCluster,
   SDQ_LEVEL_LABEL,
   SDQ_RATER_LABEL,
-  SUPPORT_TYPE_LABEL,
   type RiskGroup,
   type SdqLevel,
   type SdqRater,
@@ -555,7 +554,6 @@ export function CareTab({ studentId, terms }: { studentId: string; terms: string
                     {(
                       [
                         ["ที่มา", c.triggerSource],
-                        ["ประเภท", SUPPORT_TYPE_LABEL[c.supportType]],
                         ["วิธีการดูแล", c.careMethods.map((m) => CARE_METHOD_LABEL[m]).join(", ") || "-"],
                         ["เป้าหมาย", c.goal || "ยังไม่วางแผนช่วยเหลือ"],
                         [c.status === "active" ? "ติดตามครั้งถัดไป" : "ผลสรุป", c.status === "active" ? (c.nextFollowupDate ? formatThaiDate(c.nextFollowupDate) : "ยังไม่กำหนด") : (c.closingSummary ?? "-")],

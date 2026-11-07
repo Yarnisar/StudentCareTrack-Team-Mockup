@@ -354,16 +354,6 @@ export interface RegistryCorrection {
   status: "sent" | "queued";
 }
 
-/** 4 ประเภทการช่วยเหลือ ตามแนวทาง HERO OBEC CARE */
-export type SupportType = "promote" | "prevent" | "refer_internal" | "refer_external";
-
-export const SUPPORT_TYPE_LABEL: Record<SupportType, string> = {
-  promote: "ส่งเสริมพัฒนา",
-  prevent: "ป้องกันแก้ไข",
-  refer_internal: "ส่งต่อภายใน",
-  refer_external: "ส่งต่อภายนอก",
-};
-
 /** 5 วิธีการดูแล */
 export type CareMethod =
   | "behavior_adjust"
@@ -390,13 +380,12 @@ export interface CareFollowup {
   nextFollowupDate?: string;
 }
 
-/** ระดับความเร่งด่วนของ case (รายงาน 2.1.7 ข้อ 2) — PROTOTYPE: จำนวนระดับยังไม่ได้ตกลงกับทีม */
-export type CaseUrgency = "high" | "medium" | "low";
+/** ระดับความเร่งด่วนของ case 2 ระดับ ตรง Data Dictionary ตาราง SupportCase (urgency: normal, urgent) */
+export type CaseUrgency = "normal" | "urgent";
 
 export const CASE_URGENCY_LABEL: Record<CaseUrgency, string> = {
-  high: "เร่งด่วนมาก",
-  medium: "เร่งด่วน",
-  low: "ปกติ",
+  normal: "ปกติ",
+  urgent: "เร่งด่วน",
 };
 
 export interface CareCase {
@@ -406,7 +395,6 @@ export interface CareCase {
   status: "active" | "closed";
   openedAt: string;
   closedAt: string | null;
-  supportType: SupportType;
   careMethods: CareMethod[];
   goal: string;
   targetDate: string;

@@ -786,12 +786,11 @@ export const careCases: CareCase[] = [
     status: "active",
     openedAt: "2570-02-01",
     closedAt: null,
-    supportType: "prevent",
     careMethods: ["behavior_adjust", "life_skills", "counseling"],
     goal:
       "ลดความกังวลด้านการเรียนและเศรษฐกิจ โดยประสานทุนการศึกษาจากโรงเรียน และให้คำปรึกษาต่อเนื่องสัปดาห์ละ 1 ครั้ง จนถึงสิ้นภาคเรียน",
     targetDate: "2570-03-31",
-    urgency: "medium",
+    urgency: "urgent",
     nextFollowupDate: "2570-02-25",
     followups: [
       {
@@ -826,11 +825,10 @@ export const careCases: CareCase[] = [
     status: "active",
     openedAt: "2570-02-13",
     closedAt: null,
-    supportType: "refer_internal",
     careMethods: ["counseling", "guidance_teacher"],
     goal: "ส่งต่อครูแนะแนวเพื่อประเมินเชิงลึกด้านสุขภาพจิต และติดตามพฤติกรรมการมาสาย",
     targetDate: "2570-03-15",
-    urgency: "high",
+    urgency: "urgent",
     nextFollowupDate: "2570-02-18",
     followups: [
       {

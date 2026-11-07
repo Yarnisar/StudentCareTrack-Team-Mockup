@@ -10,7 +10,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
 import { useStore } from "@/lib/store";
 import { ruleKind } from "@/lib/behavior-rules";
@@ -25,11 +24,8 @@ import {
   CaseUrgency,
   REFERRAL_STATUS_LABEL,
   SDQ_LEVEL_LABEL,
-  SUPPORT_TYPE_LABEL,
-  SupportType,
 } from "@/lib/types";
 
-const SUPPORT_TYPES = Object.keys(SUPPORT_TYPE_LABEL) as SupportType[];
 const CARE_METHODS = Object.keys(CARE_METHOD_LABEL) as CareMethod[];
 const URGENCIES = Object.keys(CASE_URGENCY_LABEL) as CaseUrgency[];
 /** ตัวเลือกวันติดตามครั้งถัดไปแบบกดเดียว — PROTOTYPE: ช่วงวันยังไม่ได้ตกลงกับทีม */
@@ -231,26 +227,7 @@ function CareCasesContent() {
               <div className="grid gap-5 lg:grid-cols-2">
                 <Card>
                   <CardContent className="p-6">
-                    <h3 className="text-[15.5px] font-bold">ประเภทการช่วยเหลือ</h3>
-                    <p className="mt-0.5 mb-3 text-[11.5px] text-muted-foreground">
-                      อ้างอิงแนวทาง HERO OBEC CARE
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {SUPPORT_TYPES.map((t) => (
-                        <span
-                          key={t}
-                          className={
-                            activeCase.supportType === t
-                              ? "rounded-lg border border-primary bg-accent px-4 py-2 text-[13.5px] font-semibold text-primary"
-                              : "rounded-lg border border-border px-4 py-2 text-[13.5px] text-muted-foreground"
-                          }
-                        >
-                          {SUPPORT_TYPE_LABEL[t]}
-                        </span>
-                      ))}
-                    </div>
-
-                    <h3 className="mt-5 mb-2 text-[15.5px] font-bold">วิธีการดูแล</h3>
+                    <h3 className="mb-2 text-[15.5px] font-bold">วิธีการดูแล</h3>
                     <div className="space-y-1">
                       {CARE_METHODS.map((m) => (
                         <div key={m} className="flex items-center gap-3 py-1">
@@ -423,7 +400,6 @@ function CaseActions({ caseId, hasReferral }: { caseId: string; hasReferral: boo
               {[
                 ["นักเรียน", `${student.fullName} · ${student.roomName} เลขที่ ${student.classNo}`],
                 ["ที่มาของ case", careCase.triggerSource],
-                ["ประเภทการช่วยเหลือ", SUPPORT_TYPE_LABEL[careCase.supportType]],
                 ["วิธีการดูแล", careCase.careMethods.map((m) => CARE_METHOD_LABEL[m]).join(", ") || "-"],
                 ["เป้าหมาย", careCase.goal || "-"],
                 ["การติดตาม", `${careCase.followups.length} ครั้ง${careCase.followups[0] ? ` · ล่าสุด: ${careCase.followups[0].actionTaken}` : ""}`],
@@ -518,7 +494,6 @@ function NewCaseForm({
   const student = store.getStudent(studentId);
   const risk = store.overallRiskOf(studentId);
 
-  const [supportType, setSupportType] = useState<SupportType>("prevent");
   const [methods, setMethods] = useState<CareMethod[]>([]);
   const [goal, setGoal] = useState("");
   const [targetDate, setTargetDate] = useState("");
@@ -537,7 +512,6 @@ function NewCaseForm({
     if (!urgency) return;
     if (planCaseId) {
       store.planCase(planCaseId, {
-        supportType,
         careMethods: methods,
         goal: goal.trim(),
         urgency,
@@ -547,7 +521,7 @@ function NewCaseForm({
       onCreated(planCaseId);
       return;
     }
-    const record = store.openCase(studentId, supportType, methods, goal.trim(), {
+    const record = store.openCase(studentId, methods, goal.trim(), {
       urgency,
       nextFollowupDate: nextDate,
       targetDate: targetDate || undefined,
@@ -573,24 +547,6 @@ function NewCaseForm({
             ระบบเปิด case นี้ให้จากผลคัดกรอง ระบุแผนช่วยเหลือ ความเร่งด่วน และวันติดตามเพื่อเริ่มติดตาม
           </p>
         )}
-
-        <h3 className="mb-2 text-[15px] font-bold">ประเภทการช่วยเหลือ</h3>
-        <RadioGroup
-          value={supportType}
-          onValueChange={(v) => setSupportType(v as SupportType)}
-          className="mb-5 flex flex-wrap gap-2.5"
-        >
-          {SUPPORT_TYPES.map((t) => (
-            <Label
-              key={t}
-              htmlFor={`type-${t}`}
-              className="flex cursor-pointer items-center gap-2 rounded-lg border border-border px-4 py-2 text-[13.5px] font-medium has-[[data-checked]]:border-primary has-[[data-checked]]:bg-accent has-[[data-checked]]:text-primary"
-            >
-              <RadioGroupItem id={`type-${t}`} value={t} />
-              {SUPPORT_TYPE_LABEL[t]}
-            </Label>
-          ))}
-        </RadioGroup>
 
         <h3 className="mb-2 text-[15px] font-bold">
           วิธีการดูแล <span className="text-[12px] font-normal text-muted-foreground">(เลือกอย่างน้อย 1)</span>
@@ -660,7 +616,7 @@ function UrgencyTag({ urgency }: { urgency: CaseUrgency }) {
   return (
     <span
       className={
-        urgency === "high"
+        urgency === "urgent"
           ? "rounded-md border border-foreground/40 px-1.5 py-0.5 font-semibold text-foreground"
           : "rounded-md bg-muted px-1.5 py-0.5 font-medium text-muted-foreground"
       }

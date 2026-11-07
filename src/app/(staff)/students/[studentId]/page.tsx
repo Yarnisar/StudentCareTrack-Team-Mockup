@@ -28,7 +28,6 @@ import {
   RISK_LABEL,
   SDQ_LEVEL_LABEL,
   SDQ_RATER_LABEL,
-  SUPPORT_TYPE_LABEL,
   SdqRater,
 } from "@/lib/types";
 
@@ -203,7 +202,7 @@ function StudentDetail({
       rows.push([
         "case ช่วยเหลือ",
         careCase.caseId,
-        `${careCase.status === "active" ? "กำลังดำเนินการ" : "ปิดแล้ว"} · ${SUPPORT_TYPE_LABEL[careCase.supportType]} · ${caseUrgencyText(careCase)}`,
+        `${careCase.status === "active" ? "กำลังดำเนินการ" : "ปิดแล้ว"} · ${caseUrgencyText(careCase)}`,
       ]);
     }
     rows.push(["ความประพฤติ", "คะแนนความประพฤติ", behaviorScore]);

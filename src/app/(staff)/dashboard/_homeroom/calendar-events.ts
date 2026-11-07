@@ -103,7 +103,7 @@ export function calendarEvents(
         title: student.fullName,
         detail: `ความเร่งด่วน: ${CASE_URGENCY_LABEL[c.urgency]}${overdue ? " · เลยวันติดตามแล้ว" : ""}`,
         student,
-        attention: c.urgency === "high" || overdue,
+        attention: c.urgency === "urgent" || overdue,
         href,
         action: "บันทึกการติดตาม",
       });
