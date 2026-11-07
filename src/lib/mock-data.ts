@@ -404,7 +404,7 @@ export const appointments: HomeVisitAppointment[] = [
     teacherName: CURRENT_TEACHER.name,
     proposedDate: "2570-02-08T15:00:00",
     status: "awaiting_visit_confirmation",
-    confirmedBy: "นางสมศรี ตั้งใจเรียน",
+    confirmedBy: "นายสมชาย ตั้งใจเรียน",
     visitConfirmDeadline: "2570-02-11",
   },
   {
@@ -539,9 +539,9 @@ export const subjectSubmissions: SubjectSubmission[] = [
 
 export const educationDocuments: EducationDocument[] = [
   { docId: "DOC-001", docType: "ปพ.6", target: "ด.ญ. ชลิดา พากเพียร", generatedByName: CURRENT_TEACHER.name, generatedAt: "2570-02-16" },
-  { docId: "DOC-002", docType: "ปพ.4", target: "ทั้งห้อง ม.3/1 (38 คน)", generatedByName: CURRENT_TEACHER.name, generatedAt: "2570-02-14" },
+  { docId: "DOC-002", docType: "ปพ.4", target: "ด.ญ. ปาริชาติ ใฝ่ดี", generatedByName: CURRENT_TEACHER.name, generatedAt: "2570-02-14" },
   { docId: "DOC-003", docType: "ปพ.7", target: "ด.ช. ธนากร รักเรียน", generatedByName: "แอดมินโรงเรียน", generatedAt: "2570-02-10" },
-  { docId: "DOC-004", docType: "ปพ.5", target: "วิชาคณิตศาสตร์ ม.3/1", generatedByName: "ครูวิชัย มานะ", generatedAt: "2570-02-02" },
+  { docId: "DOC-004", docType: "ปพ.5", target: "รายวิชาคณิตศาสตร์", generatedByName: "แอดมินโรงเรียน", generatedAt: "2570-02-02" },
 ];
 
 

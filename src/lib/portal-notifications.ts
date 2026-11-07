@@ -79,5 +79,6 @@ export function buildNotifications(input: {
       body: input.viewer === "parent" ? "ฉบับผู้ปกครอง ทำได้ที่เมนูผลประเมิน" : "ฉบับนักเรียน ทำได้ที่เมนูแบบประเมิน",
     });
 
-  return list.sort((a, b) => b.at.localeCompare(a.at));
+  // แยกสถานะอ่านแล้วของนักเรียนกับผู้ปกครอง แม้เป็นเหตุการณ์เดียวกัน
+  return list.map((n) => ({ ...n, id: `${input.viewer}:${n.id}` })).sort((a, b) => b.at.localeCompare(a.at));
 }

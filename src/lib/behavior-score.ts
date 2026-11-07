@@ -64,6 +64,20 @@ export function runningScore(items: ScoreItem[], cfg: BehaviorScoreConfig): numb
     .reduce((score, item) => clampScore(score + item.delta, cfg), cfg.startScore);
 }
 
+/**
+ * ระดับเฝ้าระวังสูงสุดที่เคยถึงหลังเวลา since (ไม่รวม) ไล่คะแนนตามลำดับวันที่
+ * ใช้คงสถานะไว้จนครูที่ปรึกษายืนยันถอน (UC8 Scenario C, Alt-F: ไม่ถอนสถานะอัตโนมัติ)
+ */
+export function peakWatchLevel(items: ScoreItem[], cfg: BehaviorScoreConfig, since: string): number {
+  let score = cfg.startScore;
+  let peak = 0;
+  for (const item of [...items].sort((a, b) => a.at.localeCompare(b.at))) {
+    score = clampScore(score + item.delta, cfg);
+    if (item.at > since) peak = Math.max(peak, watchLevelOf(score, cfg));
+  }
+  return peak;
+}
+
 /** ระดับเฝ้าระวังของคะแนนนี้ 0 = ไม่อยู่ในสถานะเฝ้าระวัง */
 export function watchLevelOf(score: number, cfg: BehaviorScoreConfig): number {
   return cfg.watchLevels.filter((l) => score <= l.atOrBelow).length;

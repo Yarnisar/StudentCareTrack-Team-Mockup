@@ -349,6 +349,11 @@ export interface CareCase {
   referral?: Referral;
 }
 
+/** case ที่ระบบเปิดให้จากผลคัดกรองแต่ครูยังไม่วางแผน ความเร่งด่วนยังไม่มีผล (UC11 ข้อ 5) */
+export function caseUrgencyText(c: Pick<CareCase, "goal" | "urgency">): string {
+  return c.goal === "" ? "ยังไม่วางแผน" : CASE_URGENCY_LABEL[c.urgency];
+}
+
 export type ReferralStatus = "awaiting_admin" | "stored" | "forwarded";
 
 export const REFERRAL_STATUS_LABEL: Record<ReferralStatus, string> = {

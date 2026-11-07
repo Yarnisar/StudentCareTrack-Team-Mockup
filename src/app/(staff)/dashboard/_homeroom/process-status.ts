@@ -161,10 +161,13 @@ export function processStatus(store: Store, termId: string): { items: Item[]; su
     }
 
     // ---- เยี่ยมบ้าน: ทุกคน ปีละครั้ง
-    const record = store.homeVisitRecords.find((r) => r.studentId === id);
-    const appointment = store.appointments.find(
-      (a) => a.studentId === id && !["completed", "completed_no_response", "cancelled"].includes(a.status)
-    );
+    // ผลของนัดที่ถูกแจ้งว่าไม่ได้เยี่ยมจริงไม่นับว่าเยี่ยมแล้ว (UC4 Alt-E)
+    const disputed = new Set(store.appointments.filter((a) => a.status === "visit_disputed").map((a) => a.appointmentId));
+    const record = store.homeVisitRecords.find((r) => r.studentId === id && !disputed.has(r.appointmentId));
+    // นัดล่าสุดที่ยังไม่ปิด ถ้าครูนัดใหม่แล้ว นัดเดิมที่ถูกแจ้งว่าไม่ได้เยี่ยมจะไม่ถูกหยิบมาแสดง
+    const appointment = store.appointments
+      .filter((a) => a.studentId === id && !["completed", "completed_no_response", "cancelled"].includes(a.status))
+      .sort((a, b) => b.proposedDate.localeCompare(a.proposedDate))[0];
     if (appointment?.status === "visit_disputed") {
       items.push(
         open("home_visit", "home_visit", { student, detail: "แจ้งว่าไม่ได้เยี่ยมบ้านจริง ต้องนัดใหม่", href: "/home-visits", action: "ดูนัดหมาย" })
@@ -202,7 +205,17 @@ export function processStatus(store: Store, termId: string): { items: Item[]; su
     // ---- การติดตามช่วยเหลือ (UC11): ครบกำหนดตามวันติดตามครั้งถัดไปที่ครูกำหนดใน case
     const cases = store.careCases.filter((c) => c.studentId === id);
     const activeCase = cases.find((c) => c.status === "active");
-    if (activeCase) {
+    if (activeCase && activeCase.goal === "") {
+      // ระบบเปิดให้จากผลคัดกรอง ครูยังไม่วางแผน (UC11 ข้อ 5)
+      items.push({
+        process: "care",
+        status: "pending",
+        student,
+        detail: `ระบบเปิด case ให้จาก${activeCase.triggerSource} · ยังไม่วางแผนช่วยเหลือ`,
+        href: `/care-cases?student=${id}`,
+        action: "วางแผนช่วยเหลือ",
+      });
+    } else if (activeCase) {
       const last = activeCase.followups.map((f) => f.followupDate).sort().at(-1);
       const next = activeCase.nextFollowupDate || undefined;
       items.push({
@@ -243,7 +256,9 @@ export function processStatus(store: Store, termId: string): { items: Item[]; su
         process: "behavior",
         status: "watch",
         student,
-        detail: `เฝ้าระวังระดับ ${store.behaviorWatchLevelOf(id)} · คะแนนความประพฤติ ${score}`,
+        detail: store.watchWithdrawalPending(id)
+          ? `คะแนนกลับเข้าเกณฑ์แล้ว (${score}) · รอครูที่ปรึกษายืนยันถอนสถานะเฝ้าระวังระดับ ${store.behaviorWatchLevelOf(id)}`
+          : `เฝ้าระวังระดับ ${store.behaviorWatchLevelOf(id)} · คะแนนความประพฤติ ${score}`,
         href: `/students/${id}`,
         action: "ดูประวัติ",
       });

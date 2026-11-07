@@ -8,6 +8,7 @@ import { RiskBadge } from "@/components/shared/risk-badge";
 import { Button } from "@/components/ui/button";
 import { LinkButton } from "@/components/ui/link-button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { ruleKind, ruleScoreText } from "@/lib/behavior-rules";
 import { useStore } from "@/lib/store";
 import { dcCriteria, CURRENT_TERM } from "@/lib/mock-data";
@@ -18,7 +19,7 @@ import {
   APPOINTMENT_STATUS_LABEL,
   AssessmentOutcome,
   CARE_METHOD_LABEL,
-  CASE_URGENCY_LABEL,
+  caseUrgencyText,
   DC_LEVEL_LABEL,
   DIMENSION_LABEL,
   NINE_S_CLUSTER_LABEL,
@@ -172,7 +173,7 @@ export default function StudentDetailPage({
       rows.push([
         "case ช่วยเหลือ",
         careCase.caseId,
-        `${careCase.status === "active" ? "กำลังดำเนินการ" : "ปิดแล้ว"} · ${SUPPORT_TYPE_LABEL[careCase.supportType]} · ${CASE_URGENCY_LABEL[careCase.urgency]}`,
+        `${careCase.status === "active" ? "กำลังดำเนินการ" : "ปิดแล้ว"} · ${SUPPORT_TYPE_LABEL[careCase.supportType]} · ${caseUrgencyText(careCase)}`,
       ]);
     }
     rows.push(["ความประพฤติ", "คะแนนความประพฤติ", behaviorScore]);
@@ -489,15 +490,15 @@ export default function StudentDetailPage({
                         {careCase.status === "active" ? "กำลังดำเนินการ" : "ปิดแล้ว"}
                       </span>
                       <span className="rounded-full bg-surface px-2.5 py-1 text-xs font-semibold">
-                        {CASE_URGENCY_LABEL[careCase.urgency]}
+                        {caseUrgencyText(careCase)}
                       </span>
                     </div>
                     <dl className="divide-y divide-border text-[13.5px]">
                       {(
                         [
                           ["ประเภท", SUPPORT_TYPE_LABEL[careCase.supportType]],
-                          ["วิธีการดูแล", careCase.careMethods.map((m) => CARE_METHOD_LABEL[m]).join(", ")],
-                          ["เป้าหมาย", careCase.goal],
+                          ["วิธีการดูแล", careCase.careMethods.map((m) => CARE_METHOD_LABEL[m]).join(", ") || "-"],
+                          ["เป้าหมาย", careCase.goal || "ยังไม่วางแผนช่วยเหลือ"],
                           [
                             "ติดตามครั้งถัดไป",
                             careCase.nextFollowupDate ? formatThaiDate(careCase.nextFollowupDate) : "ยังไม่กำหนด",
@@ -546,6 +547,7 @@ export default function StudentDetailPage({
                     )}
                   </span>
                 </div>
+                {store.watchWithdrawalPending(studentId) && <WatchWithdrawal studentId={studentId} />}
                 <div className="divide-y divide-border">
                   {behaviors.map((rec) => {
                     const rule = store.behaviorRules.find((r) => r.ruleId === rec.ruleId);
@@ -626,5 +628,54 @@ export default function StudentDetailPage({
         </div>
       </div>
     </>
+  );
+}
+
+/**
+ * คะแนนกลับเข้าเกณฑ์แล้ว ครูที่ปรึกษายืนยันถอนสถานะ หรือคงสถานะไว้พร้อมเหตุผล (UC8 Scenario C)
+ * PROTOTYPE: ยังไม่มีการเตือนซ้ำและแจ้งแอดมินเมื่อครบเวลา (Alt-F)
+ */
+function WatchWithdrawal({ studentId }: { studentId: string }) {
+  const store = useStore();
+  const [keeping, setKeeping] = useState(false);
+  const [reason, setReason] = useState("");
+  const last = store.watchDecisions.filter((d) => d.studentId === studentId && !d.withdraw).at(-1);
+  if (store.role !== "homeroom") return null;
+  return (
+    <div className="mb-3 rounded-lg border border-border p-3 text-[13px]">
+      <div className="font-semibold">คะแนนกลับเข้าเกณฑ์แล้ว รอยืนยันถอนสถานะเฝ้าระวัง</div>
+      <div className="text-[12px] text-muted-foreground">
+        ระบบไม่ถอนสถานะเอง ตรวจประวัติด้านล่างแล้วยืนยันหรือคงสถานะไว้
+        {last && ` · คงสถานะครั้งล่าสุด: ${last.reason}`}
+      </div>
+      {keeping ? (
+        <div className="mt-2 flex flex-wrap gap-2">
+          <Input aria-label="เหตุผลที่คงสถานะ" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="เหตุผลที่คงสถานะ (จำเป็น)" className="h-9 min-w-0 flex-1" />
+          <Button size="sm" variant="outline" onClick={() => setKeeping(false)}>
+            ย้อนกลับ
+          </Button>
+          <Button
+            size="sm"
+            disabled={reason.trim() === ""}
+            onClick={() => {
+              store.resolveWatchWithdrawal(studentId, false, reason.trim());
+              setKeeping(false);
+              setReason("");
+            }}
+          >
+            บันทึก
+          </Button>
+        </div>
+      ) : (
+        <div className="mt-2 flex flex-wrap gap-2">
+          <Button size="sm" onClick={() => store.resolveWatchWithdrawal(studentId, true)}>
+            ยืนยันถอนสถานะ
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => setKeeping(true)}>
+            คงสถานะไว้
+          </Button>
+        </div>
+      )}
+    </div>
   );
 }

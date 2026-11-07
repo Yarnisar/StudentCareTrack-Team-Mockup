@@ -34,7 +34,7 @@ import { usePathname } from "next/navigation";
 import { DEFAULT_DC_CRITERIA, type DcRound } from "./dc-round";
 import { canRevealCitizenId, defaultRoleFor, ROLE_INFO, type Role } from "./roles";
 import { INITIAL_WINDOWS, shiftDate, type AssessmentWindow } from "./periods";
-import { DEFAULT_BEHAVIOR_SCORE, runningScore, watchLevelOf, type BehaviorScoreConfig } from "./behavior-score";
+import { DEFAULT_BEHAVIOR_SCORE, peakWatchLevel, runningScore, watchLevelOf, type BehaviorScoreConfig } from "./behavior-score";
 import {
   AccessLog,
   AppointmentStatus,
@@ -102,6 +102,12 @@ interface StoreValue {
   behaviorWatchLevelOf: (studentId: string, extra?: { delta: number; at: string }) => number;
   /** ถึงเกณฑ์เฝ้าระวังด้านความประพฤติหรือไม่ */
   isBehaviorWatch: (studentId: string) => boolean;
+  /** คะแนนกลับเข้าเกณฑ์แล้ว แต่ยังคงสถานะไว้จนครูที่ปรึกษายืนยันถอน (UC8 Scenario C) */
+  watchWithdrawalPending: (studentId: string) => boolean;
+  /** ครูที่ปรึกษายืนยันถอนสถานะ หรือคงสถานะไว้พร้อมเหตุผล (Scenario C ข้อ 4–6) */
+  resolveWatchWithdrawal: (studentId: string, withdraw: boolean, reason?: string) => void;
+  /** ประวัติการถอน / คงสถานะเฝ้าระวัง */
+  watchDecisions: { studentId: string; at: string; by: string; withdraw: boolean; reason: string }[];
   caseOf: (studentId: string) => CareCase | undefined;
 
   /** ร่างแบบประเมินที่ยังไม่ส่ง (key จาก draftKey) */
@@ -263,6 +269,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       status: "open",
     },
   ]);
+  const [watchDecisions, setWatchDecisions] = useState<StoreValue["watchDecisions"]>([]);
   const [readNotifications, setReadNotifications] = useState<string[]>([]);
   const [educationDocuments, setEducationDocuments] = useState<EducationDocument[]>(seedDocuments);
   const [documentRequests, setDocumentRequests] = useState<DocumentRequest[]>([]);
@@ -305,8 +312,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         .filter((b) => b.studentId === studentId)
         .sort((a, b) => b.occurredAt.localeCompare(a.occurredAt));
 
-    const behaviorScoreOf = (studentId: string, extra?: { delta: number; at: string }) => {
-      const items = behaviorOf(studentId).map((rec) => ({
+    const scoreItems = (studentId: string) =>
+      behaviorOf(studentId).map((rec) => ({
         // กฎที่ถูกยกเลิกไม่นับคะแนนรายการเดิม (UC7 Scenario C ข้อ 9)
         delta: (() => {
           const rule = behaviorRules.find((r) => r.ruleId === rec.ruleId);
@@ -314,13 +321,38 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         })(),
         at: rec.occurredAt,
       }));
+
+    const behaviorScoreOf = (studentId: string, extra?: { delta: number; at: string }) => {
+      const items = scoreItems(studentId);
       return runningScore(extra ? [...items, extra] : items, behaviorScoreConfig);
     };
 
-    const behaviorWatchLevelOf = (studentId: string, extra?: { delta: number; at: string }) =>
+    /** ระดับตามคะแนนตอนนี้ */
+    const currentWatchLevel = (studentId: string, extra?: { delta: number; at: string }) =>
       watchLevelOf(behaviorScoreOf(studentId, extra), behaviorScoreConfig);
 
+    /** ระดับที่มีผล = สูงสุดระหว่างระดับตอนนี้ กับระดับสูงสุดที่เคยถึงหลังครูยืนยันถอนครั้งล่าสุด */
+    const behaviorWatchLevelOf = (studentId: string, extra?: { delta: number; at: string }) => {
+      const lastWithdraw = watchDecisions
+        .filter((d) => d.studentId === studentId && d.withdraw)
+        .map((d) => d.at)
+        .sort()
+        .at(-1) ?? "";
+      const items = scoreItems(studentId);
+      const peak = peakWatchLevel(extra ? [...items, extra] : items, behaviorScoreConfig, lastWithdraw);
+      return Math.max(currentWatchLevel(studentId, extra), peak);
+    };
+
     const isBehaviorWatch = (studentId: string) => behaviorWatchLevelOf(studentId) > 0;
+
+    const watchWithdrawalPending = (studentId: string) =>
+      behaviorWatchLevelOf(studentId) > currentWatchLevel(studentId);
+
+    const resolveWatchWithdrawal: StoreValue["resolveWatchWithdrawal"] = (studentId, withdraw, reason = "") =>
+      setWatchDecisions((prev) => [
+        ...prev,
+        { studentId, at: nowThaiIso(), by: CURRENT_TEACHER.name, withdraw, reason },
+      ]);
 
     const caseOf = (studentId: string) =>
       careCases.find((c) => c.studentId === studentId && c.status === "active") ??
@@ -900,6 +932,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       behaviorScoreOf,
       behaviorWatchLevelOf,
       isBehaviorWatch,
+      watchWithdrawalPending,
+      resolveWatchWithdrawal,
+      watchDecisions,
       caseOf,
       getDraft,
       saveDraft,
@@ -944,7 +979,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       fulfillRequest,
       logCitizenIdView,
     };
-  }, [role, screenings, redFlags, nineS, sdq, behaviorRecords, rawAppointments, careCases, homeVisitRecords, accessLogs, assessmentWindows, behaviorRules, behaviorScoreConfig, drafts, screeningWatch, educationDocuments, documentRequests, dcAssessments, readNotifications, dcRounds]);
+  }, [role, screenings, redFlags, nineS, sdq, behaviorRecords, rawAppointments, careCases, homeVisitRecords, accessLogs, assessmentWindows, behaviorRules, behaviorScoreConfig, drafts, screeningWatch, educationDocuments, documentRequests, dcAssessments, readNotifications, dcRounds, watchDecisions]);
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }
