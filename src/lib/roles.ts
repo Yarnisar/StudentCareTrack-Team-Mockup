@@ -3,7 +3,8 @@
  *
  * PROTOTYPE: ยังไม่มีบัญชีจริง บทบาทเลือกจากหน้า login หรือแถบสลับบทบาท (RoleSwitcher)
  * Project 2: บทบาทและขอบเขตความรับผิดชอบมาจากระบบยืนยันตัวตนกลาง และ backend ต้องตรวจสิทธิ์ซ้ำทุกคำขอ
- * ตารางสิทธิ์ของ "ครูทั่วไป" เป็นข้อเสนอ — รายงานระบุเพียงว่าครูแต่ละหน้าที่เห็นข้อมูลต่างกันตาม Assignment (3.3.4)
+ * ครูมีผู้ใช้ประเภทเดียว สิทธิ์ขึ้นกับการมอบหมาย (Assignment) ต่อห้อง/นักเรียน ไม่ใช่ประเภทของครู (3.3.4, ตารางขอบเขตสิทธิ์)
+ * แถบสลับบทบาทมีครู 2 คนเพื่อให้เห็นความต่าง: คนหนึ่งเป็นครูประจำชั้นและสอนด้วย อีกคนสอนอย่างเดียว
  */
 
 export type Role = "admin" | "homeroom" | "subject" | "student" | "parent";
@@ -30,9 +31,9 @@ export const ROLE_INFO: Record<
     user: { name: "ครูสมหญิง ใจดี", title: "ครูประจำชั้น ม.3/1", scope: "ม.3/1" },
   },
   subject: {
-    label: "ครูทั่วไป",
+    label: "ครูผู้สอน",
     home: "/behavior",
-    user: { name: "ครูมานพ สอนดี", title: "ครูผู้สอน วิทยาศาสตร์", scope: "วิชาวิทยาศาสตร์" },
+    user: { name: "ครูมานพ สอนดี", title: "สอนวิทยาศาสตร์ ม.3/1–3/2", scope: "วิทยาศาสตร์" },
   },
   student: {
     label: "นักเรียน",
@@ -111,4 +112,27 @@ export function canRevealCitizenId(role: Role): boolean {
 export function canAccess(role: Role, pathname: string): boolean {
   if (pathname === "/login") return true;
   return ALLOWED[role].some((p) => pathname === p || pathname.startsWith(`${p}/`));
+}
+
+/**
+ * การมอบหมายงานของครูแต่ละบัญชี — ครูคนเดียวเป็นทั้งครูประจำชั้นและครูผู้สอนได้
+ * - ห้องที่เป็นครูประจำชั้น: เห็นข้อมูลรายคนและรายการพฤติกรรมทั้งหมดของนักเรียนห้องนั้น
+ * - ห้องที่สอน: บันทึกพฤติกรรมได้ และเห็น/แก้ไข/ยกเลิกเฉพาะรายการที่ตนบันทึก (ตารางขอบเขตสิทธิ์ "ครูที่ได้รับมอบหมายอื่น")
+ * PROTOTYPE: Project 2 อ่าน Assignment จาก IAM ของ Team B
+ */
+export interface TeacherAssignment {
+  homeroomRoom?: string;
+  teaches: { subject: string; rooms: string[] }[];
+}
+
+export const TEACHER_ASSIGNMENTS: Partial<Record<Role, TeacherAssignment>> = {
+  homeroom: { homeroomRoom: "ม.3/1", teaches: [{ subject: "สังคมศึกษา", rooms: ["ม.3/1", "ม.3/2"] }] },
+  subject: { teaches: [{ subject: "วิทยาศาสตร์", rooms: ["ม.3/1", "ม.3/2"] }] },
+};
+
+/** ห้องที่ครูคนนี้บันทึกพฤติกรรมได้ = ห้องที่เป็นครูประจำชั้น + ห้องที่สอน */
+export function recordableRooms(role: Role): string[] {
+  const a = TEACHER_ASSIGNMENTS[role];
+  if (!a) return [];
+  return [...new Set([...(a.homeroomRoom ? [a.homeroomRoom] : []), ...a.teaches.flatMap((t) => t.rooms)])];
 }

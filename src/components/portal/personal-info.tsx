@@ -144,15 +144,17 @@ export function PersonalInfo({ viewer, studentIds }: { viewer: "student" | "pare
                     <div className="min-w-0 flex-1">
                       <div className="text-[13.5px]">
                         {rule?.name}
-                        {rule?.cancelled && (
-                          <span className="ml-1.5 rounded bg-muted px-1.5 py-0.5 text-[11px] text-muted-foreground">กฎถูกยกเลิก</span>
+                        {(rule?.cancelled || b.cancelled) && (
+                          <span className="ml-1.5 rounded bg-muted px-1.5 py-0.5 text-[11px] text-muted-foreground">
+                            {b.cancelled ? "ครูยกเลิกรายการนี้แล้ว" : "กฎถูกยกเลิก"}
+                          </span>
                         )}
                       </div>
                       <div className="text-[11.5px] text-muted-foreground">
                         {formatThaiDate(b.occurredAt)} · บันทึกโดย {b.recordedByName}
                       </div>
                     </div>
-                    <span className={`text-[13.5px] font-bold ${refer || rule?.cancelled ? "text-muted-foreground" : ""}`}>
+                    <span className={`text-[13.5px] font-bold ${refer || rule?.cancelled || b.cancelled ? "text-muted-foreground" : ""} ${b.cancelled ? "line-through" : ""}`}>
                       {rule ? ruleScoreText(rule) : ""}
                     </span>
                   </div>

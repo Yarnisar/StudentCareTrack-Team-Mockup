@@ -156,6 +156,61 @@ export const students: Student[] = [
   },
 ];
 
+/**
+ * นักเรียนห้องอื่นที่ครูในตัวอย่างสอน (ม.3/2) และห้องที่ไม่ได้สอน (ม.1/3) ใช้สาธิตขอบเขตตามการมอบหมาย (UC8 ข้อ 6, Alt-B)
+ * ไม่อยู่ในรายชื่อห้องของครูประจำชั้น จึงไม่ปรากฏในภาพรวม คัดกรอง หรือหน้าข้อมูลรายคน
+ */
+export const otherStudents: Student[] = [
+  {
+    studentId: "30201",
+    fullName: "ด.ช. ชยพล รักดี",
+    citizenId: "1-1037-0030201-00-0",
+    roomName: "ม.3/2",
+    classNo: 3,
+    guardianName: "นางสมใจ รักดี",
+    guardianRelation: "มารดา",
+    guardianPhone: "08x-xxx-0201",
+    address: "-",
+    sourceSystem: "team_b_registry",
+  },
+  {
+    studentId: "30207",
+    fullName: "ด.ญ. กมลชนก ศรีงาม",
+    citizenId: "1-1037-0030207-00-0",
+    roomName: "ม.3/2",
+    classNo: 9,
+    guardianName: "นางวิไล ศรีงาม",
+    guardianRelation: "มารดา",
+    guardianPhone: "08x-xxx-0207",
+    address: "-",
+    sourceSystem: "team_b_registry",
+  },
+  {
+    studentId: "30214",
+    fullName: "ด.ช. ปวริศ มั่นคง",
+    citizenId: "1-1037-0030214-00-0",
+    roomName: "ม.3/2",
+    classNo: 15,
+    guardianName: "นางพรทิพย์ มั่นคง",
+    guardianRelation: "มารดา",
+    guardianPhone: "08x-xxx-0214",
+    address: "-",
+    sourceSystem: "team_b_registry",
+  },
+  {
+    studentId: "10322",
+    fullName: "ด.ญ. ธิดารัตน์ แสงทอง",
+    citizenId: "1-1037-0010322-00-0",
+    roomName: "ม.1/3",
+    classNo: 4,
+    guardianName: "นางอรุณี แสงทอง",
+    guardianRelation: "มารดา",
+    guardianPhone: "08x-xxx-0322",
+    address: "-",
+    sourceSystem: "team_b_registry",
+  },
+];
+
 export const screenings: Screening[] = [
   {
     screeningId: "SC-001",
@@ -435,9 +490,32 @@ export const studentCards: StudentCard[] = [
   ...["30118", "30131", "30140", "30152", "30160", "30171"].map(
     (id, i): StudentCard => ({ cardId: `CARD-${i + 2}`, code: `${id}-1`, studentId: id, type: "new", issuedAt: "2569-05-20", expiresAt: ACADEMIC_YEAR_END, status: "active", physical: "handed" })
   ),
+  // ห้องอื่น: ม.3/2 (ครูทั้งสองคนสอน) และ ม.1/3 (ไม่ได้สอน สแกนแล้วบันทึกไม่ได้)
+  ...["30201", "10322"].map(
+    (id, i): StudentCard => ({ cardId: `CARD-O${i}`, code: `${id}-1`, studentId: id, type: "new", issuedAt: "2569-05-20", expiresAt: ACADEMIC_YEAR_END, status: "active", physical: "handed" })
+  ),
 ];
 
 export const behaviorRecords: BehaviorRecord[] = [
+  // ห้องที่สอน (ม.3/2): ครูประจำชั้น ม.3/1 บันทึกในฐานะครูผู้สอน และครูผู้สอนวิทยาศาสตร์บันทึกอีกรายการ
+  {
+    recordId: "BH-O1",
+    studentId: "30201",
+    ruleId: "BR-04",
+    description: "ใช้โทรศัพท์ระหว่างเรียนสังคมศึกษา",
+    occurredAt: "2570-02-14T10:40:00",
+    recordedByName: "ครูสมหญิง ใจดี",
+    source: "manual",
+  },
+  {
+    recordId: "BH-O2",
+    studentId: "30207",
+    ruleId: "BR-07",
+    description: "ช่วยเพื่อนทำการทดลองวิทยาศาสตร์",
+    occurredAt: "2570-02-15T14:10:00",
+    recordedByName: "ครูมานพ สอนดี",
+    source: "manual",
+  },
   {
     recordId: "BH-001",
     studentId: "30118",
@@ -462,7 +540,7 @@ export const behaviorRecords: BehaviorRecord[] = [
     ruleId: "BR-03",
     description: "ไม่ส่งการบ้านวิชาคณิตศาสตร์ ครั้งที่ 3 ในเดือนนี้",
     occurredAt: "2570-02-15T13:20:00",
-    recordedByName: "ครูวิชัย มานะ (ครูประจำวิชา)",
+    recordedByName: "ครูมานพ สอนดี",
     source: "manual",
   },
   {

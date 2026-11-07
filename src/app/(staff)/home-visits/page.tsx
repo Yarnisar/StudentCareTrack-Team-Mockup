@@ -53,7 +53,7 @@ export default function HomeVisitsPage() {
         title="จัดการการเยี่ยมบ้าน"
         subtitle="นัดหมาย ยืนยัน และบันทึกผลตามแบบฟอร์มการเยี่ยมบ้านนักเรียน"
         action={
-          <Button size="sm" variant="outline" onClick={() => setCreating(true)}>
+          <Button onClick={() => setCreating(true)}>
             <Plus className="size-4" /> สร้างนัดหมาย
           </Button>
         }

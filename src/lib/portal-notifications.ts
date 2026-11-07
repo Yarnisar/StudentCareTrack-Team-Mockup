@@ -38,6 +38,22 @@ export function buildNotifications(input: {
         title: "มีการบันทึกพฤติกรรม",
         body: `${rule?.name ?? "พฤติกรรม"} · ${formatThaiDate(b.occurredAt)} ดูรายละเอียดได้ที่แท็บความประพฤติ`,
       });
+      // แก้ไขหรือยกเลิกรายการแจ้งผู้ปกครองด้วย (UC8 สถานการณ์ B ข้อ 10)
+      const lastEdit = b.editHistory?.at(-1);
+      if (lastEdit)
+        list.push({
+          id: `bh-${b.recordId}-edit-${b.editHistory!.length}`,
+          at: lastEdit.at,
+          title: "มีการแก้ไขบันทึกพฤติกรรม",
+          body: `${rule?.name ?? "พฤติกรรม"} · ดูรายการล่าสุดได้ที่แท็บความประพฤติ`,
+        });
+      if (b.cancelled)
+        list.push({
+          id: `bh-${b.recordId}-cancel`,
+          at: b.cancelled.at,
+          title: "มีการยกเลิกบันทึกพฤติกรรม",
+          body: `${rule?.name ?? "พฤติกรรม"} · ${formatThaiDate(b.occurredAt)} ไม่นับคะแนนแล้ว`,
+        });
     }
 
   if (input.watchLevel > 0)

@@ -22,6 +22,7 @@ import {
   sdqAssessments as seedSdq,
   eqAssessments as seedEq,
   students,
+  otherStudents,
 } from "./mock-data";
 import {
   classifyDimension,
@@ -33,7 +34,7 @@ import {
 import { nowThaiIso } from "./format";
 import { usePathname } from "next/navigation";
 import { DEFAULT_DC_CRITERIA, type DcRound } from "./dc-round";
-import { canRevealCitizenId, defaultRoleFor, ROLE_INFO, type Role } from "./roles";
+import { canRevealCitizenId, defaultRoleFor, recordableRooms, ROLE_INFO, TEACHER_ASSIGNMENTS, type Role } from "./roles";
 import { INITIAL_WINDOWS, shiftDate, windowFor, windowStatus, type AssessmentWindow } from "./periods";
 import { scoreEq, type EqAnswer, type EqAssessment } from "./eq";
 import { eqReviewInfo, sdqReviewInfo, type AssessmentReview, type ReviewKind } from "./assessment-review";
@@ -150,7 +151,27 @@ interface StoreValue {
     occurredOn?: string;
     evidence?: string[];
     source?: BehaviorRecord["source"];
+    backdateReason?: string;
   }) => void;
+  /** นักเรียนที่ครูคนนี้บันทึกพฤติกรรมได้ = ห้องที่เป็นครูประจำชั้น + ห้องที่สอน */
+  recordableStudents: Student[];
+  canRecordStudent: (studentId: string) => boolean;
+  /** ครูประจำชั้นเห็นทุกรายการของห้องตน ห้องที่สอนเห็นเฉพาะรายการที่ตนบันทึก */
+  behaviorVisible: (record: BehaviorRecord) => boolean;
+  /** ผู้บันทึกแก้ไขหรือยกเลิกรายการนี้ได้หรือไม่ ไม่ได้ = เหตุผล (UC8 สถานการณ์ B ข้อ 3, Alt-E) */
+  behaviorEditable: (record: BehaviorRecord) => { ok: true } | { ok: false; reason: string };
+  /** แก้ไขรายการ เก็บประวัติ และคำนวณคะแนนใหม่ */
+  updateBehaviorRecord: (
+    recordId: string,
+    patch: { ruleId: string; occurredOn: string; description: string; backdateReason?: string }
+  ) => void;
+  /** ยกเลิกรายการ ไม่นับคะแนนแต่ยังเก็บประวัติ */
+  cancelBehaviorRecord: (recordId: string, reason: string) => void;
+  /** คะแนนและระดับเฝ้าระวังก่อน/หลัง ถ้าแก้หรือยกเลิกรายการนี้ (สถานการณ์ B ข้อ 6, 11) */
+  previewBehaviorChange: (
+    recordId: string,
+    change: { ruleId: string; occurredOn: string } | "cancel"
+  ) => { scoreBefore: number; scoreAfter: number; levelBefore: number; levelAfter: number };
   setAppointmentStatus: (appointmentId: string, status: AppointmentStatus) => void;
   /** ครูประจำชั้นนัดหมายเยี่ยมบ้าน (UC4 Scenario B) สถานะเริ่มที่ "รอการยืนยัน" */
   createAppointment: (studentId: string, proposedDate: string) => HomeVisitAppointment;
@@ -339,7 +360,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       return a;
     });
 
-    const getStudent = (studentId: string) => students.find((s) => s.studentId === studentId);
+    const getStudent = (studentId: string) =>
+      students.find((s) => s.studentId === studentId) ?? otherStudents.find((s) => s.studentId === studentId);
+    // ขอบเขตตามการมอบหมาย (UC8 ข้อ 6, ตารางขอบเขตสิทธิ์)
+    const rooms = recordableRooms(role);
+    const recordableStudents = [...students, ...otherStudents].filter((s) => rooms.includes(s.roomName));
+    const canRecordStudent = (studentId: string) => recordableStudents.some((s) => s.studentId === studentId);
+    const homeroomRoom = TEACHER_ASSIGNMENTS[role]?.homeroomRoom;
+    const behaviorVisible = (rec: BehaviorRecord) =>
+      (!!homeroomRoom && getStudent(rec.studentId)?.roomName === homeroomRoom) || rec.recordedByName === ROLE_INFO[role].user.name;
 
     const latestScreening = (studentId: string) =>
       screenings
@@ -420,15 +449,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         .filter((b) => b.studentId === studentId)
         .sort((a, b) => b.occurredAt.localeCompare(a.occurredAt));
 
+    /** คะแนนของรายการ: กฎที่ถูกยกเลิก (UC7 Scenario C ข้อ 9) และรายการที่ครูยกเลิก (UC8 สถานการณ์ B) ไม่นับ */
+    const deltaOf = (ruleId: string) => {
+      const rule = behaviorRules.find((r) => r.ruleId === ruleId);
+      return !rule || rule.cancelled ? 0 : rule.scoreDelta;
+    };
     const scoreItems = (studentId: string) =>
-      behaviorOf(studentId).map((rec) => ({
-        // กฎที่ถูกยกเลิกไม่นับคะแนนรายการเดิม (UC7 Scenario C ข้อ 9)
-        delta: (() => {
-          const rule = behaviorRules.find((r) => r.ruleId === rec.ruleId);
-          return !rule || rule.cancelled ? 0 : rule.scoreDelta;
-        })(),
-        at: rec.occurredAt,
-      }));
+      behaviorOf(studentId).map((rec) => ({ delta: rec.cancelled ? 0 : deltaOf(rec.ruleId), at: rec.occurredAt }));
 
     const behaviorScoreOf = (studentId: string, extra?: { delta: number; at: string }) => {
       const items = scoreItems(studentId);
@@ -461,6 +488,68 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         ...prev,
         { studentId, at: nowThaiIso(), by: CURRENT_TEACHER.name, withdraw, reason },
       ]);
+
+    const currentUserName = ROLE_INFO[role].user.name;
+    const behaviorEditable: StoreValue["behaviorEditable"] = (rec) => {
+      if (rec.cancelled) return { ok: false, reason: "รายการนี้ถูกยกเลิกแล้ว" };
+      if (rec.recordedByName !== currentUserName) return { ok: false, reason: `แก้ไขได้เฉพาะผู้บันทึก (${rec.recordedByName})` };
+      const since = (rec.recordedAt ?? rec.occurredAt).slice(0, 10);
+      if (shiftDate(since, behaviorScoreConfig.editDays) < DEMO_TODAY)
+        return { ok: false, reason: `พ้นระยะเวลาแก้ไข ${behaviorScoreConfig.editDays} วันหลังบันทึกแล้ว` };
+      return { ok: true };
+    };
+
+    const previewBehaviorChange: StoreValue["previewBehaviorChange"] = (recordId, change) => {
+      const rec = behaviorRecords.find((r) => r.recordId === recordId)!;
+      const lastWithdraw =
+        watchDecisions
+          .filter((d) => d.studentId === rec.studentId && d.withdraw)
+          .map((d) => d.at)
+          .sort()
+          .at(-1) ?? "";
+      const others = behaviorOf(rec.studentId)
+        .filter((r) => r.recordId !== recordId)
+        .map((r) => ({ delta: r.cancelled ? 0 : deltaOf(r.ruleId), at: r.occurredAt }));
+      const after =
+        change === "cancel"
+          ? others
+          : [...others, { delta: deltaOf(change.ruleId), at: `${change.occurredOn}T${rec.occurredAt.split("T")[1] ?? "00:00:00"}` }];
+      const scoreAfter = runningScore(after, behaviorScoreConfig);
+      const levelAfter = Math.max(watchLevelOf(scoreAfter, behaviorScoreConfig), peakWatchLevel(after, behaviorScoreConfig, lastWithdraw));
+      return {
+        scoreBefore: behaviorScoreOf(rec.studentId),
+        scoreAfter,
+        levelBefore: behaviorWatchLevelOf(rec.studentId),
+        levelAfter,
+      };
+    };
+
+    const updateBehaviorRecord: StoreValue["updateBehaviorRecord"] = (recordId, patch) =>
+      setBehaviorRecords((prev) =>
+        prev.map((r) => {
+          if (r.recordId !== recordId) return r;
+          const occurredAt = `${patch.occurredOn}T${r.occurredAt.split("T")[1] ?? "00:00:00"}`;
+          const changes = [
+            patch.ruleId !== r.ruleId &&
+              `พฤติกรรม: ${behaviorRules.find((x) => x.ruleId === r.ruleId)?.name} → ${behaviorRules.find((x) => x.ruleId === patch.ruleId)?.name}`,
+            patch.occurredOn !== r.occurredAt.slice(0, 10) && "วันที่เกิดเหตุ",
+            patch.description !== r.description && "รายละเอียด",
+          ].filter(Boolean) as string[];
+          return {
+            ...r,
+            ruleId: patch.ruleId,
+            occurredAt,
+            description: patch.description,
+            backdateReason: patch.backdateReason ?? r.backdateReason,
+            editHistory: [...(r.editHistory ?? []), { at: nowThaiIso(), by: currentUserName, changes }],
+          };
+        })
+      );
+
+    const cancelBehaviorRecord: StoreValue["cancelBehaviorRecord"] = (recordId, reason) =>
+      setBehaviorRecords((prev) =>
+        prev.map((r) => (r.recordId === recordId ? { ...r, cancelled: { at: nowThaiIso(), by: currentUserName, reason } } : r))
+      );
 
     const caseOf = (studentId: string) =>
       careCases.find((c) => c.studentId === studentId && c.status === "active") ??
@@ -724,6 +813,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       occurredOn,
       evidence,
       source = "manual",
+      backdateReason,
     }) => {
       const now = nowThaiIso();
       // วันที่เกิดเหตุย้อนหลังได้ ใช้เวลาที่บันทึกจริงต่อท้าย
@@ -734,8 +824,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         ruleId,
         description,
         occurredAt,
-        recordedByName: CURRENT_TEACHER.name,
+        recordedByName: ROLE_INFO[role].user.name,
+        recordedAt: now,
         source,
+        ...(backdateReason && { backdateReason }),
         ...(evidence && evidence.length > 0 && { evidence }),
       }));
       setBehaviorRecords((prev) => [...created, ...prev]);
@@ -1119,6 +1211,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       saveNineS,
       saveSdq,
       addBehaviorRecord,
+      behaviorEditable,
+      recordableStudents,
+      canRecordStudent,
+      behaviorVisible,
+      updateBehaviorRecord,
+      cancelBehaviorRecord,
+      previewBehaviorChange,
       setAppointmentStatus,
       createAppointment,
       saveGuardianInfo,

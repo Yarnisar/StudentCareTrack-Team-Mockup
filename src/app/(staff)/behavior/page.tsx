@@ -45,8 +45,9 @@ function BehaviorContent() {
   const [recording, setRecording] = useState(false);
 
   const records = useMemo(
-    () => [...store.behaviorRecords].sort((a, b) => b.occurredAt.localeCompare(a.occurredAt)),
-    [store.behaviorRecords]
+    // ครูประจำชั้นเห็นทุกรายการของห้องตน ห้องที่สอนเห็นเฉพาะรายการที่ตนบันทึก (ตารางขอบเขตสิทธิ์)
+    () => store.behaviorRecords.filter(store.behaviorVisible).sort((a, b) => b.occurredAt.localeCompare(a.occurredAt)),
+    [store.behaviorRecords, store.behaviorVisible]
   );
 
   return (

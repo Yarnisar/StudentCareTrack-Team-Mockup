@@ -235,6 +235,14 @@ export interface BehaviorRecord {
   source: "manual" | "card_scan";
   /** รูปหลักฐาน (data URL ที่ย่อแล้ว) — PROTOTYPE: Project 2 เก็บไฟล์บน server แล้วเก็บแค่ลิงก์ */
   evidence?: string[];
+  /** เวลาที่บันทึกจริง ใช้นับระยะเวลาแก้ไข (ไม่มี = ใช้วันที่เกิดเหตุ) */
+  recordedAt?: string;
+  /** เหตุผลเมื่อบันทึกย้อนหลัง (UC8 ข้อ 8) */
+  backdateReason?: string;
+  /** ยกเลิกแล้ว: ไม่นับคะแนนแต่ยังเก็บประวัติ (UC8 สถานการณ์ B ข้อ 9) */
+  cancelled?: { at: string; by: string; reason: string };
+  /** ประวัติการแก้ไขโดยผู้บันทึก */
+  editHistory?: { at: string; by: string; changes: string[] }[];
 }
 
 export type AppointmentStatus =

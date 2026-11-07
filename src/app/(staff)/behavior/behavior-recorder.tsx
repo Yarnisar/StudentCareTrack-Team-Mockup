@@ -42,17 +42,19 @@ type Feedback = { kind: "added" | "duplicate" | "not_found" | "saved"; text: str
 
 const RULE_GROUPS: RuleKind[] = ["deduct", "add", "refer"];
 
-export function BehaviorRecorder({ onClose }: { onClose: () => void }) {
+/** studentId: เปิดจากหน้านักเรียน เลือกนักเรียนคนนั้นไว้ให้แล้ว เหลือเลือกพฤติกรรม */
+export function BehaviorRecorder({ onClose, studentId }: { onClose: () => void; studentId?: string }) {
   const store = useStore();
   const online = useOnline();
   const [ruleId, setRuleId] = useState("");
-  const [entries, setEntries] = useState<Entry[]>([]);
+  const [entries, setEntries] = useState<Entry[]>(() => (studentId ? [{ studentId, via: "search" }] : []));
   const [code, setCode] = useState("");
   const [feedback, setFeedback] = useState<Feedback>(null);
   const [showDetails, setShowDetails] = useState(false);
   const [occurredOn, setOccurredOn] = useState(DEMO_TODAY);
   const [description, setDescription] = useState("");
   const [evidence, setEvidence] = useState<string[]>([]);
+  const [backdateReason, setBackdateReason] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
   const activeRules = store.behaviorRules.filter((r) => r.isActive);
@@ -67,17 +69,34 @@ export function BehaviorRecorder({ onClose }: { onClose: () => void }) {
     return { before, after };
   };
   /** มีนักเรียนในรายการแล้ว = รอบนี้ล็อกพฤติกรรมไว้ */
-  const locked = entries.length > 0;
+  // เปิดจากหน้านักเรียน: มีนักเรียนในรายการก่อนเลือกพฤติกรรมได้ จึงล็อกเมื่อเลือกพฤติกรรมแล้วเท่านั้น
+  const locked = entries.length > 0 && !!rule;
   const q = code.trim();
   // รหัสบัตรรูปแบบ "เลขประจำตัว-ลำดับบัตร" หรือพิมพ์เลขประจำตัวเอง
   const isCode = /^[\d-]+$/.test(q);
   // ไม่มีบัตร: พิมพ์ชื่อแล้วกดเลือกจากรายชื่อที่ตรง
-  const nameMatches = q !== "" && !isCode ? store.students.filter((s) => s.fullName.includes(q)).slice(0, 5) : [];
+  const nameMatches = q !== "" && !isCode ? store.recordableStudents.filter((s) => s.fullName.includes(q)).slice(0, 5) : [];
+  // บันทึกย้อนหลังได้ไม่เกินที่แอดมินกำหนด และต้องระบุเหตุผล (ข้อ 6, 8, Alt-B)
+  const minDate = shiftDate(DEMO_TODAY, -store.behaviorScoreConfig.backdateDays);
+  const backdated = occurredOn < DEMO_TODAY;
+  const dateError =
+    occurredOn > DEMO_TODAY
+      ? "วันที่เกิดเหตุต้องไม่เกินวันนี้"
+      : occurredOn < minDate
+        ? `บันทึกย้อนหลังได้ไม่เกิน ${store.behaviorScoreConfig.backdateDays} วัน`
+        : backdated && backdateReason.trim() === ""
+          ? "ระบุเหตุผลที่บันทึกย้อนหลัง"
+          : "";
   const hasDetails = occurredOn !== DEMO_TODAY || description.trim() !== "" || evidence.length > 0;
 
   const add = (student: Student, via: Entry["via"]) => {
     setCode("");
     inputRef.current?.focus();
+    // ตรวจสิทธิ์ต่อนักเรียน: ต้องเป็นห้องที่เป็นครูประจำชั้นหรือห้องที่สอน (ข้อ 6, Alt-B ข้อ 4)
+    if (!store.canRecordStudent(student.studentId)) {
+      setFeedback({ kind: "not_found", text: `${student.fullName} (${student.roomName}) ไม่อยู่ในห้องที่คุณสอนหรือเป็นครูประจำชั้น จึงบันทึกไม่ได้` });
+      return;
+    }
     if (entries.some((e) => e.studentId === student.studentId)) {
       setFeedback({ kind: "duplicate", text: `${student.fullName} อยู่ในรายการแล้ว` });
       return;
@@ -136,6 +155,7 @@ export function BehaviorRecorder({ onClose }: { onClose: () => void }) {
         occurredOn,
         evidence,
         source: via === "scan" ? "card_scan" : "manual",
+        backdateReason: backdated ? backdateReason.trim() : undefined,
       });
     }
     const notes = [`แจ้งผู้ปกครอง ${entries.length} คนในระบบ`];
@@ -283,7 +303,7 @@ export function BehaviorRecorder({ onClose }: { onClose: () => void }) {
               <div className="mt-2 flex flex-wrap gap-1.5">
                 <span className="text-[11.5px] text-muted-foreground">จำลองการสแกน:</span>
                 {/* บัตรตัวอย่าง รวมบัตรที่ถูกยกเลิกแล้ว 1 ใบ เพื่อดูกรณีสแกนไม่ได้ */}
-                {store.studentCards.slice(0, 7).map((c) => (
+                {store.studentCards.map((c) => (
                   <button
                     key={c.cardId}
                     type="button"
@@ -352,12 +372,21 @@ export function BehaviorRecorder({ onClose }: { onClose: () => void }) {
                       type="date"
                       aria-label="วันที่เกิดเหตุ"
                       value={occurredOn}
+                      min={minDate}
                       max={DEMO_TODAY}
                       onChange={(e) => setOccurredOn(e.target.value)}
                       className="h-10 w-40"
                     />
                   </div>
                 </div>
+                {backdated && (
+                  <Input
+                    aria-label="เหตุผลที่บันทึกย้อนหลัง"
+                    placeholder="เหตุผลที่บันทึกย้อนหลัง (จำเป็น)"
+                    value={backdateReason}
+                    onChange={(e) => setBackdateReason(e.target.value)}
+                  />
+                )}
                 <Textarea
                   aria-label="รายละเอียดเหตุการณ์"
                   rows={2}
@@ -411,6 +440,13 @@ export function BehaviorRecorder({ onClose }: { onClose: () => void }) {
               )}
             </div>
             <div className="divide-y divide-border">
+              {!rule &&
+                entries.map((e) => (
+                  <div key={e.studentId} className="py-2.5 text-[13.5px]">
+                    <span className="font-semibold">{store.getStudent(e.studentId)?.fullName}</span>
+                    <span className="ml-2 text-[12px] text-muted-foreground">เลือกพฤติกรรมด้านบน</span>
+                  </div>
+                ))}
               {rule &&
                 entries.map((e) => {
                   const s = store.getStudent(e.studentId);
@@ -455,7 +491,15 @@ export function BehaviorRecorder({ onClose }: { onClose: () => void }) {
               <WifiOff className="size-4" /> ออฟไลน์ · รายการยังอยู่ในหน้านี้ กดบันทึกได้เมื่อกลับมาออนไลน์
             </p>
           )}
-          <Button className="h-12 w-full text-[15px]" disabled={entries.length === 0 || !online} onClick={save}>
+          {dateError && entries.length > 0 && (
+            <p className="mb-2 text-[12.5px] text-destructive">
+              {dateError}{" "}
+              <button type="button" className="underline underline-offset-2" onClick={() => setShowDetails(true)}>
+                แก้ที่ “เพิ่มรายละเอียด”
+              </button>
+            </p>
+          )}
+          <Button className="h-12 w-full text-[15px]" disabled={entries.length === 0 || !rule || !online || !!dateError} onClick={save}>
             {entries.length === 0 ? "บันทึก" : `ตรวจแล้ว บันทึก ${entries.length} คน`}
           </Button>
         </div>

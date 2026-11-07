@@ -10,6 +10,7 @@
 import { formatThaiDate, formatThaiTime } from "@/lib/format";
 import { DEMO_TODAY } from "@/lib/mock-data";
 import { useStore } from "@/lib/store";
+import { scopeText } from "./shared";
 import type { BehaviorRecord } from "@/lib/types";
 import {
   SEVERITY_LABEL,
@@ -42,7 +43,7 @@ export function VariantB({ records }: { records: BehaviorRecord[] }) {
         <div>
           <h2 className="text-[15.5px] font-bold">ประวัติการบันทึกความประพฤติ</h2>
           <p className="mt-1 mb-3 text-xs text-muted-foreground">
-            ครูทั่วไปบันทึกได้ทุกห้องที่สอน · ครูประจำชั้นดูแลนักเรียนในห้องตนเอง
+            {scopeText(store.role)}
           </p>
 
           <div className="space-y-2.5">

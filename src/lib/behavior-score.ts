@@ -34,6 +34,10 @@ export interface BehaviorScoreConfig {
   minScore: number;
   /** เรียงจากเกณฑ์สูงไปต่ำ ระดับ 1 คือเกณฑ์แรกที่ถึง */
   watchLevels: WatchLevel[];
+  /** บันทึกย้อนหลังได้ไม่เกินกี่วัน (UC8 ข้อ 6, Alt-B) */
+  backdateDays: number;
+  /** ผู้บันทึกแก้ไขหรือยกเลิกได้ภายในกี่วันหลังบันทึก (UC8 สถานการณ์ B, Alt-E) */
+  editDays: number;
 }
 
 /** ค่าตั้งต้น: เริ่ม 100 เพดานเท่าคะแนนเริ่มต้น ต่ำสุด 0 ตามรายงาน ส่วนเกณฑ์เฝ้าระวังเป็นค่าตัวอย่าง ยังไม่ได้ตกลงกับโรงเรียน */
@@ -45,6 +49,9 @@ export const DEFAULT_BEHAVIOR_SCORE: BehaviorScoreConfig = {
     { atOrBelow: 80, notify: [] },
     { atOrBelow: 60, notify: ["level_head", "guidance"] },
   ],
+  // PROTOTYPE: ค่าตัวอย่าง ยังไม่ได้ตกลงกับโรงเรียน
+  backdateDays: 7,
+  editDays: 3,
 };
 
 export interface ScoreItem {
@@ -87,6 +94,8 @@ export function watchLevelOf(score: number, cfg: BehaviorScoreConfig): number {
 export function validateScoreConfig(cfg: BehaviorScoreConfig): string[] {
   const errors: string[] = [];
   if (cfg.minScore >= cfg.startScore) errors.push("คะแนนต่ำสุดต้องน้อยกว่าคะแนนเริ่มต้น");
+  if (cfg.backdateDays < 0) errors.push("ระยะบันทึกย้อนหลังต้องไม่ติดลบ");
+  if (cfg.editDays < 0) errors.push("ระยะเวลาแก้ไขต้องไม่ติดลบ");
   if (cfg.ceiling !== null && cfg.ceiling < cfg.startScore) errors.push("เพดานต้องไม่น้อยกว่าคะแนนเริ่มต้น");
   cfg.watchLevels.forEach((l, i) => {
     if (l.atOrBelow < cfg.minScore || l.atOrBelow >= cfg.startScore)

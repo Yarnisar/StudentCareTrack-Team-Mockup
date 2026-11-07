@@ -1,4 +1,5 @@
 "use client";
+import { recordableRooms, TEACHER_ASSIGNMENTS, type Role } from "@/lib/roles";
 
 /**
  * PROTOTYPE ONLY — ส่วนที่ทุก variant ใช้ร่วมกัน (ทิ้งได้)
@@ -100,4 +101,14 @@ export function ScoreChip({
       {positive ? `+${delta}` : delta}
     </span>
   );
+}
+
+/** ขอบเขตรายการที่ผู้ใช้คนนี้เห็น ตามการมอบหมาย */
+export function scopeText(role: Role): string {
+  const a = TEACHER_ASSIGNMENTS[role];
+  if (!a) return "";
+  const taught = recordableRooms(role).filter((r) => r !== a.homeroomRoom);
+  return a.homeroomRoom
+    ? `ทุกรายการของนักเรียน ${a.homeroomRoom} ที่คุณเป็นครูประจำชั้น${taught.length ? ` และรายการที่คุณบันทึกให้นักเรียน ${taught.join(", ")}` : ""}`
+    : `รายการที่คุณบันทึกให้นักเรียนห้องที่สอน (${recordableRooms(role).join(", ")})`;
 }

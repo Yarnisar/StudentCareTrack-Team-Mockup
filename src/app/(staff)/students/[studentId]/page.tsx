@@ -11,6 +11,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ruleKind, ruleScoreText } from "@/lib/behavior-rules";
 import { useStore } from "@/lib/store";
+import { BehaviorRecorder } from "../../behavior/behavior-recorder";
 import { REVIEW_STATE_LABEL } from "@/lib/assessment-review";
 import { dcCriteria, CURRENT_TERM } from "@/lib/mock-data";
 import { downloadCsv } from "@/lib/csv";
@@ -61,6 +62,7 @@ export default function StudentDetailPage({
   const student = store.getStudent(studentId);
   // เปิดดูเลขบัตรเต็มเป็นรายครั้ง (ออกจากหน้านี้แล้วกลับมาจะซ่อนอีก)
   const [citizenIdRevealed, setCitizenIdRevealed] = useState(false);
+  const [recording, setRecording] = useState(false);
 
   if (!student) return <p className="p-8 text-sm text-muted-foreground">ไม่พบข้อมูลนักเรียน</p>;
 
@@ -222,6 +224,9 @@ export default function StudentDetailPage({
               <LinkButton variant="outline" href={`/screening/${studentId}`}>
                 คัดกรองใหม่
               </LinkButton>
+              <Button variant="outline" onClick={() => setRecording(true)}>
+                บันทึกพฤติกรรม
+              </Button>
               <LinkButton href={`/care-cases?student=${studentId}`}>
                 {careCase ? "ดู case ช่วยเหลือ" : "เปิด case ช่วยเหลือ"}
               </LinkButton>
@@ -394,7 +399,7 @@ export default function StudentDetailPage({
                     {REVIEW_STATE_LABEL[store.sdqReview(studentId).state]}
                   </span>
                   <span className="flex-1" />
-                  <LinkButton size="sm" variant="outline" href={`/assessment/review/${studentId}`}>
+                  <LinkButton variant="outline" href={`/assessment/review/${studentId}`}>
                     ตรวจผล SDQ / EQ
                   </LinkButton>
                 </div>
@@ -585,7 +590,14 @@ export default function StudentDetailPage({
                         <span className="w-32 shrink-0 text-[12.5px] text-muted-foreground">
                           {formatThaiDateTime(rec.occurredAt)}
                         </span>
-                        <span className="flex-1 text-[13.5px]">{rule?.name}{rule?.cancelled && <span className="ml-1.5 rounded bg-muted px-1.5 py-0.5 text-[11px] font-normal text-muted-foreground">กฎถูกยกเลิก</span>}</span>
+                        <span className="flex-1 text-[13.5px]">
+                          <span className={rec.cancelled ? "text-muted-foreground line-through" : ""}>{rule?.name}</span>
+                          {(rule?.cancelled || rec.cancelled) && (
+                            <span className="ml-1.5 rounded bg-muted px-1.5 py-0.5 text-[11px] font-normal text-muted-foreground">
+                              {rec.cancelled ? "ยกเลิกแล้ว ไม่นับคะแนน" : "กฎถูกยกเลิก"}
+                            </span>
+                          )}
+                        </span>
                         {rec.source === "card_scan" && (
                           <span className="rounded bg-accent px-2 py-0.5 text-[11px] font-semibold text-primary">
                             สแกนบัตร
@@ -593,8 +605,8 @@ export default function StudentDetailPage({
                         )}
                         <span
                           className={
-                            refer
-                              ? "w-10 text-right text-[12px] font-semibold text-muted-foreground"
+                            refer || rec.cancelled
+                              ? "w-10 text-right text-[12px] font-semibold text-muted-foreground line-through"
                               : positive
                                 ? "w-10 text-right text-sm font-bold text-risk-green"
                                 : "w-10 text-right text-sm font-bold text-risk-red"
@@ -654,6 +666,7 @@ export default function StudentDetailPage({
           </div>
         </div>
       </div>
+      {recording && <BehaviorRecorder studentId={studentId} onClose={() => setRecording(false)} />}
     </>
   );
 }

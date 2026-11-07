@@ -89,6 +89,15 @@ export function BehaviorScoreCard() {
           <Stepper label="คะแนนต่ำสุด" value={draft.minScore} onChange={(v) => set({ minScore: v })} />
         </div>
 
+        <h3 className="mt-5 text-[13.5px] font-bold">ระยะเวลาบันทึกและแก้ไข</h3>
+        <p className="mt-0.5 mb-2 text-[12px] text-muted-foreground">
+          บันทึกย้อนหลังต้องระบุเหตุผล ผู้บันทึกแก้ไขหรือยกเลิกรายการของตนได้ภายในระยะเวลาที่กำหนด ระบบเก็บประวัติทุกครั้ง
+        </p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Stepper label="บันทึกย้อนหลังได้ไม่เกิน (วัน)" value={draft.backdateDays} step={1} onChange={(v) => set({ backdateDays: v })} />
+          <Stepper label="แก้ไขหรือยกเลิกได้ภายใน (วันหลังบันทึก)" value={draft.editDays} step={1} onChange={(v) => set({ editDays: v })} />
+        </div>
+
         <h3 className="mt-5 text-[13.5px] font-bold">เกณฑ์เฝ้าระวัง</h3>
         <p className="mt-0.5 mb-2 text-[12px] text-muted-foreground">
           ทุกระดับแจ้ง{WATCH_ALWAYS_NOTIFIED} และให้ครูที่ปรึกษาพิจารณาเปิดกรณีช่วยเหลือ เลือกผู้ที่ต้องแจ้งเพิ่มของแต่ละระดับ
@@ -188,22 +197,32 @@ export function BehaviorScoreCard() {
   );
 }
 
-function Stepper({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
+function Stepper({ label, value, onChange, step }: { label: string; value: number; onChange: (v: number) => void; step?: number }) {
   return (
     <div className="rounded-lg border border-border p-3">
       <div className="text-[12.5px] text-muted-foreground">{label}</div>
-      <StepperControl value={value} onChange={onChange} label={label} />
+      <StepperControl value={value} onChange={onChange} label={label} step={step} />
     </div>
   );
 }
 
-function StepperControl({ value, onChange, label }: { value: number; onChange: (v: number) => void; label: string }) {
+function StepperControl({
+  value,
+  onChange,
+  label,
+  step = STEP,
+}: {
+  value: number;
+  onChange: (v: number) => void;
+  label: string;
+  step?: number;
+}) {
   return (
     <div className="mt-1.5 flex items-center gap-2">
       <button
         type="button"
-        aria-label={`${label} ลด ${STEP}`}
-        onClick={() => onChange(value - STEP)}
+        aria-label={`${label} ลด ${step}`}
+        onClick={() => onChange(value - step)}
         className="flex size-9 items-center justify-center rounded-lg border border-border hover:bg-muted"
       >
         <Minus className="size-4" />
@@ -211,8 +230,8 @@ function StepperControl({ value, onChange, label }: { value: number; onChange: (
       <span className="flex-1 text-center text-[16px] font-semibold tabular-nums">{value}</span>
       <button
         type="button"
-        aria-label={`${label} เพิ่ม ${STEP}`}
-        onClick={() => onChange(value + STEP)}
+        aria-label={`${label} เพิ่ม ${step}`}
+        onClick={() => onChange(value + step)}
         className="flex size-9 items-center justify-center rounded-lg border border-border hover:bg-muted"
       >
         <Plus className="size-4" />

@@ -7,10 +7,15 @@
  * คอลัมน์รายละเอียดกว้างที่สุดและตัดบรรทัดได้เอง ไม่มีการ truncate เลย
  */
 
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { ROLE_INFO } from "@/lib/roles";
+import { EditBehaviorRecord } from "../edit-record";
 import { formatThaiDate, formatThaiTime } from "@/lib/format";
 import { DEMO_TODAY } from "@/lib/mock-data";
 import { useStore } from "@/lib/store";
+import { scopeText } from "./shared";
 import type { BehaviorRecord } from "@/lib/types";
 import {
   ScoreChip,
@@ -24,6 +29,34 @@ export const VARIANT_A_NAME = "ตารางเต็มความกว้�
 export function VariantA({ records }: { records: BehaviorRecord[] }) {
   const store = useStore();
   const ruleOf = useRuleOf();
+  const [editing, setEditing] = useState<BehaviorRecord | null>(null);
+  /** ผู้บันทึกแก้ไข/ยกเลิกได้ภายในเวลาที่กำหนด (UC8 สถานการณ์ B) คนอื่นไม่เห็นปุ่ม */
+  const action = (rec: BehaviorRecord) => {
+    const check = store.behaviorEditable(rec);
+    if (check.ok)
+      return (
+        <Button size="sm" variant="outline" onClick={() => setEditing(rec)}>
+          แก้ไข
+        </Button>
+      );
+    // ผู้บันทึกเองแต่พ้นเวลา: บอกเหตุผล (Alt-E)
+    if (!rec.cancelled && rec.recordedByName === ROLE_INFO[store.role].user.name)
+      return <span className="text-[11.5px] text-muted-foreground">{check.reason}</span>;
+    return null;
+  };
+  const statusNote = (rec: BehaviorRecord) =>
+    rec.cancelled ? (
+      <span className="ml-1.5 rounded bg-muted px-1.5 py-0.5 text-[11px] font-normal text-muted-foreground" title={`${rec.cancelled.by}: ${rec.cancelled.reason}`}>
+        ยกเลิกแล้ว
+      </span>
+    ) : (rec.editHistory ?? []).length > 0 ? (
+      <span
+        className="ml-1.5 rounded bg-muted px-1.5 py-0.5 text-[11px] font-normal text-muted-foreground"
+        title={rec.editHistory!.map((h) => `${formatThaiDate(h.at)} ${h.by}: ${h.changes.join(", ") || "-"}`).join("\n")}
+      >
+        แก้ไขแล้ว
+      </span>
+    ) : null;
 
   const studentsTouched = new Set(records.map((r) => r.studentId)).size;
 
@@ -45,7 +78,7 @@ export function VariantA({ records }: { records: BehaviorRecord[] }) {
             <div>
               <h2 className="text-[15.5px] font-bold">ประวัติการบันทึกความประพฤติ</h2>
               <p className="text-xs text-muted-foreground">
-                ครูทั่วไปบันทึกได้ทุกห้องที่สอน · ครูประจำชั้นดูแลนักเรียนในห้องตนเอง
+                {scopeText(store.role)}
               </p>
             </div>
             <span className="flex-1" />
@@ -65,7 +98,8 @@ export function VariantA({ records }: { records: BehaviorRecord[] }) {
                         {student?.roomName} เลขที่ {student?.classNo}
                       </span>
                     </div>
-                    <div className="mt-0.5 text-[13.5px]">{rule?.name}{rule?.cancelled && <span className="ml-1.5 rounded bg-muted px-1.5 py-0.5 text-[11px] font-normal text-muted-foreground">กฎถูกยกเลิก</span>}</div>
+                    <div className={`mt-0.5 text-[13.5px] ${rec.cancelled ? "text-muted-foreground line-through" : ""}`}>{rule?.name}{rule?.cancelled && <span className="ml-1.5 rounded bg-muted px-1.5 py-0.5 text-[11px] font-normal text-muted-foreground">กฎถูกยกเลิก</span>}</div>
+                    {statusNote(rec)}
                     {rec.description !== "-" && (
                       <div className="mt-0.5 text-[12.5px] text-muted-foreground">{rec.description}</div>
                     )}
@@ -77,8 +111,9 @@ export function VariantA({ records }: { records: BehaviorRecord[] }) {
                       <SourceBadge source={rec.source} evidence={rec.evidence} />
                     </div>
                   </div>
-                  <div className="flex self-start">
-                    <ScoreChip delta={rule?.scoreDelta ?? 0} cancelled={!!rule?.cancelled} />
+                  <div className="flex flex-col items-end gap-2 self-start">
+                    <ScoreChip delta={rule?.scoreDelta ?? 0} cancelled={!!rule?.cancelled || !!rec.cancelled} />
+                    {action(rec)}
                   </div>
                 </div>
               );
@@ -115,7 +150,11 @@ export function VariantA({ records }: { records: BehaviorRecord[] }) {
                         {student?.roomName} เลขที่ {student?.classNo}
                       </div>
                     </td>
-                    <td className="py-3 pr-3">{rule?.name}{rule?.cancelled && <span className="ml-1.5 rounded bg-muted px-1.5 py-0.5 text-[11px] font-normal text-muted-foreground">กฎถูกยกเลิก</span>}</td>
+                    <td className="py-3 pr-3">
+                      <span className={rec.cancelled ? "text-muted-foreground line-through" : ""}>{rule?.name}</span>
+                      {rule?.cancelled && <span className="ml-1.5 rounded bg-muted px-1.5 py-0.5 text-[11px] font-normal text-muted-foreground">กฎถูกยกเลิก</span>}
+                      {statusNote(rec)}
+                    </td>
                     <td className="py-3 pr-3 text-muted-foreground">{rec.description}</td>
                     <td className="py-3 pr-3">
                       <SourceBadge source={rec.source} evidence={rec.evidence} />
@@ -124,7 +163,10 @@ export function VariantA({ records }: { records: BehaviorRecord[] }) {
                       {rec.recordedByName}
                     </td>
                     <td className="py-3">
-                      <ScoreChip delta={rule?.scoreDelta ?? 0} cancelled={!!rule?.cancelled} />
+                      <div className="flex flex-col items-center gap-2">
+                        <ScoreChip delta={rule?.scoreDelta ?? 0} cancelled={!!rule?.cancelled || !!rec.cancelled} />
+                        {action(rec)}
+                      </div>
                     </td>
                   </tr>
                 );
@@ -134,6 +176,7 @@ export function VariantA({ records }: { records: BehaviorRecord[] }) {
         </CardContent>
       </Card>
 
+      {editing && <EditBehaviorRecord record={editing} onClose={() => setEditing(null)} />}
     </div>
   );
 }
