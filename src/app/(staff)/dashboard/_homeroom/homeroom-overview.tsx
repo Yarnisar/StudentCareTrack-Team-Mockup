@@ -2,7 +2,7 @@
 
 /**
  * ภาพรวมของครูประจำชั้น (UC1): แต่ละกระบวนการไปถึงไหน และอะไรใกล้หมดเวลา
- * ตารางสถานะ 5 กระบวนการ → กดตัวเลขเพื่อดูรายชื่อ (Subflow B) → กดรายการเพื่อไปทำต่อ
+ * ① เรื่องที่ด่วนที่สุด → ② การ์ด 4 กระบวนการ กดเพื่อดูรายชื่อ (Subflow B) → ③ รายการ กดเพื่อไปทำต่อ + ผลคัดกรอง
  * ตัวกรองปีการศึกษา / ภาคเรียน / สถานะ และส่งออกตามตัวกรองปัจจุบัน (Subflow C)
  * สลับเป็นปฏิทินได้ เพื่อดูว่างานไหนต้องเสร็จเมื่อไร (homeroom-calendar.tsx)
  * ใช้ข้อมูลจริงใน store ตัวเลขจึงตรงกับหน้าอื่นและขยับตามงานที่ทำ
@@ -19,7 +19,15 @@ import { downloadCsv } from "@/lib/csv";
 import { formatThaiDate } from "@/lib/format";
 import { CURRENT_TEACHER, CURRENT_TERM } from "@/lib/mock-data";
 import { useStore } from "@/lib/store";
-import { Filter, ProcessTable, STATUS_TAG } from "../_shared/process-table";
+import {
+  concernsOf,
+  FOCUS_PRIMARY,
+  Filter,
+  FocusBox,
+  ProcessCards,
+  RiskPanel,
+  STATUS_TAG,
+} from "../_shared/process-table";
 import {
   PROCESS_LABEL,
   processStatus,
@@ -35,7 +43,7 @@ import { HomeroomCalendar } from "./homeroom-calendar";
 type StatusFilter = Status | "open" | "all";
 
 const STATUS_FILTER_LABEL: Record<StatusFilter, string> = {
-  open: "ยังไม่เสร็จทั้งหมด",
+  open: "งานค้าง",
   overdue: STATUS_LABEL.overdue,
   near_due: STATUS_LABEL.near_due,
   pending: STATUS_LABEL.pending,
@@ -49,7 +57,7 @@ const SEMESTERS = [1, 2];
 
 const matches = (item: Item, process: ProcessKey | "all", status: StatusFilter) =>
   (process === "all" || item.process === process) &&
-  (status === "all" || (status === "open" ? item.status !== "done" : item.status === status));
+  (status === "all" || (status === "open" ? item.status !== "done" && item.status !== "watch" : item.status === status));
 
 export function HomeroomOverview() {
   const store = useStore();
@@ -70,6 +78,12 @@ export function HomeroomOverview() {
     const same = p === process && s === status;
     setProcess(same ? "all" : p);
     setStatus(same ? "open" : s);
+  };
+  /** จากกล่องโฟกัส: เลือกแล้วเลื่อนไปที่รายชื่อ */
+  const showList = (p: ProcessKey, s: StatusFilter) => {
+    setProcess(p);
+    setStatus(s);
+    document.getElementById("overview-list")?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   const resetTerm = () => {
@@ -127,21 +141,6 @@ export function HomeroomOverview() {
             ))}
           </NativeSelect>
         </Filter>
-        {view === "table" && (
-          <Filter label="สถานะ">
-            <NativeSelect
-              value={status}
-              onChange={(e) => setStatus(e.target.value as StatusFilter)}
-              className="w-48"
-            >
-              {(Object.keys(STATUS_FILTER_LABEL) as StatusFilter[]).map((s) => (
-                <option key={s} value={s}>
-                  {STATUS_FILTER_LABEL[s]}
-                </option>
-              ))}
-            </NativeSelect>
-          </Filter>
-        )}
         <span className="flex-1" />
         {view === "table" && (
           <Button variant="outline" className="h-10" onClick={exportCsv} disabled={shown.length === 0}>
@@ -152,67 +151,106 @@ export function HomeroomOverview() {
 
       {view === "calendar" && !noData && <HomeroomCalendar events={events} periods={periods} />}
 
-      {(view === "table" || noData) && (
+      {noData && (
         <Card className="mt-5">
-          <CardContent className="p-6">
-            <h2 className="text-[15.5px] font-bold">สถานะการดำเนินงาน</h2>
-
-            {noData ? (
-              <div className="py-12 text-center text-[13px] text-muted-foreground">
-                <p>ไม่พบข้อมูลของ{termLabel} ลองเปลี่ยนตัวกรอง</p>
-                <Button variant="outline" size="sm" className="mt-3" onClick={resetTerm}>
-                  กลับไปภาคเรียนปัจจุบัน
-                </Button>
-              </div>
-            ) : (
-              <ProcessTable
-                summaries={summaries}
-                selected={process === "all" ? null : { process, status }}
-                onPick={(p, st) => pick(p, st)}
-                risk={riskOf(store)}
-              />
-            )}
+          <CardContent className="py-12 text-center text-[13px] text-muted-foreground">
+            <p>ไม่พบข้อมูลของ{termLabel} ลองเปลี่ยนตัวกรอง</p>
+            <Button variant="outline" size="sm" className="mt-3" onClick={resetTerm}>
+              กลับไปภาคเรียนปัจจุบัน
+            </Button>
           </CardContent>
         </Card>
       )}
 
       {!noData && view === "table" && (
-        <Card className="mt-5">
-          <CardContent className="p-6">
-            <div className="flex flex-wrap items-center gap-3">
-              <h2 className="text-[15.5px] font-bold">
-                {listTitle} · {shown.length} รายการ
-              </h2>
-              <span className="flex-1" />
-              {(process !== "all" || status !== "open") && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setProcess("all");
-                    setStatus("open");
-                  }}
-                >
-                  ล้างการเลือก
-                </Button>
+        <>
+          {/* ① เรื่องที่ด่วนที่สุด */}
+          <div className="mt-5">
+            <FocusBox
+              concerns={concernsOf(summaries)}
+              unit={(c) => (c.process === "care" ? "case" : "คน")}
+              onPickOther={(c) => showList(c.process, c.status)}
+              actions={(c) => (
+                <button type="button" className={FOCUS_PRIMARY} onClick={() => showList(c.process, c.status)}>
+                  ดูรายชื่อและทำต่อ <ChevronRight className="size-4" />
+                </button>
               )}
-            </div>
-            <p className="mt-0.5 text-[12.5px] text-muted-foreground">
-              เรียงจากเกินกำหนดก่อน กดรายการเพื่อไปทำต่อ
-            </p>
+            />
+          </div>
 
-            <div className="mt-4 space-y-2">
-              {shown.map((item, i) => (
-                <ItemRow key={`${item.process}-${item.student.studentId}-${i}`} item={item} showProcess={process === "all"} />
-              ))}
-              {shown.length === 0 && (
-                <p className="py-10 text-center text-[13px] text-muted-foreground">
-                  ไม่มีรายการในสถานะนี้ ลองเปลี่ยนตัวกรอง
-                </p>
-              )}
+          {/* ② การ์ดกระบวนการ */}
+          <div className="mt-4">
+            <ProcessCards
+              summaries={summaries}
+              selected={process === "all" ? null : process}
+              onPick={(p, st) => pick(p, st)}
+              totalNote={(row) =>
+                row.process === "assessment" ? `จาก ${row.total} คนที่ต้องทำ SDQ` : `จาก ${row.total} ${row.unit}`
+              }
+            />
+          </div>
+
+          {/* ③ รายการ + ผลคัดกรอง */}
+          <div className="mt-4 grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
+            <Card id="overview-list" className="scroll-mt-4">
+              <CardContent className="p-6">
+                <div className="flex flex-wrap items-end gap-3">
+                  <div className="min-w-0 flex-1">
+                    <h2 className="text-[15px] font-bold">
+                      {listTitle} · {shown.length} รายการ
+                    </h2>
+                    <p className="mt-0.5 text-[12.5px] text-muted-foreground">เรียงจากเกินกำหนดก่อน กดรายการเพื่อไปทำต่อ</p>
+                  </div>
+                  {(process !== "all" || status !== "open") && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setProcess("all");
+                        setStatus("open");
+                      }}
+                    >
+                      ล้างการเลือก
+                    </Button>
+                  )}
+                  <Filter label="สถานะ">
+                    <NativeSelect
+                      value={status}
+                      onChange={(e) => setStatus(e.target.value as StatusFilter)}
+                      className="w-44"
+                    >
+                      {(Object.keys(STATUS_FILTER_LABEL) as StatusFilter[]).map((s) => (
+                        <option key={s} value={s}>
+                          {STATUS_FILTER_LABEL[s]}
+                        </option>
+                      ))}
+                    </NativeSelect>
+                  </Filter>
+                </div>
+
+                <div className="mt-4 space-y-2">
+                  {shown.map((item, i) => (
+                    <ItemRow key={`${item.process}-${item.student.studentId}-${i}`} item={item} showProcess={process === "all"} />
+                  ))}
+                  {shown.length === 0 && (
+                    <p className="py-10 text-center text-[13px] text-muted-foreground">
+                      ไม่มีรายการในสถานะนี้ ลองเปลี่ยนตัวกรอง
+                    </p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+            <div className="lg:sticky lg:top-4">
+              <RiskPanel
+                risk={riskOf(store)}
+                total={store.students.length}
+                behavior={summaries.find((r) => r.process === "behavior")}
+                watchActive={process === "behavior"}
+                onPickWatch={() => pick("behavior", "watch")}
+              />
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </>
       )}
     </div>
   );
@@ -251,7 +289,7 @@ function ItemRow({ item, showProcess }: { item: Item; showProcess: boolean }) {
   );
 }
 
-/** ผลคัดกรองเป็นข้อมูลรอง แสดงในแถบสรุปใต้ตารางสถานะงาน */
+/** ผลคัดกรองของห้อง แสดงเป็นแถบสีข้างรายการ */
 function riskOf(store: ReturnType<typeof useStore>) {
   const count = (g: "green" | "amber" | "red") =>
     store.students.filter((s) => store.overallRiskOf(s.studentId) === g).length;

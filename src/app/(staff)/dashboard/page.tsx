@@ -25,7 +25,7 @@ export default function DashboardPage() {
         title="ภาพรวมการดูแลช่วยเหลือนักเรียน"
         subtitle={
           isAdmin
-            ? `${CURRENT_TERM.label} · ทั้งโรงเรียน`
+            ? "สรุปเป็นจำนวน ไม่แสดงรายชื่อนักเรียน"
             : `${CURRENT_TERM.label} · ${ROLE_INFO.homeroom.user.title} · แสดง ${store.students.length} จาก ${CLASS_SIZE} คน`
         }
       />
