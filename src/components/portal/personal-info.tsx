@@ -46,6 +46,7 @@ export function PersonalInfo({ viewer, studentIds }: { viewer: "student" | "pare
     watchLevel,
     appointments: store.appointments.filter((a) => a.studentId === studentId),
     sdq: store.sdqOf(studentId),
+    eq: store.eqOf(studentId),
   });
   const unread = notifications.filter((n) => !store.readNotifications.includes(n.id)).length;
 

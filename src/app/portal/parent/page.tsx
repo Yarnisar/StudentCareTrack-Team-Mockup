@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useStore } from "@/lib/store";
 import { formatThaiDate, formatThaiTime } from "@/lib/format";
 import { dcCriteria } from "@/lib/mock-data";
-import { dcSummaryForParent, sdqSummaryForParent } from "@/lib/portal";
+import { dcSummaryForParent } from "@/lib/portal";
 import { buildNotifications } from "@/lib/portal-notifications";
 import { SDQ_PORTAL_LABEL } from "@/lib/types";
 
@@ -24,9 +24,8 @@ export default function ParentHomePage() {
   const parentSdq = store
     .sdqOf(DEMO_STUDENT_ID)
     .find((s) => s.rater === "parent" && s.round === 1);
-  const sdqSummary = sdqSummaryForParent(
-    store.sdqOf(DEMO_STUDENT_ID).filter((s) => s.round === 1)
-  );
+  // เปิดผลหลังครูที่ปรึกษาตรวจแล้วเท่านั้น และแสดงผล ณ เวลาที่ตรวจ (UC10 สถานการณ์ B ข้อ 7)
+  const sdqSummary = store.sdqReview(DEMO_STUDENT_ID).review?.released.sdq ?? null;
   const dc = dcSummaryForParent(
     store.dcResultOf(DEMO_STUDENT_ID),
     dcCriteria.length
@@ -140,7 +139,7 @@ export default function ParentHomePage() {
                     {sdqSummary ? (
                       SDQ_PORTAL_LABEL[sdqSummary]
                     ) : (
-                      <span className="text-muted-foreground">รอผล</span>
+                      <span className="text-muted-foreground">รอครูตรวจผล</span>
                     )}
                   </div>
                 </div>

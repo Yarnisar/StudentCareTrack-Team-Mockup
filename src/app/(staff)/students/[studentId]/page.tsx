@@ -11,6 +11,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ruleKind, ruleScoreText } from "@/lib/behavior-rules";
 import { useStore } from "@/lib/store";
+import { REVIEW_STATE_LABEL } from "@/lib/assessment-review";
 import { dcCriteria, CURRENT_TERM } from "@/lib/mock-data";
 import { downloadCsv } from "@/lib/csv";
 import { formatThaiDate, formatThaiDateTime, maskCitizenId } from "@/lib/format";
@@ -387,7 +388,16 @@ export default function StudentDetailPage({
 
             <Card>
               <CardContent className="p-6">
-                <h3 className="mb-3 text-[15.5px] font-bold">ผลการประเมิน SDQ (3 ผู้ประเมิน)</h3>
+                <div className="mb-3 flex flex-wrap items-center gap-2">
+                  <h3 className="text-[15.5px] font-bold">ผลการประเมิน SDQ (3 ผู้ประเมิน)</h3>
+                  <span className="rounded-md bg-muted px-2 py-0.5 text-[11.5px] font-semibold text-muted-foreground">
+                    {REVIEW_STATE_LABEL[store.sdqReview(studentId).state]}
+                  </span>
+                  <span className="flex-1" />
+                  <LinkButton size="sm" variant="outline" href={`/assessment/review/${studentId}`}>
+                    ตรวจผล SDQ / EQ
+                  </LinkButton>
+                </div>
                 <div className="grid gap-3 sm:grid-cols-3">
                   {(["teacher", "student", "parent"] as SdqRater[]).map((rater) => {
                     const rec = sdqSet.find((s) => s.rater === rater);

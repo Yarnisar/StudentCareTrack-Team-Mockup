@@ -20,6 +20,7 @@ import {
   homeVisitRecords as seedHomeVisitRecords,
   screenings as seedScreenings,
   sdqAssessments as seedSdq,
+  eqAssessments as seedEq,
   students,
 } from "./mock-data";
 import {
@@ -33,7 +34,10 @@ import { nowThaiIso } from "./format";
 import { usePathname } from "next/navigation";
 import { DEFAULT_DC_CRITERIA, type DcRound } from "./dc-round";
 import { canRevealCitizenId, defaultRoleFor, ROLE_INFO, type Role } from "./roles";
-import { INITIAL_WINDOWS, shiftDate, type AssessmentWindow } from "./periods";
+import { INITIAL_WINDOWS, shiftDate, windowFor, windowStatus, type AssessmentWindow } from "./periods";
+import { scoreEq, type EqAnswer, type EqAssessment } from "./eq";
+import { eqReviewInfo, sdqReviewInfo, type AssessmentReview, type ReviewKind } from "./assessment-review";
+import { sdqSummaryForParent } from "./portal";
 import { DEFAULT_BEHAVIOR_SCORE, peakWatchLevel, runningScore, watchLevelOf, type BehaviorScoreConfig } from "./behavior-score";
 import {
   AccessLog,
@@ -97,6 +101,19 @@ interface StoreValue {
   latestScreening: (studentId: string) => Screening | undefined;
   overallRiskOf: (studentId: string) => RiskGroup | null;
   sdqOf: (studentId: string) => SdqAssessment[];
+  /** EQ ภาคเรียนนี้ (UC10) */
+  eq: EqAssessment[];
+  eqOf: (studentId: string) => EqAssessment | undefined;
+  /** ส่งหรือแก้คำตอบ EQ ก่อนปิดรับ แก้แล้วเก็บประวัติและประมวลผลใหม่ */
+  saveEq: (studentId: string, answers: Record<number, EqAnswer>) => void;
+  /** นักเรียนมัธยมเลือกไม่ทำ EQ (Alt-B) */
+  declineEq: (studentId: string) => void;
+  /** การตรวจผลของครูที่ปรึกษา (สถานการณ์ B) */
+  reviews: AssessmentReview[];
+  sdqReview: (studentId: string) => ReturnType<typeof sdqReviewInfo> & { review?: AssessmentReview };
+  eqReview: (studentId: string) => ReturnType<typeof eqReviewInfo> & { review?: AssessmentReview };
+  /** ยืนยันว่าตรวจผลแล้ว → เปิดผล ณ ตอนนี้ให้นักเรียนและผู้ปกครอง */
+  confirmReview: (studentId: string, kind: ReviewKind) => void;
   behaviorOf: (studentId: string) => BehaviorRecord[];
   /** คะแนนความประพฤติปัจจุบัน ใส่ extra เพื่อดูคะแนนหลังบันทึกรายการใหม่ (UC8 ข้อ 11) */
   behaviorScoreOf: (studentId: string, extra?: { delta: number; at: string }) => number;
@@ -246,7 +263,7 @@ const StoreContext = createContext<StoreValue | null>(null);
 let seq = 1000;
 const nextId = (prefix: string) => `${prefix}-${++seq}`;
 
-export type DraftForm = "screening" | "red_flag" | "nine_s" | `sdq_${SdqRater}` | "home_visit";
+export type DraftForm = "screening" | "red_flag" | "nine_s" | `sdq_${SdqRater}` | "eq" | "home_visit";
 
 /** id คือ studentId ของแบบประเมิน หรือ appointmentId ของการเยี่ยมบ้าน */
 export const draftKey = (form: DraftForm, id: string) => `${form}:${id}`;
@@ -259,6 +276,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [redFlags, setRedFlags] = useState<RedFlagAssessment[]>([]);
   const [nineS, setNineS] = useState<NineSAssessment[]>([]);
   const [sdq, setSdq] = useState<SdqAssessment[]>(seedSdq);
+  const [eq, setEq] = useState<EqAssessment[]>(seedEq);
+  const [reviews, setReviews] = useState<AssessmentReview[]>([]);
   const [behaviorRecords, setBehaviorRecords] = useState<BehaviorRecord[]>(seedBehaviorRecords);
   const [rawAppointments, setAppointments] = useState<HomeVisitAppointment[]>(seedAppointments);
   const [careCases, setCareCases] = useState<CareCase[]>(seedCareCases);
@@ -333,6 +352,59 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     };
 
     const sdqOf = (studentId: string) => sdq.filter((s) => s.studentId === studentId);
+    const eqOf = (studentId: string) => eq.find((e) => e.studentId === studentId);
+    const reviewOf = (studentId: string, kind: ReviewKind) =>
+      reviews.filter((r) => r.studentId === studentId && r.kind === kind).sort((a, b) => b.reviewedAt.localeCompare(a.reviewedAt))[0];
+    const sdqWindow = windowFor(assessmentWindows, "sdq");
+    const sdqReview: StoreValue["sdqReview"] = (studentId) => {
+      const review = reviewOf(studentId, "sdq");
+      const roundClosed = !!sdqWindow && windowStatus(sdqWindow) === "closed";
+      return { ...sdqReviewInfo(sdqOf(studentId).filter((x) => x.round === 1), review, roundClosed), review };
+    };
+    const eqReview: StoreValue["eqReview"] = (studentId) => {
+      const review = reviewOf(studentId, "eq");
+      return { ...eqReviewInfo(eqOf(studentId), review), review };
+    };
+    const confirmReview: StoreValue["confirmReview"] = (studentId, kind) => {
+      const e = eqOf(studentId);
+      setReviews((prev) => [
+        ...prev,
+        {
+          studentId,
+          kind,
+          reviewedAt: nowThaiIso(),
+          reviewedBy: CURRENT_TEACHER.name,
+          released:
+            kind === "sdq"
+              ? { sdq: sdqSummaryForParent(sdqOf(studentId).filter((x) => x.round === 1)) }
+              : { eq: e?.status === "completed" ? e.levels : null },
+        },
+      ]);
+    };
+    const saveEq: StoreValue["saveEq"] = (studentId, answers) => {
+      clearDraft(draftKey("eq", studentId));
+      const at = nowThaiIso();
+      setEq((prev) =>
+        prev.map((e) =>
+          e.studentId === studentId
+            ? {
+                ...e,
+                status: "completed",
+                answers,
+                ...scoreEq(answers),
+                assessedAt: at,
+                editHistory: e.status === "completed" && e.assessedAt ? [...(e.editHistory ?? []), e.assessedAt] : e.editHistory,
+              }
+            : e
+        )
+      );
+    };
+    const declineEq: StoreValue["declineEq"] = (studentId) =>
+      setEq((prev) =>
+        prev.map((e) =>
+          e.studentId === studentId ? { ...e, status: "declined", answers: {}, scores: null, levels: null, assessedAt: nowThaiIso() } : e
+        )
+      );
 
     const behaviorOf = (studentId: string) =>
       behaviorRecords
@@ -606,6 +678,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           level,
           status: "completed",
           assessedAt: nowThaiIso(),
+          editHistory:
+            base.status === "completed" && base.assessedAt ? [...(base.editHistory ?? []), base.assessedAt] : base.editHistory,
         };
         saved = updated;
         if (idx >= 0) {
@@ -1011,6 +1085,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       latestScreening,
       overallRiskOf,
       sdqOf,
+      eq,
+      eqOf,
+      saveEq,
+      declineEq,
+      reviews,
+      sdqReview,
+      eqReview,
+      confirmReview,
       behaviorOf,
       behaviorScoreOf,
       behaviorWatchLevelOf,
@@ -1068,7 +1150,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       fulfillRequest,
       logCitizenIdView,
     };
-  }, [role, screenings, redFlags, nineS, sdq, behaviorRecords, rawAppointments, careCases, homeVisitRecords, accessLogs, assessmentWindows, behaviorRules, behaviorScoreConfig, drafts, screeningWatch, educationDocuments, documentRequests, dcAssessments, readNotifications, dcRounds, watchDecisions, registryCorrections, studentCards]);
+  }, [role, screenings, redFlags, nineS, sdq, eq, reviews, behaviorRecords, rawAppointments, careCases, homeVisitRecords, accessLogs, assessmentWindows, behaviorRules, behaviorScoreConfig, drafts, screeningWatch, educationDocuments, documentRequests, dcAssessments, readNotifications, dcRounds, watchDecisions, registryCorrections, studentCards]);
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }

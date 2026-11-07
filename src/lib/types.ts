@@ -196,6 +196,8 @@ export interface SdqAssessment {
   level: SdqLevel | null;
   status: "pending" | "completed";
   assessedAt: string | null;
+  /** เวลาที่ส่งครั้งก่อน ๆ เมื่อแก้คำตอบที่ส่งแล้ว (UC10 ข้อ 13) */
+  editHistory?: string[];
 }
 
 export interface EqAssessment {

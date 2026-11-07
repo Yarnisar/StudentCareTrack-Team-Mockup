@@ -8,6 +8,7 @@
 import { formatThaiDate, formatThaiTime } from "./format";
 import { DEMO_TODAY } from "./mock-data";
 import type { BehaviorRecord, BehaviorRule, HomeVisitAppointment, SdqAssessment } from "./types";
+import type { EqAssessment } from "./eq";
 
 export interface PortalNotification {
   id: string;
@@ -23,6 +24,7 @@ export function buildNotifications(input: {
   watchLevel: number;
   appointments: HomeVisitAppointment[];
   sdq: SdqAssessment[];
+  eq?: EqAssessment;
 }): PortalNotification[] {
   const list: PortalNotification[] = [];
 
@@ -77,6 +79,14 @@ export function buildNotifications(input: {
       at: `${DEMO_TODAY}T07:00:00`,
       title: "มีแบบประเมิน SDQ ที่ต้องทำ",
       body: input.viewer === "parent" ? "ฉบับผู้ปกครอง ทำได้ที่เมนูผลประเมิน" : "ฉบับนักเรียน ทำได้ที่เมนูแบบประเมิน",
+    });
+
+  if (input.viewer === "student" && input.eq?.status === "pending")
+    list.push({
+      id: `eq-${input.eq.id}`,
+      at: `${DEMO_TODAY}T07:00:00`,
+      title: "มีแบบประเมิน EQ ที่ต้องทำ",
+      body: "ทำได้ที่เมนูแบบประเมิน หรือเลือกไม่ทำก็ได้",
     });
 
   // แยกสถานะอ่านแล้วของนักเรียนกับผู้ปกครอง แม้เป็นเหตุการณ์เดียวกัน

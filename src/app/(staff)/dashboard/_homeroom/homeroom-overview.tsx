@@ -191,7 +191,7 @@ export function HomeroomOverview() {
               selected={process === "all" ? null : process}
               onPick={(p, st) => pick(p, st)}
               totalNote={(row) =>
-                row.process === "assessment" ? `จาก ${row.total} คนที่ต้องทำ SDQ` : `จาก ${row.total} ${row.unit}`
+                row.process === "assessment" ? `จาก ${row.total} รายการ (SDQ และ EQ)` : `จาก ${row.total} ${row.unit}`
               }
             />
           </div>

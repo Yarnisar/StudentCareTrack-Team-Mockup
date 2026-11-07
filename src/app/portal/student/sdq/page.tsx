@@ -9,6 +9,8 @@ import { SdqForm } from "@/components/assessment/sdq-form";
 import { LinkButton } from "@/components/ui/link-button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useStore } from "@/lib/store";
+import { SDQ_PORTAL_LABEL } from "@/lib/types";
+import { AssessmentTabs } from "@/components/portal/assessment-tabs";
 
 const DEMO_STUDENT_ID = "30125";
 
@@ -22,6 +24,7 @@ export default function StudentSdqPage() {
       .sdqOf(DEMO_STUDENT_ID)
       .find((s) => s.rater === "student" && s.round === 1)?.status === "completed";
 
+  const releasedSdq = store.sdqReview(DEMO_STUDENT_ID).review?.released.sdq;
   // ปิดรับแล้ว (UC9) นักเรียนติดต่อครูประจำชั้น
   const lockedSdq = lockedWindowFor(store.assessmentWindows, "sdq");
 
@@ -33,6 +36,7 @@ export default function StudentSdqPage() {
       back="/portal/student"
     >
       <div className="space-y-4 p-5">
+        <AssessmentTabs studentId={DEMO_STUDENT_ID} />
         <div className="flex gap-2.5 rounded-xl border border-blue-200 bg-accent p-3.5">
           <HeartHandshake className="size-5 shrink-0 text-primary" />
           <p className="text-[12.5px] leading-relaxed text-accent-foreground">
@@ -50,6 +54,16 @@ export default function StudentSdqPage() {
               <p className="mt-3 text-[13.5px] leading-relaxed text-muted-foreground">
                 ขอบคุณที่ตอบแบบประเมินนะ หากอยากพูดคุยหรือมีเรื่องไม่สบายใจ
                 สามารถติดต่อครูประจำชั้นได้ตลอดเวลา
+              </p>
+              {/* ผลเปิดให้เห็นหลังครูที่ปรึกษาตรวจแล้วเท่านั้น (UC10 สถานการณ์ B) */}
+              <p className="mt-3 rounded-lg bg-surface px-3 py-2.5 text-[13px]">
+                {releasedSdq ? (
+                  <>
+                    ครูประจำชั้นตรวจผลแล้ว: <b>{SDQ_PORTAL_LABEL[releasedSdq]}</b>
+                  </>
+                ) : (
+                  <span className="text-muted-foreground">รอครูประจำชั้นตรวจผล เมื่อตรวจแล้วจะเห็นผลสรุปที่หน้านี้</span>
+                )}
               </p>
               <LinkButton className="mt-5 w-full" href="/portal/student">
                 กลับหน้าข้อมูลของฉัน

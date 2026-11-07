@@ -62,7 +62,7 @@ export function MobileShell({
 
       <nav className="flex border-t border-border bg-card pb-3">
         {tabs.map(({ href, label, icon: Icon }) => {
-          const active = pathname === href;
+          const active = pathname === href || (href === "/portal/student/sdq" && pathname === "/portal/student/eq");
           return (
             <Link
               key={href}

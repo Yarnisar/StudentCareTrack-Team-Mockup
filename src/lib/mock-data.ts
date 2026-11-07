@@ -19,6 +19,7 @@ import {
   SubjectSubmission,
   StudentCard,
 } from "./types";
+import { scoreEq, type EqAnswer, type EqAssessment } from "./eq";
 
 /**
  * วันที่อ้างอิงของต้นแบบ (ปี พ.ศ.)
@@ -305,7 +306,61 @@ export const sdqAssessments: SdqAssessment[] = [
     status: "completed",
     assessedAt: "2570-02-13",
   },
+  // ด.ช. ภูมิ: ตอบครบ 3 ฉบับแล้ว รอครูที่ปรึกษาตรวจผล (UC10 สถานการณ์ B)
+  {
+    id: "SDQ-005",
+    studentId: "30118",
+    termId: CURRENT_TERM.termId,
+    round: 1,
+    rater: "student",
+    raterName: "ด.ช. ภูมิ ตั้งใจเรียน",
+    answers: {},
+    totalDifficulties: 18,
+    scaleScores: { emotional: 4, conduct: 5, hyperactivity: 6, peer: 3, prosocial: 6 },
+    level: "risk",
+    status: "completed",
+    assessedAt: "2570-02-14",
+  },
+  {
+    id: "SDQ-006",
+    studentId: "30118",
+    termId: CURRENT_TERM.termId,
+    round: 1,
+    rater: "parent",
+    raterName: "ผู้ปกครองของ ด.ช. ภูมิ",
+    answers: {},
+    totalDifficulties: 17,
+    scaleScores: { emotional: 4, conduct: 4, hyperactivity: 6, peer: 3, prosocial: 6 },
+    level: "risk",
+    status: "completed",
+    assessedAt: "2570-02-15",
+  },
 ];
+
+/**
+ * EQ ภาคเรียนนี้: นักเรียนมัธยมประเมินตนเองทุกคน (UC10 Pre-condition 2)
+ * ด.ญ. แพรวา (นักเรียนในพอร์ทัล) ยังไม่ได้ทำ ใช้ทดลองทำ EQ หรือเลือกไม่ทำ
+ */
+const eqAnswers = (values: number[]) =>
+  Object.fromEntries(values.map((v, i) => [i + 1, v])) as Record<number, EqAnswer>;
+const eqDone = (studentId: string, values: number[], at: string): EqAssessment => ({
+  id: `EQ-${studentId}`,
+  studentId,
+  termId: CURRENT_TERM.termId,
+  status: "completed",
+  answers: eqAnswers(values),
+  ...scoreEq(eqAnswers(values)),
+  assessedAt: at,
+});
+export const eqAssessments: EqAssessment[] = students.map((st) =>
+  st.studentId === "30131"
+    ? eqDone("30131", [3, 4, 3, 3, 2, 2, 3, 3, 2, 3, 1, 2], "2570-02-14")
+    : st.studentId === "30140"
+      ? eqDone("30140", [4, 3, 4, 4, 3, 4, 3, 4, 4, 3, 3, 4], "2570-02-12")
+      : st.studentId === "30171"
+        ? { id: "EQ-30171", studentId: "30171", termId: CURRENT_TERM.termId, status: "declined", answers: {}, scores: null, levels: null, assessedAt: "2570-02-13" }
+        : { id: `EQ-${st.studentId}`, studentId: st.studentId, termId: CURRENT_TERM.termId, status: "pending", answers: {}, scores: null, levels: null, assessedAt: null }
+);
 
 /**
  * กฎตัวอย่าง คะแนนอิงระดับการดำเนินการในภาคผนวก ข (ว่ากล่าวตักเตือน 5, ทำทัณฑ์บน 10–15, ทำกิจกรรม 20)

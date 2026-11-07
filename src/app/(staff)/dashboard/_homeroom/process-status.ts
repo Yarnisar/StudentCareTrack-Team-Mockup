@@ -10,6 +10,7 @@ import { formatThaiDate } from "@/lib/format";
 import { CURRENT_TERM, DEMO_TODAY } from "@/lib/mock-data";
 import { dueStatus, isLocked, KIND_LABEL, windowFor, type AssessmentKind } from "@/lib/periods";
 import { draftKey, type useStore } from "@/lib/store";
+import { needsReview } from "@/lib/assessment-review";
 import { CASE_URGENCY_LABEL, SDQ_RATER_LABEL, type CaseUrgency, type Student } from "@/lib/types";
 
 type Store = ReturnType<typeof useStore>;
@@ -141,12 +142,27 @@ export function processStatus(store: Store, termId: string): { items: Item[]; su
     }
 
     // ---- การประเมิน (UC10): SDQ 3 ฉบับ (ครู / นักเรียน / ผู้ปกครอง) ที่ระบบเปิดเมื่อ Red Flag หรือ 9S ควรดูแล
-    // PROTOTYPE: ยังไม่มี EQ
     const sdq = store.sdq.filter((s) => s.studentId === id && s.termId === termId);
     if (sdq.length > 0) {
       const pending = sdq.filter((s) => s.status === "pending");
-      if (pending.length === 0) {
-        items.push({ process: "assessment", status: "done", student, detail: "SDQ ครบทั้ง 3 ฉบับ" });
+      const review = store.sdqReview(id);
+      if (needsReview(review.state)) {
+        // ครูที่ปรึกษาตรวจผลก่อนเปิดให้นักเรียนและผู้ปกครอง (UC10 สถานการณ์ B) — ไม่มีวันครบกำหนดในรายงาน
+        items.push({
+          process: "assessment",
+          status: "pending",
+          student,
+          detail:
+            review.state === "re_review"
+              ? "มีการแก้คำตอบ SDQ หลังตรวจ ต้องตรวจผลใหม่"
+              : review.state === "closed_incomplete"
+                ? "ปิดรอบแล้วผู้ตอบ SDQ ไม่ครบ ตรวจจากข้อมูลที่มี"
+                : "SDQ ครบทั้ง 3 ฉบับ รอครูตรวจผล",
+          href: `/assessment/review/${id}`,
+          action: "ตรวจผล",
+        });
+      } else if (pending.length === 0) {
+        items.push({ process: "assessment", status: "done", student, detail: "SDQ ครบทั้ง 3 ฉบับ ตรวจผลแล้ว" });
       } else {
         const teacherPending = pending.some((s) => s.rater === "teacher");
         const others = pending.filter((s) => s.rater !== "teacher").map((s) => SDQ_RATER_LABEL[s.rater]);
@@ -163,6 +179,26 @@ export function processStatus(store: Store, termId: string): { items: Item[]; su
         // ครบกำหนดตามช่วงเวลา SDQ ที่เปิดอยู่ — PROTOTYPE: SDQ ในระบบผูกรอบ 1 ตายตัว ยังแยกตามรอบจริงไม่ได้
         items.push(open("assessment", "sdq", base));
       }
+    }
+
+    // ---- EQ (UC10): มัธยมให้นักเรียนประเมินตนเอง เลือกไม่ทำได้
+    const eq = store.eqOf(id);
+    const eqReview = store.eqReview(id);
+    if (eq?.status === "declined") {
+      items.push({ process: "assessment", status: "done", student, detail: "นักเรียนเลือกไม่ทำ EQ" });
+    } else if (eq?.status === "completed" && needsReview(eqReview.state)) {
+      items.push({
+        process: "assessment",
+        status: "pending",
+        student,
+        detail: eqReview.state === "re_review" ? "นักเรียนแก้คำตอบ EQ หลังตรวจ ต้องตรวจผลใหม่" : "นักเรียนทำ EQ แล้ว รอครูตรวจผล",
+        href: `/assessment/review/${id}`,
+        action: "ตรวจผล EQ",
+      });
+    } else if (eq?.status === "completed") {
+      items.push({ process: "assessment", status: "done", student, detail: "EQ ตรวจผลแล้ว" });
+    } else if (eq) {
+      items.push(open("assessment", "eq", { student, detail: "รอนักเรียนทำ EQ" }));
     }
 
     // ---- เยี่ยมบ้าน: ทุกคน ปีละครั้ง

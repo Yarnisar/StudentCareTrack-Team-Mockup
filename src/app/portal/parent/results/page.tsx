@@ -7,8 +7,8 @@ import { SdqForm } from "@/components/assessment/sdq-form";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useStore } from "@/lib/store";
+import { EQ_DOMAIN_LABEL, EQ_DOMAINS, EQ_LEVEL_LABEL } from "@/lib/eq";
 import { dcCriteria, CURRENT_TERM } from "@/lib/mock-data";
-import { sdqSummaryForParent } from "@/lib/portal";
 import { DC_LEVEL_LABEL, SDQ_PORTAL_LABEL, SdqRater } from "@/lib/types";
 
 const DEMO_STUDENT_ID = "30125";
@@ -22,7 +22,11 @@ export default function ParentResultsPage() {
   const sdqSet = store.sdqOf(DEMO_STUDENT_ID).filter((s) => s.round === 1);
   const parentSdq = sdqSet.find((s) => s.rater === "parent");
   const dc = store.dcResultOf(DEMO_STUDENT_ID);
-  const summary = sdqSummaryForParent(sdqSet);
+  // เปิดผลหลังครูที่ปรึกษาตรวจแล้วเท่านั้น (UC10 สถานการณ์ B)
+  const sdqReview = store.sdqReview(DEMO_STUDENT_ID);
+  const summary = sdqReview.review?.released.sdq ?? null;
+  const eq = store.eqOf(DEMO_STUDENT_ID);
+  const eqReleased = store.eqReview(DEMO_STUDENT_ID).review?.released.eq;
 
   if (!student) return null;
 
@@ -94,6 +98,11 @@ export default function ParentResultsPage() {
               })}
             </div>
 
+            {!summary && sdqSet.some((r) => r.status === "completed") && (
+              <p className="mt-3 rounded-xl bg-surface px-3.5 py-2.5 text-[13px] text-muted-foreground">
+                {sdqReview.state === "waiting" ? "ผลสรุปจะแสดงเมื่อทุกฝ่ายตอบครบและครูประจำชั้นตรวจแล้ว" : "รอครูประจำชั้นตรวจผล"}
+              </p>
+            )}
             {summary && (
               <p className="mt-3 rounded-xl bg-surface px-3.5 py-2.5 text-[13px] leading-relaxed">
                 <span className="font-semibold">{SDQ_PORTAL_LABEL[summary]}</span>
@@ -115,6 +124,28 @@ export default function ParentResultsPage() {
             <p className="mt-3 text-[11.5px] leading-relaxed text-muted-foreground">
               ผลประเมินใช้เพื่อการดูแลช่วยเหลือ ไม่มีผลต่อการเรียนหรือคะแนนของนักเรียน
             </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-5">
+            <div className="text-[13.5px] font-semibold text-muted-foreground">แบบประเมิน EQ · นักเรียนประเมินตนเอง</div>
+            {!eq || eq.status === "pending" ? (
+              <p className="mt-2 text-[13px] text-muted-foreground">นักเรียนยังไม่ได้ทำ</p>
+            ) : eq.status === "declined" ? (
+              <p className="mt-2 text-[13px] text-muted-foreground">นักเรียนเลือกไม่ทำ EQ ในภาคเรียนนี้</p>
+            ) : eqReleased ? (
+              <div className="mt-2 space-y-1.5">
+                {EQ_DOMAINS.map((d) => (
+                  <div key={d} className="flex justify-between rounded-lg bg-surface px-3 py-2 text-[13px]">
+                    <span className="font-semibold">ด้าน{EQ_DOMAIN_LABEL[d]}</span>
+                    <span>{EQ_LEVEL_LABEL[eqReleased[d]]}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-2 text-[13px] text-muted-foreground">นักเรียนทำแล้ว รอครูประจำชั้นตรวจผล</p>
+            )}
           </CardContent>
         </Card>
 

@@ -102,13 +102,13 @@ export const INITIAL_WINDOWS: AssessmentWindow[] = [
   {
     id: "W6",
     kind: "eq",
-    label: "ประเมิน EQ ปลายภาค",
-    openDate: "2570-03-01",
+    label: "ประเมิน EQ",
+    openDate: "2570-02-10",
     closeDate: "2570-03-15",
-    enabled: false,
+    enabled: true,
     lockAfterClose: false,
     remindDaysBefore: 5,
-    raters: ["teacher", "student"],
+    raters: ["student"], // มัธยม: นักเรียนประเมินตนเอง
   },
   {
     id: "W7",
