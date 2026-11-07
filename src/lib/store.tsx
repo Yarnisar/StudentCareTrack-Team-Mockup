@@ -10,8 +10,8 @@ import { createContext, useContext, useMemo, useState, type ReactNode } from "re
 import {
   appointments as seedAppointments,
   behaviorRecords as seedBehaviorRecords,
-  behaviorRules as seedBehaviorRules,
-  careCases as seedCareCases,
+  behaviorRules as seedBehaviorRules,  careCases as seedCareCases,
+  studentCards as seedCards,
   CURRENT_TEACHER,
   CURRENT_TERM,
   DEMO_TODAY,
@@ -44,6 +44,7 @@ import {
   CareCase,
   CaseUrgency,
   CareMethod,
+  StudentCard,
   RegistryCorrection,
   DcAssessment,
   DcLevel,
@@ -166,6 +167,12 @@ interface StoreValue {
     result: Omit<HomeVisitRecord, "recordId" | "appointmentId" | "studentId" | "signedAt" | "editHistory">,
     changes: string[]
   ) => void;
+  /** บัตรนักเรียนทุกใบ รวมบัตรที่ยกเลิกแล้ว (UC14) */
+  studentCards: StudentCard[];
+  /** ออกบัตรใหม่หรือบัตรทดแทน บัตรทดแทนยกเลิกบัตรเดิมทันที (UC14 สถานการณ์ A ข้อ 11) */
+  issueCards: (studentIds: string[], type: StudentCard["type"], expiresAt: string, reason?: string) => StudentCard[];
+  /** บันทึกสถานะบัตรจริง (สถานการณ์ B) */
+  setCardPhysical: (cardId: string, physical: StudentCard["physical"]) => void;
   /** คำขอแก้ข้อมูลทะเบียน (UC5 Alt-D) */
   registryCorrections: RegistryCorrection[];
   requestRegistryCorrection: (input: Omit<RegistryCorrection, "id" | "by" | "at" | "status">, delivered: boolean) => void;
@@ -284,6 +291,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       status: "open",
     },
   ]);
+  const [studentCards, setStudentCards] = useState<StudentCard[]>(seedCards);
   const [registryCorrections, setRegistryCorrections] = useState<RegistryCorrection[]>([]);
   const [watchDecisions, setWatchDecisions] = useState<StoreValue["watchDecisions"]>([]);
   const [readNotifications, setReadNotifications] = useState<string[]>([]);
@@ -742,6 +750,34 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       clearDraft(draftKey("home_visit", appointmentId));
     };
 
+    const issueCards: StoreValue["issueCards"] = (studentIds, type, expiresAt, reason) => {
+      const today = nowThaiIso().split("T")[0];
+      const created = studentIds.map((studentId): StudentCard => {
+        const n = studentCards.filter((c) => c.studentId === studentId).length + 1;
+        return {
+          cardId: nextId("CARD"),
+          code: `${studentId}-${n}`,
+          studentId,
+          type,
+          reason: type === "replacement" ? reason : undefined,
+          issuedAt: today,
+          expiresAt,
+          status: "active",
+          physical: "none",
+        };
+      });
+      setStudentCards((prev) => [
+        ...prev.map((c) => (studentIds.includes(c.studentId) && c.status === "active" ? { ...c, status: "cancelled" as const } : c)),
+        ...created,
+      ]);
+      return created;
+    };
+
+    const setCardPhysical: StoreValue["setCardPhysical"] = (cardId, physical) =>
+      setStudentCards((prev) =>
+        prev.map((c) => (c.cardId === cardId ? { ...c, physical, physicalAt: nowThaiIso() } : c))
+      );
+
     const requestRegistryCorrection: StoreValue["requestRegistryCorrection"] = (input, delivered) =>
       setRegistryCorrections((prev) => [
         ...prev,
@@ -1001,6 +1037,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       updateHomeVisit,
       registryCorrections,
       requestRegistryCorrection,
+      studentCards,
+      issueCards,
+      setCardPhysical,
       openCase,
       openOrLinkCase,
       planCase,
@@ -1029,7 +1068,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       fulfillRequest,
       logCitizenIdView,
     };
-  }, [role, screenings, redFlags, nineS, sdq, behaviorRecords, rawAppointments, careCases, homeVisitRecords, accessLogs, assessmentWindows, behaviorRules, behaviorScoreConfig, drafts, screeningWatch, educationDocuments, documentRequests, dcAssessments, readNotifications, dcRounds, watchDecisions, registryCorrections]);
+  }, [role, screenings, redFlags, nineS, sdq, behaviorRecords, rawAppointments, careCases, homeVisitRecords, accessLogs, assessmentWindows, behaviorRules, behaviorScoreConfig, drafts, screeningWatch, educationDocuments, documentRequests, dcAssessments, readNotifications, dcRounds, watchDecisions, registryCorrections, studentCards]);
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }

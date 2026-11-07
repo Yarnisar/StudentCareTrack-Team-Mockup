@@ -9,6 +9,7 @@ import {
   FileText,
   Flag,
   HeartPulse,
+  IdCard,
   Home,
   LayoutGrid,
   LogOut,
@@ -58,7 +59,10 @@ const NAV: { title?: string; items: NavItem[] }[] = [
   },
   {
     title: "เอกสาร",
-    items: [{ href: "/documents", label: "เอกสาร ปพ.", icon: FileText }],
+    items: [
+      { href: "/documents", label: "เอกสาร ปพ.", icon: FileText },
+      { href: "/cards", label: "บัตรนักเรียน", icon: IdCard },
+    ],
   },
   {
     title: "ระบบ",

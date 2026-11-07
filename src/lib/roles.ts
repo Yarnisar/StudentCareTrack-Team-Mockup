@@ -63,9 +63,9 @@ const TEACHER_PAGES = [
  * แอดมินดูภาพรวมเป็นจำนวน ตั้งค่า และจัดทำเอกสาร ปพ. เท่านั้น (3.4.1)
  * ไม่เข้าหน้าที่มีข้อมูลรายคน: ผลคัดกรอง ผล SDQ/EQ รายละเอียด case ผลเยี่ยมบ้าน ความประพฤติ และคุณลักษณะฯ
  * การตั้งค่าช่วงเวลาเยี่ยมบ้าน (UC4 Scenario A) และกฎความประพฤติ (UC7) อยู่ในหน้าตั้งค่า
- * PROTOTYPE: ยังไม่มีหน้าจัดทำบัตรนักเรียน (UC14)
+ * จัดทำบัตรนักเรียน (UC14) ใช้ข้อมูลทะเบียนเท่าที่บัตรต้องใช้
  */
-const ADMIN_PAGES = ["/dashboard", "/documents", "/settings"];
+const ADMIN_PAGES = ["/dashboard", "/documents", "/cards", "/settings"];
 
 const ALLOWED: Record<Role, string[]> = {
   admin: ADMIN_PAGES,

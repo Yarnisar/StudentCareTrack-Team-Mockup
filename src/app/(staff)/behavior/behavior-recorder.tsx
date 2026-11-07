@@ -69,7 +69,8 @@ export function BehaviorRecorder({ onClose }: { onClose: () => void }) {
   /** มีนักเรียนในรายการแล้ว = รอบนี้ล็อกพฤติกรรมไว้ */
   const locked = entries.length > 0;
   const q = code.trim();
-  const isCode = /^\d+$/.test(q);
+  // รหัสบัตรรูปแบบ "เลขประจำตัว-ลำดับบัตร" หรือพิมพ์เลขประจำตัวเอง
+  const isCode = /^[\d-]+$/.test(q);
   // ไม่มีบัตร: พิมพ์ชื่อแล้วกดเลือกจากรายชื่อที่ตรง
   const nameMatches = q !== "" && !isCode ? store.students.filter((s) => s.fullName.includes(q)).slice(0, 5) : [];
   const hasDetails = occurredOn !== DEMO_TODAY || description.trim() !== "" || evidence.length > 0;
@@ -87,11 +88,28 @@ export function BehaviorRecorder({ onClose }: { onClose: () => void }) {
   };
 
   const scan = (value: string) => {
-    const student = store.getStudent(value.trim());
-    if (student) add(student, "scan");
+    const v = value.trim();
+    // สแกนบัตร: ตรวจว่าบัตรยังใช้งานได้ บัตรที่ยกเลิกหรือหมดอายุให้เลือกจากรายชื่อแทน (UC8 Alt-A, UC14)
+    const card = store.studentCards.find((c) => c.code === v);
+    if (card) {
+      if (card.status === "cancelled" || card.expiresAt < DEMO_TODAY) {
+        setCode("");
+        setFeedback({
+          kind: "not_found",
+          text: `บัตร “${v}” ${card.status === "cancelled" ? "ถูกยกเลิกแล้ว" : "หมดอายุแล้ว"} ให้พิมพ์ชื่อเลือกจากรายชื่อแทน`,
+        });
+        return;
+      }
+      const student = store.getStudent(card.studentId);
+      if (student) add(student, "scan");
+      return;
+    }
+    // พิมพ์เลขประจำตัวเอง นับเป็นการเลือกจากรายชื่อ
+    const student = store.getStudent(v);
+    if (student) add(student, "search");
     else {
       setCode("");
-      setFeedback({ kind: "not_found", text: `ไม่พบนักเรียนจากบัตร “${value.trim()}” สแกนใหม่ หรือพิมพ์ชื่อแทน` });
+      setFeedback({ kind: "not_found", text: `ไม่พบนักเรียนจากบัตร “${v}” สแกนใหม่ หรือพิมพ์ชื่อแทน` });
     }
   };
 
@@ -264,14 +282,16 @@ export function BehaviorRecorder({ onClose }: { onClose: () => void }) {
             {ruleId && (
               <div className="mt-2 flex flex-wrap gap-1.5">
                 <span className="text-[11.5px] text-muted-foreground">จำลองการสแกน:</span>
-                {store.students.slice(0, 6).map((s) => (
+                {/* บัตรตัวอย่าง รวมบัตรที่ถูกยกเลิกแล้ว 1 ใบ เพื่อดูกรณีสแกนไม่ได้ */}
+                {store.studentCards.slice(0, 7).map((c) => (
                   <button
-                    key={s.studentId}
+                    key={c.cardId}
                     type="button"
-                    onClick={() => scan(s.studentId)}
+                    onClick={() => scan(c.code)}
                     className="rounded-md bg-muted px-2 py-0.5 text-[11.5px] text-muted-foreground hover:bg-muted/70"
                   >
-                    {s.studentId}
+                    {c.code}
+                    {c.status === "cancelled" && " (ยกเลิก)"}
                   </button>
                 ))}
               </div>

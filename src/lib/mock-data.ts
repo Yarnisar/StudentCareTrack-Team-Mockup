@@ -17,6 +17,7 @@ import {
   Screening,
   Student,
   SubjectSubmission,
+  StudentCard,
 } from "./types";
 
 /**
@@ -150,6 +151,7 @@ export const students: Student[] = [
     guardianPhone: "08x-xxx-5504",
     address: "31 ต.บางพลี อ.เมือง จ.สมุทรปราการ",
     sourceSystem: "team_b_registry",
+    hasPhoto: false,
   },
 ];
 
@@ -320,6 +322,21 @@ export const behaviorRules: BehaviorRule[] = [
   { ruleId: "BR-08", name: "ไม่ร่วมกิจกรรมที่โรงเรียนกำหนด", severity: "severe", scoreDelta: -20, isActive: true, recordableBy: ["discipline_head", "executive"] },
   { ruleId: "BR-09", name: "พกพาอาวุธหรือสิ่งที่ใช้เป็นอาวุธ", severity: "refer", scoreDelta: 0, isActive: true, recordableBy: ["teacher"] },
   { ruleId: "BR-10", name: "ทะเลาะวิวาทโดยใช้อาวุธ", severity: "refer", scoreDelta: 0, isActive: true, recordableBy: ["discipline_head", "executive"] },
+];
+
+/** วันสิ้นปีการศึกษา ใช้เป็นวันหมดอายุตั้งต้นของบัตร (UC14 ข้อ 3) */
+export const ACADEMIC_YEAR_END = "2570-03-31";
+
+/**
+ * บัตรตัวอย่าง: ทุกคนมีบัตรที่ใช้งานอยู่ ยกเว้นคนที่ยังไม่มีรูป
+ * ด.ญ. แพรวา เคยทำบัตรหายแล้วออกบัตรทดแทน บัตรเดิม (30125-1) จึงถูกยกเลิก ใช้สาธิตการสแกนบัตรที่ยกเลิกแล้ว
+ */
+export const studentCards: StudentCard[] = [
+  { cardId: "CARD-0", code: "30125-1", studentId: "30125", type: "new", issuedAt: "2569-05-20", expiresAt: ACADEMIC_YEAR_END, status: "cancelled", physical: "handed" },
+  { cardId: "CARD-1", code: "30125-2", studentId: "30125", type: "replacement", reason: "บัตรหาย", issuedAt: "2569-11-10", expiresAt: ACADEMIC_YEAR_END, status: "active", physical: "handed" },
+  ...["30118", "30131", "30140", "30152", "30160", "30171"].map(
+    (id, i): StudentCard => ({ cardId: `CARD-${i + 2}`, code: `${id}-1`, studentId: id, type: "new", issuedAt: "2569-05-20", expiresAt: ACADEMIC_YEAR_END, status: "active", physical: "handed" })
+  ),
 ];
 
 export const behaviorRecords: BehaviorRecord[] = [

@@ -56,7 +56,33 @@ export interface Student {
   address: string;
   /** อ้างอิงจากงานทะเบียนนักเรียนของโรงเรียน — ระบบนี้อ่านอย่างเดียว */
   sourceSystem: "team_b_registry";
+  /** มีรูปถ่ายในระบบทะเบียนหรือไม่ ใช้ตรวจก่อนทำบัตร (UC14 ข้อ 6) ไม่ระบุ = มี */
+  hasPhoto?: boolean;
 }
+
+/**
+ * บัตรนักเรียน (UC14) code คือข้อมูลใน QR ที่ครูสแกนตอนบันทึกพฤติกรรม (UC8)
+ * บัตรทดแทนยกเลิกบัตรเดิมทันที บัตรที่ยกเลิกหรือหมดอายุสแกนไม่ได้ (UC8 Alt-A)
+ */
+export interface StudentCard {
+  cardId: string;
+  code: string;
+  studentId: string;
+  type: "new" | "replacement";
+  reason?: string;
+  issuedAt: string;
+  expiresAt: string;
+  status: "active" | "cancelled";
+  /** สถานะบัตรจริง (สถานการณ์ B) */
+  physical: "none" | "printed" | "handed";
+  physicalAt?: string;
+}
+
+export const CARD_PHYSICAL_LABEL: Record<StudentCard["physical"], string> = {
+  none: "ยังไม่พิมพ์",
+  printed: "พิมพ์แล้ว",
+  handed: "มอบให้นักเรียนแล้ว",
+};
 
 /** รายการตรวจสอบของแต่ละมิติ: ติ๊ก = พบรายการนั้น */
 export interface ScreeningItem {
