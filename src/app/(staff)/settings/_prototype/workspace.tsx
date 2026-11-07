@@ -3,7 +3,7 @@
 /**
  * หน้าตั้งค่าแบบเดียว (รวมแบบร่าง A, B, C)
  * ปัญหาเดิม: ทุกเรื่องเรียงต่อกันในหน้าเดียว และกฎทุกข้อเปิดฟอร์มแก้ไขไว้ตลอด ต้องเลื่อนยาวกว่าจะถึงเรื่องที่จะแก้
- * - แบ่งเป็นแท็บตามเรื่อง เก็บแท็บใน URL (?tab=) ลิงก์ตรงมาที่แท็บได้
+ * - แบ่งเป็นแท็บตามเรื่อง (รวมเกณฑ์คุณลักษณะอันพึงประสงค์ UC12) เก็บแท็บใน URL (?tab=) ลิงก์ตรงมาที่แท็บได้
  * - รายการแสดงเป็นแถวสรุปบรรทัดเดียว กดแถวแล้วแก้ในแผงด้านข้าง (มือถือเป็นแผ่นเต็มจอ) ฟอร์มจึงมีที่เดียว
  * - กฎจัดกลุ่มตามชนิด ตัดคะแนน / เพิ่มคะแนน / ส่งต่อ (UC7 Scenario B ข้อ 7)
  * PROTOTYPE: ค่าที่แก้เก็บใน store มีผลทันทีกับทุกหน้า ยังไม่มีฉบับร่างและการเผยแพร่พร้อมวันเริ่มใช้ (UC7 Scenario E)
@@ -11,7 +11,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { CalendarClock, Gavel, Gauge, History, Minus, Plus, X } from "lucide-react";
+import { CalendarClock, Gavel, Gauge, History, Minus, Plus, Star, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -27,16 +27,18 @@ import { formatThaiDate } from "@/lib/format";
 import type { BehaviorRule, SdqRater } from "@/lib/types";
 import { AuditLogList, useAuditEntries } from "./audit-log";
 import { BehaviorScoreCard } from "./behavior-score-card";
+import { DcRoundSettings } from "./dc-round-settings";
 import { useConfirm } from "./confirm";
 import { windowEnabledConfirm, windowLockConfirm, type ImpactContext } from "./confirm-text";
 import { RuleRecorderPicker } from "./rule-recorder-picker";
 import { RATER_LABEL, STATUS_META, type SettingsPrototype, windowStatus } from "./state";
 
-type Tab = "windows" | "rules" | "score" | "audit";
+type Tab = "windows" | "rules" | "score" | "dc" | "audit";
 const TABS: { key: Tab; label: string; icon: typeof CalendarClock }[] = [
   { key: "windows", label: "ช่วงเวลาประเมิน", icon: CalendarClock },
   { key: "rules", label: "กฎความประพฤติ", icon: Gavel },
   { key: "score", label: "คะแนนและเกณฑ์เฝ้าระวัง", icon: Gauge },
+  { key: "dc", label: "คุณลักษณะอันพึงประสงค์", icon: Star },
   { key: "audit", label: "ประวัติการใช้งาน", icon: History },
 ];
 const KIND_ORDER: RuleKind[] = ["deduct", "add", "refer"];
@@ -120,6 +122,7 @@ export function SettingsWorkspace({
     windows: String(proto.windows.length),
     rules: String(proto.rules.length),
     score: "",
+    dc: "",
     audit: String(entries.length),
   };
 
@@ -263,6 +266,8 @@ export function SettingsWorkspace({
         )}
 
         {tab === "score" && <BehaviorScoreCard />}
+
+        {tab === "dc" && <DcRoundSettings />}
 
         {tab === "audit" && (
           <section>

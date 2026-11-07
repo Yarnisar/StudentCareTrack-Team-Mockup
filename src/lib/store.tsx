@@ -31,6 +31,7 @@ import {
 } from "./rules";
 import { nowThaiIso } from "./format";
 import { usePathname } from "next/navigation";
+import { DEFAULT_DC_CRITERIA, type DcRound } from "./dc-round";
 import { canRevealCitizenId, defaultRoleFor, ROLE_INFO, type Role } from "./roles";
 import { INITIAL_WINDOWS, shiftDate, type AssessmentWindow } from "./periods";
 import { DEFAULT_BEHAVIOR_SCORE, runningScore, watchLevelOf, type BehaviorScoreConfig } from "./behavior-score";
@@ -185,6 +186,13 @@ interface StoreValue {
   /** id การแจ้งเตือนที่ผู้ใช้เปิดอ่านแล้ว (UC3 ข้อ 6) */
   readNotifications: string[];
   markNotificationRead: (id: string) => void;
+  /** รอบประเมินคุณลักษณะของแต่ละภาคเรียน: เกณฑ์ วิธีสรุปผล วันปิดส่งผล (UC12) */
+  dcRounds: DcRound[];
+  saveDcRound: (round: DcRound) => void;
+  /** รอบที่เปิดใช้ของภาคเรียนปัจจุบัน ครูที่ปรึกษาประเมินได้เมื่อมีรอบนี้ (UC13 Pre-condition 2) */
+  activeDcRound: DcRound | undefined;
+  /** รอบนี้มีผลประเมินแล้วหรือยัง ถ้ามีแล้วแก้เกณฑ์ไม่ได้ (UC12 Alt-A) */
+  dcRoundHasResults: (termId: string) => boolean;
   /** ผลประเมินคุณลักษณะทุกรอบ (UC13) */
   dcAssessments: DcAssessment[];
   /** ผลล่าสุดที่ส่งแล้วของนักเรียน ใช้ทำ ปพ.4 / ปพ.6 / ปพ.3 */
@@ -245,6 +253,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       assessedBy: CURRENT_TEACHER.name,
     }))
   );
+  const [dcRounds, setDcRounds] = useState<DcRound[]>([
+    {
+      termId: CURRENT_TERM.termId,
+      termLabel: CURRENT_TERM.label,
+      criteria: DEFAULT_DC_CRITERIA,
+      method: "min",
+      deadline: "2570-03-15",
+      status: "open",
+    },
+  ]);
   const [readNotifications, setReadNotifications] = useState<string[]>([]);
   const [educationDocuments, setEducationDocuments] = useState<EducationDocument[]>(seedDocuments);
   const [documentRequests, setDocumentRequests] = useState<DocumentRequest[]>([]);
@@ -738,6 +756,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       );
     };
 
+    const saveDcRound: StoreValue["saveDcRound"] = (round) =>
+      setDcRounds((prev) => [round, ...prev.filter((r) => r.termId !== round.termId)]);
+    const activeDcRound = dcRounds.find((r) => r.termId === CURRENT_TERM.termId && r.status === "open");
+    // PROTOTYPE: ผลประเมินในต้นแบบเป็นของภาคเรียนปัจจุบันทั้งหมด
+    const dcRoundHasResults = (termId: string) =>
+      termId === CURRENT_TERM.termId && dcAssessments.some((a) => a.status === "submitted");
+
     const markNotificationRead = (id: string) =>
       setReadNotifications((prev) => (prev.includes(id) ? prev : [...prev, id]));
 
@@ -903,6 +928,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setReferralStatus,
       readNotifications,
       markNotificationRead,
+      dcRounds,
+      saveDcRound,
+      activeDcRound,
+      dcRoundHasResults,
       dcAssessments,
       dcResultOf,
       latestDc,
@@ -915,7 +944,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       fulfillRequest,
       logCitizenIdView,
     };
-  }, [role, screenings, redFlags, nineS, sdq, behaviorRecords, rawAppointments, careCases, homeVisitRecords, accessLogs, assessmentWindows, behaviorRules, behaviorScoreConfig, drafts, screeningWatch, educationDocuments, documentRequests, dcAssessments, readNotifications]);
+  }, [role, screenings, redFlags, nineS, sdq, behaviorRecords, rawAppointments, careCases, homeVisitRecords, accessLogs, assessmentWindows, behaviorRules, behaviorScoreConfig, drafts, screeningWatch, educationDocuments, documentRequests, dcAssessments, readNotifications, dcRounds]);
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }

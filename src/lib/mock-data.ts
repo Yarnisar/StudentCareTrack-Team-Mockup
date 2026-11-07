@@ -40,6 +40,12 @@ export const CURRENT_TERM = {
   label: "ภาคเรียนที่ 2 ปีการศึกษา 2569",
 };
 
+/** ภาคเรียนที่เลือกได้ในหน้าตั้งค่า (ภาคปัจจุบันและภาคถัดไป) — PROTOTYPE: ข้อมูลจริงมาจาก Team B */
+export const TERMS = [
+  { termId: CURRENT_TERM.termId, label: CURRENT_TERM.label },
+  { termId: "T2570-1", label: "ภาคเรียนที่ 1 ปีการศึกษา 2570" },
+];
+
 export const CURRENT_TEACHER = {
   name: "ครูสมหญิง ใจดี",
   role: "ครูประจำชั้น ม.3/1",

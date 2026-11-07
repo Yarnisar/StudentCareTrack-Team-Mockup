@@ -6,7 +6,7 @@
  * - แสดงประวัติความประพฤติเป็นหลักฐานประกอบ ไม่แปลงคะแนนความประพฤติเป็นผลโดยอัตโนมัติ (ข้อ 3, 2.1.6)
  * - ให้ระดับแต่ละข้อด้วยปุ่ม บันทึกร่างหรือส่งผล ระบบตรวจว่าครบ 8 ข้อ (ข้อ 4–8, Alt-A, Alt-B)
  * - ผลไม่ผ่าน: แจ้งให้พิจารณาเปิดหรือเชื่อม case ไม่เปิดเอง / ประเมินซ้ำแล้วผ่าน: ให้ทบทวน case เดิม (ข้อ 10–11)
- * PROTOTYPE: ยังไม่มีหน้าตั้งเกณฑ์ (UC12) จึงสรุปผลรวมด้วยวิธีที่เสนอ: ไม่ผ่านถ้ามีข้อใดไม่ผ่าน ไม่อย่างนั้นใช้ระดับที่ต่ำที่สุด
+ * - เกณฑ์รายข้อ วิธีสรุปผลรวม และวันปิดส่งผลมาจากรอบที่แอดมินเปิดใช้ (UC12) ไม่มีรอบเปิดหรือพ้นวันปิดส่งผลแล้วส่งผลไม่ได้ (Pre-condition 2–3)
  */
 
 import { useState } from "react";
@@ -16,29 +16,35 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { ruleScoreText } from "@/lib/behavior-rules";
+import { DC_SUMMARY_METHOD_LABEL, summarizeDc, type DcSummaryMethod } from "@/lib/dc-round";
 import { formatThaiDate } from "@/lib/format";
-import { CURRENT_TEACHER, CURRENT_TERM, dcCriteria } from "@/lib/mock-data";
+import { CURRENT_TEACHER, CURRENT_TERM, DEMO_TODAY, dcCriteria } from "@/lib/mock-data";
 import { useStore } from "@/lib/store";
 import { DC_LEVEL_LABEL, type DcLevel } from "@/lib/types";
 
 const LEVELS: DcLevel[] = [3, 2, 1, 0];
 
-/** ผลรวมตามวิธีที่เสนอ (รอ UC12 กำหนด) */
-function overall(levels: Record<number, DcLevel | null>): DcLevel | null {
-  const values = dcCriteria.map((c) => levels[c.criteriaId]);
-  if (values.some((v) => v == null)) return null;
-  return Math.min(...(values as DcLevel[])) as DcLevel;
+/** ผลรวมตามวิธีที่แอดมินกำหนดในรอบประเมิน (UC12) */
+function overall(levels: Record<number, DcLevel | null>, method: DcSummaryMethod = "min"): DcLevel | null {
+  return summarizeDc(dcCriteria.map((c) => levels[c.criteriaId]), method);
 }
 
 export default function CharacteristicsPage() {
   const store = useStore();
   const [selected, setSelected] = useState<string | null>(null);
+  const round = store.activeDcRound;
+  const method = round?.method ?? "min";
 
   return (
     <>
       <PageHeader title="คุณลักษณะอันพึงประสงค์" subtitle={`ครูที่ปรึกษาประเมิน 8 ประการ · ห้อง ${CURRENT_TEACHER.roomName} · ${CURRENT_TERM.label}`} />
 
       <div className="flex-1 overflow-y-auto p-4 sm:p-8">
+        <p className="mb-4 rounded-xl border border-border bg-card px-4 py-3 text-[13px]">
+          {round
+            ? `รอบ${round.termLabel} · ส่งผลได้ถึง ${formatThaiDate(round.deadline)} · สรุปผลรวมโดย${DC_SUMMARY_METHOD_LABEL[round.method]}`
+            : "แอดมินยังไม่เปิดรอบประเมินของภาคเรียนนี้ จึงยังประเมินไม่ได้"}
+        </p>
         <div className="grid gap-5 xl:grid-cols-[320px_1fr]">
           <Card className="h-fit">
             <CardContent className="p-5">
@@ -47,7 +53,7 @@ export default function CharacteristicsPage() {
                 {store.students.map((s) => {
                   const latest = store.latestDc(s.studentId);
                   const result = store.dcResultOf(s.studentId);
-                  const total = result ? overall(result.levels) : null;
+                  const total = result ? overall(result.levels, method) : null;
                   const status = !latest
                     ? "ยังไม่ประเมิน"
                     : latest.status === "draft"
@@ -95,6 +101,9 @@ function AssessForm({ studentId }: { studentId: string }) {
   const store = useStore();
   const student = store.getStudent(studentId);
   const latest = store.latestDc(studentId);
+  const round = store.activeDcRound;
+  const method = round?.method ?? "min";
+  const closed = !round || DEMO_TODAY > round.deadline;
   const editing = latest?.status === "draft";
   const previous = store.dcAssessments
     .filter((a) => a.studentId === studentId && a.status === "submitted")
@@ -108,14 +117,14 @@ function AssessForm({ studentId }: { studentId: string }) {
   if (!student) return null;
   const missing = dcCriteria.filter((c) => levels[c.criteriaId] == null);
   const behaviors = store.behaviorOf(studentId).slice(0, 5);
-  const total = overall(levels);
+  const total = overall(levels, method);
 
   const submit = () => {
     if (missing.length > 0) {
       setShowMissing(true);
       return;
     }
-    const before = previous ? overall(previous.levels) : null;
+    const before = previous ? overall(previous.levels, method) : null;
     store.saveDcAssessment(studentId, levels, note.trim(), true);
     if (total === 0) setMessage("ส่งผลแล้ว ผลรวมไม่ผ่าน · ระบบแจ้งครูที่ปรึกษาให้พิจารณาเปิดหรือเชื่อม case ช่วยเหลือ");
     else if (before === 0) setMessage("ส่งผลแล้ว ผลประเมินซ้ำเปลี่ยนเป็นผ่าน · ทบทวน case เดิมของนักเรียน");
@@ -128,10 +137,10 @@ function AssessForm({ studentId }: { studentId: string }) {
       <Card>
         <CardContent className="p-6">
           <Header name={student.fullName} sub={`ส่งผลแล้ว ครั้งที่ ${latest.round} · ${formatThaiDate(latest.assessedAt)}`} />
-          <ResultTable levels={latest.levels} />
+          <ResultTable levels={latest.levels} method={method} />
           {latest.note && <p className="mt-3 rounded-lg bg-surface px-3 py-2 text-[13px]">หมายเหตุ: {latest.note}</p>}
           <div className="mt-4 flex justify-end">
-            <Button variant="outline" onClick={() => store.startDcReassessment(studentId)}>
+            <Button variant="outline" disabled={closed} onClick={() => store.startDcReassessment(studentId)}>
               ประเมินซ้ำ (เก็บผลเดิมไว้)
             </Button>
           </div>
@@ -146,7 +155,7 @@ function AssessForm({ studentId }: { studentId: string }) {
       <Card>
         <CardContent className="p-6">
           <Header name={student.fullName} sub={message} />
-          <ResultTable levels={levels} />
+          <ResultTable levels={levels} method={method} />
           {failed && (
             <Link
               href={`/care-cases?student=${studentId}`}
@@ -179,6 +188,7 @@ function AssessForm({ studentId }: { studentId: string }) {
                     <div className="text-[13.5px] font-medium">
                       {c.criteriaId}. {c.name}
                     </div>
+                    {round?.criteria[c.criteriaId] && <div className="text-[11.5px] text-muted-foreground">เกณฑ์: {round.criteria[c.criteriaId]}</div>}
                     {prev != null && <div className="text-[11.5px] text-muted-foreground">ครั้งก่อน: {DC_LEVEL_LABEL[prev]}</div>}
                   </div>
                   <div className="flex flex-wrap gap-1">
@@ -209,6 +219,7 @@ function AssessForm({ studentId }: { studentId: string }) {
             <div className="flex gap-2">
               <Button
                 variant="outline"
+                disabled={closed}
                 onClick={() => {
                   store.saveDcAssessment(studentId, levels, note.trim(), false);
                   setMessage("บันทึกร่างแล้ว กลับมาทำต่อได้ก่อนปิดรอบ");
@@ -216,7 +227,9 @@ function AssessForm({ studentId }: { studentId: string }) {
               >
                 บันทึกร่าง
               </Button>
-              <Button onClick={submit}>ส่งผลประเมิน</Button>
+              <Button disabled={closed} onClick={submit}>
+                ส่งผลประเมิน
+              </Button>
             </div>
           </div>
         </CardContent>
@@ -256,8 +269,8 @@ function Header({ name, sub }: { name: string; sub: string }) {
   );
 }
 
-function ResultTable({ levels }: { levels: Record<number, DcLevel | null> }) {
-  const total = overall(levels);
+function ResultTable({ levels, method }: { levels: Record<number, DcLevel | null>; method: DcSummaryMethod }) {
+  const total = overall(levels, method);
   return (
     <div className="divide-y divide-border rounded-lg border border-border">
       {dcCriteria.map((c) => {
