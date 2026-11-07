@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Sarabun } from "next/font/google";
 import "./globals.css";
 import { StoreProvider } from "@/lib/store";
-import { RoleSwitcher } from "@/components/prototype/role-switcher";
 
 const sarabun = Sarabun({
   weight: ["400", "500", "600", "700"],
@@ -23,7 +22,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <StoreProvider>
           {children}
-          <RoleSwitcher />
         </StoreProvider>
       </body>
     </html>
