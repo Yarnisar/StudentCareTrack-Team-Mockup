@@ -90,8 +90,8 @@ export function RecordsTable({ records }: { records: BehaviorRecord[] }) {
     { key: "all", label: "ทั้งหมด", count: records.length },
     { key: "watch", label: "เฝ้าระวัง", count: watchStudents.length },
     { key: "near", label: "ใกล้เกณฑ์", count: nearStudents.length },
-    // ครูผู้สอนเห็นเฉพาะรายการของตนอยู่แล้ว "ของฉัน" จึงซ้ำกับ "ทั้งหมด"
-    ...(homeroom ? [{ key: "mine" as const, label: "ของฉัน", count: records.filter(match.mine).length }] : []),
+    // ทุกบทบาทเห็นรายการของนักเรียนที่ตนรับผิดชอบหรือสอนทั้งหมด (ตาราง 3.4) จึงมี "ของฉัน" ไว้แยกรายการที่ตนบันทึก
+    { key: "mine" as const, label: "ของฉัน", count: records.filter(match.mine).length },
     { key: "editable", label: "แก้ไขได้", count: records.filter(match.editable).length },
   ];
   const shown = records.filter((r) => match[filter](r) && (!onlyStudent || r.studentId === onlyStudent));
@@ -204,7 +204,7 @@ export function RecordsTable({ records }: { records: BehaviorRecord[] }) {
     <div className="flex-1 overflow-y-auto p-4 pb-24 sm:p-8 sm:pb-24">
       <Card>
         <CardContent className="p-4 sm:p-6">
-          <h2 className="text-[15.5px] font-bold">{homeroom ? `บันทึกของนักเรียน ${homeroom}` : "รายการที่คุณบันทึก"}</h2>
+          <h2 className="text-[15.5px] font-bold">{homeroom ? `บันทึกของนักเรียน ${homeroom}` : "รายการพฤติกรรมของนักเรียนที่สอน"}</h2>
 
           <div className="mt-3 mb-3 flex flex-wrap items-center gap-2" role="group" aria-label="กรองรายการ">
             <div className="flex flex-wrap rounded-lg border border-border bg-card p-1">
