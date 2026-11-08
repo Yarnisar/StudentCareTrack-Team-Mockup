@@ -306,6 +306,8 @@ export interface HomeVisitAppointment {
   visitConfirmDeadline?: string;
   /** ผู้ยืนยันว่าได้เยี่ยมจริง หรือผู้แจ้งว่าไม่ได้เยี่ยม */
   visitRespondedBy?: string;
+  /** ครูยกเลิกนัดพร้อมเหตุผล (Scenario F) */
+  cancelReason?: string;
 }
 
 export interface HomeVisitRecord {

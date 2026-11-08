@@ -223,6 +223,10 @@ interface StoreValue {
   ) => void;
   /** นักเรียนหรือผู้ปกครองยืนยันนัด (Scenario D ข้อ 5) */
   confirmAppointment: (appointmentId: string, by: string) => void;
+  /** ครูเลื่อนนัดที่ยังไม่ถึงวันเยี่ยม: ล้างการยืนยันเดิมและคำขอเปลี่ยนวันที่ค้าง แจ้งนักเรียนและผู้ปกครอง รอยืนยันนัดใหม่ (Scenario F) */
+  postponeAppointment: (appointmentId: string, newDateTime: string) => void;
+  /** ครูยกเลิกนัดพร้อมเหตุผล แล้วนัดหมายใหม่ตามสถานการณ์ B (Scenario F) */
+  cancelAppointment: (appointmentId: string, reason: string) => void;
   /** ขอเปลี่ยนวันพร้อมเหตุผล วันเดิมยังมีผล (Alt-C ข้อ 1–2) */
   requestReschedule: (appointmentId: string, date: string, reason: string, by: string) => void;
   /** ครูพิจารณาคำขอเปลี่ยนวัน: รับวันใหม่ หรือคงวันเดิม (Alt-C ข้อ 3) */
@@ -1222,6 +1226,36 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           : { ...a, status: "pending", reschedule: undefined }
       );
 
+    // แจ้งนักเรียนและผู้ปกครองทางอีเมล (ต้นแบบบันทึกเป็นบันทึกการส่งจำลอง ไม่ระบุชื่อนักเรียน)
+    const logVisitEmail = (text: string) =>
+      setNotificationLog((prev) => [
+        { id: nextId("NLOG"), at: nowThaiIso(), channel: "อีเมล (จำลอง)", to: "นักเรียนและผู้ปกครอง", text },
+        ...prev,
+      ]);
+
+    const postponeAppointment: StoreValue["postponeAppointment"] = (appointmentId, newDateTime) => {
+      patchAppointment(appointmentId, (a) => ({
+        ...a,
+        proposedDate: newDateTime,
+        status: "pending",
+        confirmedBy: undefined,
+        reschedule: undefined,
+        cancelReason: undefined,
+      }));
+      logVisitEmail("ครูเลื่อนนัดเยี่ยมบ้าน ขอให้ยืนยันนัดใหม่");
+    };
+
+    const cancelAppointment: StoreValue["cancelAppointment"] = (appointmentId, reason) => {
+      patchAppointment(appointmentId, (a) => ({
+        ...a,
+        status: "cancelled",
+        confirmedBy: undefined,
+        reschedule: undefined,
+        cancelReason: reason,
+      }));
+      logVisitEmail(`ครูยกเลิกนัดเยี่ยมบ้าน · เหตุผล: ${reason}`);
+    };
+
     const respondVisit: StoreValue["respondVisit"] = (appointmentId, visited, by) =>
       patchAppointment(appointmentId, (a) => ({
         ...a,
@@ -1620,6 +1654,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       createAppointment,
       saveGuardianInfo,
       confirmAppointment,
+      postponeAppointment,
+      cancelAppointment,
       requestReschedule,
       resolveReschedule,
       respondVisit,

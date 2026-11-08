@@ -8,7 +8,7 @@ import { LinkButton } from "@/components/ui/link-button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { NewAppointmentDialog } from "./new-appointment";
-import { AppointmentStatusPanel } from "./status-panel";
+import { AppointmentStatusPanel, ManageAppointment } from "./status-panel";
 import { draftKey, useStore } from "@/lib/store";
 import { DEMO_TODAY } from "@/lib/mock-data";
 import { formatBaht, formatThaiDate, formatThaiTime } from "@/lib/format";
@@ -149,6 +149,7 @@ export default function HomeVisitsPage() {
               </Card>
 
               <AppointmentStatusPanel appointmentId={appointment.appointmentId} onReschedule={() => setCreating(true)} />
+              <ManageAppointment key={appointment.appointmentId + appointment.proposedDate + appointment.status} appointmentId={appointment.appointmentId} onDone={setNotice} />
 
               {(appointment.guardianNote || appointment.convenientTime) && (
                 <Card>

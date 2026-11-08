@@ -93,6 +93,13 @@ export function buildNotifications(input: {
         title: "ยืนยันว่าครูได้เยี่ยมบ้านจริง",
         body: `ครูบันทึกผลการเยี่ยมบ้านแล้ว ยืนยันได้ภายใน ${formatThaiDate(a.visitConfirmDeadline ?? "")} ที่เมนูนัดหมาย`,
       });
+    if (a.status === "cancelled")
+      list.push({
+        id: `ap-${a.appointmentId}-cancelled`,
+        at: `${DEMO_TODAY}T08:00:00`,
+        title: "ครูยกเลิกนัดเยี่ยมบ้าน",
+        body: `${formatThaiDate(a.proposedDate)}${a.cancelReason ? ` · เหตุผล: ${a.cancelReason}` : ""} ครูจะนัดหมายใหม่`,
+      });
     if (a.status === "confirmed")
       list.push({
         id: `ap-${a.appointmentId}-confirmed`,
