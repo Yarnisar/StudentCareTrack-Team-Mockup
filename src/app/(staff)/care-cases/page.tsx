@@ -98,7 +98,7 @@ function CareCasesContent() {
         <div className="grid gap-5 xl:grid-cols-[300px_1fr]">
           <Card className="h-fit">
             <CardContent className="p-5">
-              <h2 className="mb-3 text-[15px] font-bold">รายการ case</h2>
+              <h2 className="mb-3 text-[15px] font-bold">รายการกรณี</h2>
               <div className="space-y-2">
                 {store.careCases.map((c) => {
                   const s = store.getStudent(c.studentId);
@@ -186,7 +186,7 @@ function CareCasesContent() {
                             : "rounded-full bg-risk-green-bg px-2.5 py-1 text-xs font-semibold text-risk-green"
                         }
                       >
-                        {activeCase.status === "active" ? "กำลังดำเนินการ" : "ปิด case แล้ว"}
+                        {activeCase.status === "active" ? "กำลังดำเนินการ" : "ปิดกรณีแล้ว"}
                       </span>
                       {activeCase.status === "closed" && (
                         <Button
@@ -194,12 +194,12 @@ function CareCasesContent() {
                           variant="outline"
                           onClick={() => setNewCaseFor(activeCase.studentId)}
                         >
-                          <Plus className="size-4" /> เปิด case ใหม่
+                          <Plus className="size-4" /> เปิดกรณีใหม่
                         </Button>
                       )}
                     </div>
                     <p className="mt-1 text-[13.5px] text-muted-foreground">
-                      เปิด case {formatThaiDate(activeCase.openedAt)} · ที่มา:{" "}
+                      เปิดกรณี {formatThaiDate(activeCase.openedAt)} · ที่มา:{" "}
                       {activeCase.triggerSource}
                     </p>
                     {activeCase.status === "active" && (
@@ -329,12 +329,12 @@ function CareCasesContent() {
                   <FileText className="mr-1.5 inline size-4" />
                   เอกสารส่งต่อ {activeCase.referral.referralId} ส่งให้แอดมินเมื่อ {formatThaiDate(activeCase.referral.preparedAt)} ·{" "}
                   <b>{REFERRAL_STATUS_LABEL[activeCase.referral.status]}</b>
-                  {activeCase.status === "active" && " · case ยังเปิดอยู่ ติดตามต่อได้"}
+                  {activeCase.status === "active" && " · กรณียังเปิดอยู่ ติดตามต่อได้"}
                 </p>
               )}
               {activeCase.status === "closed" && activeCase.closingSummary && (
                 <p className="rounded-lg bg-surface px-4 py-3 text-[13px]">
-                  ปิด case เมื่อ {formatThaiDate(activeCase.closedAt ?? "")} · ผลสรุป: {activeCase.closingSummary}
+                  ปิดกรณีเมื่อ {formatThaiDate(activeCase.closedAt ?? "")} · ผลสรุป: {activeCase.closingSummary}
                 </p>
               )}
               {activeCase.status === "active" && (
@@ -344,7 +344,7 @@ function CareCasesContent() {
           ) : (
             <Card>
               <CardContent className="p-10 text-center text-sm text-muted-foreground">
-                ยังไม่มี case การช่วยเหลือ
+                ยังไม่มีกรณีการช่วยเหลือ
               </CardContent>
             </Card>
           )}
@@ -383,7 +383,7 @@ function CaseActions({ caseId, hasReferral }: { caseId: string; hasReferral: boo
               </Button>
             )}
             <Button onClick={() => setMode("close")}>
-              <CheckCircle2 className="size-4" /> ปิด case
+              <CheckCircle2 className="size-4" /> ปิดกรณี
             </Button>
           </div>
         </div>
@@ -394,12 +394,12 @@ function CaseActions({ caseId, hasReferral }: { caseId: string; hasReferral: boo
           <CardContent className="p-6">
             <h3 className="text-[15.5px] font-bold">ตรวจเอกสารส่งต่อก่อนส่งให้แอดมินเก็บรักษา</h3>
             <p className="mt-0.5 mb-3 text-[12px] text-muted-foreground">
-              ระบบรวบรวมจากข้อมูลใน case นี้ ครูนำไปดำเนินการส่งต่อภายนอกเอง ระบบไม่ส่งข้อมูลออกให้หน่วยงานภายนอกโดยตรง
+              ระบบรวบรวมจากข้อมูลในกรณีนี้ ครูนำไปดำเนินการส่งต่อภายนอกเอง ระบบไม่ส่งข้อมูลออกให้หน่วยงานภายนอกโดยตรง
             </p>
             <dl className="divide-y divide-border rounded-lg border border-border text-[13px]">
               {[
                 ["นักเรียน", `${student.fullName} · ${student.roomName} เลขที่ ${student.classNo}`],
-                ["ที่มาของ case", careCase.triggerSource],
+                ["ที่มาของกรณี", careCase.triggerSource],
                 ["วิธีการดูแล", careCase.careMethods.map((m) => CARE_METHOD_LABEL[m]).join(", ") || "-"],
                 ["เป้าหมาย", careCase.goal || "-"],
                 ["การติดตาม", `${careCase.followups.length} ครั้ง${careCase.followups[0] ? ` · ล่าสุด: ${careCase.followups[0].actionTaken}` : ""}`],
@@ -433,7 +433,7 @@ function CaseActions({ caseId, hasReferral }: { caseId: string; hasReferral: boo
       {mode === "close" && (
         <Card>
           <CardContent className="p-6">
-            <h3 className="text-[15.5px] font-bold">ปิด case · บันทึกผลสรุป</h3>
+            <h3 className="text-[15.5px] font-bold">ปิดกรณี · บันทึกผลสรุป</h3>
             <div className="mt-3 flex flex-wrap gap-1.5">
               {[...CLOSE_SUMMARIES, "อื่น ๆ"].map((r) => (
                 <button
@@ -466,7 +466,7 @@ function CaseActions({ caseId, hasReferral }: { caseId: string; hasReferral: boo
                 ยกเลิก
               </Button>
               <Button disabled={finalSummary === ""} onClick={() => store.closeCase(caseId, finalSummary)}>
-                ยืนยันปิด case
+                ยืนยันปิดกรณี
               </Button>
             </div>
           </CardContent>
@@ -535,7 +535,7 @@ function NewCaseForm({
       <CardContent className="p-6">
         <div className="mb-5 flex flex-wrap items-center gap-2.5">
           <h2 className="text-lg font-bold">
-            {planCaseId ? "วางแผนช่วยเหลือ" : "เปิด case ช่วยเหลือ"} · {student.fullName}
+            {planCaseId ? "วางแผนช่วยเหลือ" : "เปิดกรณีช่วยเหลือ"} · {student.fullName}
           </h2>
           {risk && <RiskBadge group={risk} short />}
         </div>
@@ -544,7 +544,7 @@ function NewCaseForm({
         </p>
         {planCaseId && (
           <p className="-mt-2 mb-5 rounded-lg bg-surface px-3 py-2.5 text-[13px]">
-            ระบบเปิด case นี้ให้จากผลคัดกรอง ระบุแผนช่วยเหลือ ความเร่งด่วน และวันติดตามเพื่อเริ่มติดตาม
+            ระบบเปิดกรณีนี้ให้จากผลคัดกรอง ระบุแผนช่วยเหลือ ความเร่งด่วน และวันติดตามเพื่อเริ่มติดตาม
           </p>
         )}
 
@@ -603,7 +603,7 @@ function NewCaseForm({
             ยกเลิก
           </Button>
           <Button disabled={!canSubmit} onClick={handleSubmit}>
-            <Plus className="size-4" /> {planCaseId ? "บันทึกแผนช่วยเหลือ" : "เปิด case"}
+            <Plus className="size-4" /> {planCaseId ? "บันทึกแผนช่วยเหลือ" : "เปิดกรณี"}
           </Button>
         </div>
       </CardContent>

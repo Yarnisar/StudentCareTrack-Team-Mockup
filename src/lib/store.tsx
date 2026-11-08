@@ -21,6 +21,8 @@ import {
   educationDocuments as seedDocuments,
   homeVisitRecords as seedHomeVisitRecords,
   screenings as seedScreenings,
+  redFlagSeeds,
+  nineSSeeds,
   sdqAssessments as seedSdq,
   eqAssessments as seedEq,
   students,
@@ -39,6 +41,7 @@ import { DEFAULT_DC_CRITERIA, type DcRound } from "./dc-round";
 import { canRevealCitizenId, defaultRoleFor, recordableRooms, ROLE_INFO, TEACHER_ASSIGNMENTS, type Role } from "./roles";
 import { INITIAL_WINDOWS, KIND_HREF, KIND_LABEL, shiftDate, windowCoversRoom, windowFor, windowNotice, windowStatus, type AssessmentWindow } from "./periods";
 import { EQ_DOMAIN_LABEL, EQ_DOMAINS, EQ_LEVEL_LABEL, scoreEq, type EqAnswer, type EqAssessment } from "./eq";
+import { colorResults, type MentalStatus } from "./screening-view";
 import { eqReviewInfo, needsReview, sdqReviewInfo, type AssessmentReview, type ReviewKind } from "./assessment-review";
 import { sdqSummaryForParent } from "./portal";
 import { DEFAULT_BEHAVIOR_SCORE, lastRecoveryAt, peakWatchLevel, runningScore, WATCH_NOTIFY_LABEL, watchLevelOf, type BehaviorScoreConfig } from "./behavior-score";
@@ -122,6 +125,8 @@ interface StoreValue {
   getStudent: (studentId: string) => Student | undefined;
   latestScreening: (studentId: string) => Screening | undefined;
   overallRiskOf: (studentId: string) => RiskGroup | null;
+  /** มิติที่ 6 สุขภาพจิต: รอประเมิน / ควรดูแล / ไม่ต้องดูแลเพิ่ม (ไม่ใช้สี) */
+  mentalStatusOf: (studentId: string, termId?: string) => MentalStatus | null;
   sdqOf: (studentId: string) => SdqAssessment[];
   /** รอบ SDQ ปัจจุบัน = ช่วงเวลา SDQ ที่เปิดอยู่ในหน้าตั้งค่า (ไม่มีรอบเปิด = รอบที่ปิดล่าสุด) */
   sdqRound: 1 | 2;
@@ -333,8 +338,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [role, setRole] = useState<Role>(() => defaultRoleFor(pathname));
   const [screenings, setScreenings] = useState<Screening[]>(seedScreenings);
-  const [redFlags, setRedFlags] = useState<RedFlagAssessment[]>([]);
-  const [nineS, setNineS] = useState<NineSAssessment[]>([]);
+  const [redFlags, setRedFlags] = useState<RedFlagAssessment[]>(redFlagSeeds);
+  const [nineS, setNineS] = useState<NineSAssessment[]>(nineSSeeds);
   const [sdq, setSdq] = useState<SdqAssessment[]>(seedSdq);
   const [eq, setEq] = useState<EqAssessment[]>(seedEq);
   const [reviews, setReviews] = useState<AssessmentReview[]>([]);
@@ -410,19 +415,38 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const recordableStudents = [...students, ...otherStudents].filter((s) => rooms.includes(s.roomName));
     const directory = [...students, ...otherStudents];
     const canRecordStudent = (studentId: string) => recordableStudents.some((s) => s.studentId === studentId);
-    const homeroomRoom = TEACHER_ASSIGNMENTS[role]?.homeroomRoom;
-    const behaviorVisible = (rec: BehaviorRecord) =>
-      (!!homeroomRoom && getStudent(rec.studentId)?.roomName === homeroomRoom) || rec.recordedByName === ROLE_INFO[role].user.name;
+    // ดูรายการพฤติกรรมของนักเรียนทุกคนในห้องที่รับผิดชอบหรือสอน (ตาราง 3.4) ส่วนการแก้ไข/ยกเลิกได้เฉพาะรายการของตน (behaviorEditable)
+    const behaviorVisible = (rec: BehaviorRecord) => {
+      const room = getStudent(rec.studentId)?.roomName;
+      return (!!room && recordableRooms(role).includes(room)) || rec.recordedByName === ROLE_INFO[role].user.name;
+    };
 
     const latestScreening = (studentId: string) =>
       screenings
         .filter((s) => s.studentId === studentId)
         .sort((a, b) => b.screenedAt.localeCompare(a.screenedAt))[0];
 
+    /** สถานะมิติสุขภาพจิตของภาคเรียนนั้น: ภาคปัจจุบันดูจากผล Red Flag/9S ภาคก่อนที่ไม่มีผลประเมินใช้ผลที่เก็บในการคัดกรอง ไม่มีการคัดกรอง = null */
+    const mentalStatusOf = (studentId: string, termId: string = CURRENT_TERM.termId): MentalStatus | null => {
+      const sc = screenings.find((s) => s.studentId === studentId && s.termId === termId);
+      if (!sc) return null;
+      const rf = redFlags.find((r) => r.studentId === studentId && r.termId === termId);
+      const n9 = nineS.find((r) => r.studentId === studentId && r.termId === termId);
+      if (!rf) {
+        if (termId === CURRENT_TERM.termId) return "pending";
+        const g = sc.results.find((r) => r.dimension === "mental")?.group ?? "green";
+        return g === "green" ? "no_more_care" : "needs_care";
+      }
+      if (rf.result === "needs_care") return "needs_care";
+      if (!n9) return "pending";
+      return n9.result === "needs_care" ? "needs_care" : "no_more_care";
+    };
+
     const overallRiskOf = (studentId: string): RiskGroup | null => {
       const sc = latestScreening(studentId);
       if (!sc) return null;
-      const groups = sc.results.map((r) => r.group);
+      // กลุ่มสีมาจาก 5 มิติแรก มิติสุขภาพจิตแสดงแยกเป็น ควรดูแล / ไม่ต้องดูแลเพิ่ม (UC6 สถานการณ์ B)
+      const groups = colorResults(sc.results).map((r) => r.group);
       if (groups.includes("red")) return "red";
       if (groups.includes("amber")) return "amber";
       return "green";
@@ -668,8 +692,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         out.push({
           id: `fo-admin-${room}-${n}`,
           kind: "followup_overdue_admin",
-          title: "มี case ติดตามช่วยเหลือเลยกำหนด",
-          body: `ห้อง ${room} · ${n} case · เตือนครูที่ปรึกษาแล้ว`,
+          title: "มีกรณีติดตามช่วยเหลือเลยกำหนด",
+          body: `ห้อง ${room} · ${n} กรณี · เตือนครูที่ปรึกษาแล้ว`,
           at: `${DEMO_TODAY}T08:00:00`,
           to: { role: "admin" },
         });
@@ -933,7 +957,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       };
       const before = screenings.find((s) => s.studentId === studentId && s.termId === record.termId);
       if (before) {
-        const diff = record.results
+        const diff = colorResults(record.results)
           .map((r) => ({ label: DIMENSION_LABEL[r.dimension], from: RISK_LABEL[before.results.find((x) => x.dimension === r.dimension)?.group ?? "green"], to: RISK_LABEL[r.group] }))
           .filter((c) => c.from !== c.to);
         logChange("screening", studentId, "คัดกรองซ้ำ แก้ผลเดิมของภาคเรียนนี้", diff.length > 0 ? diff : [{ label: "ผลคัดกรอง", from: "เดิม", to: "ไม่เปลี่ยน" }]);
@@ -941,7 +965,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setScreenings((prev) => [record, ...prev.filter((s) => !(s.studentId === studentId && s.termId === record.termId))]);
       clearDraft(draftKey("screening", studentId));
       // มีมิติที่มีปัญหา (แดง) -> ระบบเปิดหรือเชื่อม case เอง (UC6 ข้อ 13)
-      const red = record.results.filter((r) => r.group === "red").map((r) => DIMENSION_LABEL[r.dimension]);
+      const red = colorResults(record.results).filter((r) => r.group === "red").map((r) => DIMENSION_LABEL[r.dimension]);
       if (red.length > 0) openOrLinkCase(studentId, `ผลคัดกรอง 6 มิติ: ${red.join(" / ")} มีปัญหา`);
       return record;
     };
@@ -1150,7 +1174,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           addStaffEvent({
             kind: "refer_recorded",
             title: `${st.fullName} ถูกบันทึกตามกฎส่งต่อ`,
-            body: `${rule?.name} · บันทึกโดย ${ROLE_INFO[role].user.name} · พิจารณาเปิด case ช่วยเหลือ`,
+            body: `${rule?.name} · บันทึกโดย ${ROLE_INFO[role].user.name} · พิจารณาเปิดกรณีช่วยเหลือ`,
             href: "/dashboard",
             at: now,
             to: { homeroomOf: st.roomName },
@@ -1553,6 +1577,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       getStudent,
       latestScreening,
       overallRiskOf,
+      mentalStatusOf,
       sdqOf,
       sdqRound,
       sdqSetOf,

@@ -71,8 +71,8 @@ const ADMIN_PAGES = ["/dashboard", "/documents", "/cards", "/settings"];
 const ALLOWED: Record<Role, string[]> = {
   admin: ADMIN_PAGES,
   homeroom: TEACHER_PAGES,
-  // ครูผู้สอนบันทึกพฤติกรรมและขอจัดทำ ปพ.7 ได้ ส่วนการประเมินคุณลักษณะเป็นของครูที่ปรึกษา (ตาราง 3.4, UC13)
-  subject: ["/behavior", "/documents"],
+  // ครูผู้สอนดูข้อมูลพื้นฐานและพฤติกรรมของห้องที่สอน บันทึกพฤติกรรม และขอจัดทำ ปพ.7 ได้ ส่วนการประเมินคุณลักษณะเป็นของครูที่ปรึกษา (ตาราง 3.4, UC2, UC13)
+  subject: ["/students", "/behavior", "/documents"],
   student: ["/portal/student"],
   parent: ["/portal/parent"],
 };
@@ -93,8 +93,19 @@ export function defaultRoleFor(pathname: string): Role {
  * PROTOTYPE: เทียบจากชื่อห้อง · Project 2 ใช้ Assignment จริงและตรวจซ้ำที่ backend
  */
 export function canViewStudent(role: Role, roomName: string): boolean {
-  if (role === "homeroom") return roomName === ROLE_INFO.homeroom.user.scope;
-  return false;
+  return studentViewLevel(role, roomName) !== "none";
+}
+
+/**
+ * ระดับการดูข้อมูลรายบุคคล (ตาราง 3.4)
+ * - full = ครูประจำชั้น/ครูที่ปรึกษาของห้องนั้น เห็นทุกหมวด
+ * - limited = ครูที่ได้รับมอบหมายอื่น (เช่น ครูผู้สอน, หรือครูประจำชั้นในห้องที่สอน) เห็นข้อมูลพื้นฐานและรายการพฤติกรรมของตน ไม่เห็นผลคัดกรอง ผลประเมิน กรณีช่วยเหลือ และคุณลักษณะ
+ */
+export type StudentViewLevel = "full" | "limited" | "none";
+
+export function studentViewLevel(role: Role, roomName: string): StudentViewLevel {
+  if (role === "homeroom" && roomName === ROLE_INFO.homeroom.user.scope) return "full";
+  return recordableRooms(role).includes(roomName) ? "limited" : "none";
 }
 
 /**

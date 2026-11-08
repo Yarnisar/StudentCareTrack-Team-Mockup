@@ -99,7 +99,7 @@ export default function RedFlagPage({ params }: { params: Promise<{ studentId: s
             <AlertTriangle className="size-5 shrink-0 text-risk-amber" />
             <p className="text-[13.5px] text-risk-amber">
               หากตอบ &quot;ใช่&quot; แม้เพียงข้อเดียว ระบบจะเปิดแบบประเมิน SDQ
-              ทั้งฉบับครู นักเรียน และผู้ปกครอง และเปิด case ติดตามช่วยเหลือโดยอัตโนมัติ
+              ทั้งฉบับครู นักเรียน และผู้ปกครอง และเปิดกรณีติดตามช่วยเหลือโดยอัตโนมัติ
             </p>
           </div>
 

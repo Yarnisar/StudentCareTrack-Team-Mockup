@@ -1,5 +1,6 @@
 "use client";
 
+import { colorResults, MENTAL_STATUS_LABEL } from "@/lib/screening-view";
 import { Suspense, use, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -17,7 +18,7 @@ import { BehaviorRecorder } from "../../behavior/behavior-recorder";
 import { CURRENT_TERM } from "@/lib/mock-data";
 import { downloadCsv } from "@/lib/csv";
 import { formatThaiDate, formatThaiDateTime, maskCitizenId } from "@/lib/format";
-import { canRevealCitizenId, canViewStudent } from "@/lib/roles";
+import { canRevealCitizenId, studentViewLevel } from "@/lib/roles";
 import {
   APPOINTMENT_STATUS_LABEL,
   AssessmentOutcome,
@@ -76,7 +77,9 @@ function StudentDetail({
   if (!student) return <p className="p-8 text-sm text-muted-foreground">ไม่พบข้อมูลนักเรียน</p>;
 
   // UC2 Alternate: ไม่มีสิทธิ์ → ไม่แสดงข้อมูลใด ๆ ของนักเรียน
-  if (!canViewStudent(store.role, student.roomName)) {
+  const level = studentViewLevel(store.role, student.roomName);
+  const full = level === "full";
+  if (level === "none") {
     return (
       <>
         <PageHeader title="ข้อมูลนักเรียนรายบุคคล" subtitle={CURRENT_TERM.label} />
@@ -110,9 +113,11 @@ function StudentDetail({
 
   // แท็บและตัวกรองภาคเรียน เก็บใน URL (?tab=&term=) เพื่อแชร์ลิงก์/กดย้อนกลับได้
   const events = buildTimeline(store, studentId);
-  const allTerms = termsWithData(events, CURRENT_TERM.termId);
+  const allTerms = full ? termsWithData(events, CURRENT_TERM.termId) : [CURRENT_TERM.termId];
   const tabParam = search.get("tab");
-  const tab: TabKey = TABS.some((t) => t.key === tabParam) ? (tabParam as TabKey) : "overview";
+  // ครูที่ได้รับมอบหมายอื่น เห็นเฉพาะข้อมูลพื้นฐานและความประพฤติ (ตาราง 3.4)
+  const tabs = full ? TABS : TABS.filter((t) => t.key === "conduct" || t.key === "general");
+  const tab: TabKey = tabs.some((t) => t.key === tabParam) ? (tabParam as TabKey) : full ? "overview" : "conduct";
   const termParam = search.get("term");
   const selected = termParam === "all" || (termParam && allTerms.includes(termParam)) ? termParam! : tab === "timeline" ? "all" : CURRENT_TERM.termId;
   const shownTerms = selected === "all" ? allTerms : [selected];
@@ -166,9 +171,23 @@ function StudentDetail({
       label,
       label === "เลขบัตรประชาชน" ? maskedCitizenId : value,
     ]);
-    screening?.results.forEach((r) =>
+    // ครูที่ได้รับมอบหมายอื่นส่งออกได้เท่าที่เห็น: ข้อมูลพื้นฐานและรายการพฤติกรรมที่ตนเห็น (ตาราง 3.4)
+    if (!full) {
+      store
+        .behaviorOf(studentId)
+        .filter(store.behaviorVisible)
+        .forEach((r) =>
+          rows.push(["ความประพฤติ", `${formatThaiDate(r.occurredAt)} ${store.behaviorRules.find((x) => x.ruleId === r.ruleId)?.name ?? ""}`, r.description]),
+        );
+      rows.push(["ความประพฤติ", "คะแนนความประพฤติ", behaviorScore]);
+      downloadCsv(`รายงานนักเรียน-${student.studentId}.csv`, ["หมวด", "รายการ", "ผล"], rows, store.logExport("ข้อมูลนักเรียนรายบุคคล 1 คน (ข้อมูลพื้นฐานและความประพฤติ)"));
+      return;
+    }
+    colorResults(screening?.results ?? []).forEach((r) =>
       rows.push(["ผลคัดกรอง 6 มิติ", DIMENSION_LABEL[r.dimension], RISK_LABEL[r.group]]),
     );
+    const mentalNow = store.mentalStatusOf(studentId);
+    if (mentalNow) rows.push(["ผลคัดกรอง 6 มิติ", DIMENSION_LABEL.mental, MENTAL_STATUS_LABEL[mentalNow]]);
     if (redFlag) rows.push(["Red Flag", formatThaiDate(redFlag.assessedAt), OUTCOME_LABEL[redFlag.result]]);
     if (nineS) {
       (Object.keys(nineS.clusterResults) as NineSCluster[]).forEach((c) =>
@@ -200,7 +219,7 @@ function StudentDetail({
     );
     if (careCase) {
       rows.push([
-        "case ช่วยเหลือ",
+        "กรณีช่วยเหลือ",
         careCase.caseId,
         `${careCase.status === "active" ? "กำลังดำเนินการ" : "ปิดแล้ว"} · ${caseUrgencyText(careCase)}`,
       ]);
@@ -234,13 +253,13 @@ function StudentDetail({
             <div className="min-w-0 flex-1 basis-56">
               <div className="flex flex-wrap items-center gap-2.5">
                 <h2 className="text-xl font-bold">{student.fullName}</h2>
-                {risk && <RiskBadge group={risk} />}
-                {store.caseConsiderations[studentId] && !store.caseOf(studentId) && (
+                {full && risk && <RiskBadge group={risk} />}
+                {full && store.caseConsiderations[studentId] && !store.caseOf(studentId) && (
                   <span className="rounded-md bg-muted px-2 py-0.5 text-[12px] font-semibold">
-                    พิจารณาแล้วยังไม่เปิด case · {store.caseConsiderations[studentId].reason}
+                    พิจารณาแล้วยังไม่เปิดกรณี · {store.caseConsiderations[studentId].reason}
                   </span>
                 )}
-                {store.screeningWatch[studentId] && (
+                {full && store.screeningWatch[studentId] && (
                   <span className="rounded-md bg-muted px-2 py-0.5 text-[12px] font-semibold">
                     เฝ้าดูผลคัดกรอง · {store.screeningWatch[studentId].reason}
                   </span>
@@ -248,24 +267,29 @@ function StudentDetail({
               </div>
               <p className="mt-1 text-[13.5px] text-muted-foreground">
                 {student.roomName} เลขที่ {student.classNo} · เลขประจำตัว {student.studentId}
-                {screening ? ` · คัดกรองล่าสุด ${formatThaiDate(screening.screenedAt)}` : ""}
+                {full && screening ? ` · คัดกรองล่าสุด ${formatThaiDate(screening.screenedAt)}` : ""}
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <LinkButton variant="outline" href={`/screening/${studentId}`}>
-                คัดกรองใหม่
-              </LinkButton>
+              {full && (
+                <LinkButton variant="outline" href={`/screening/${studentId}`}>
+                  คัดกรองใหม่
+                </LinkButton>
+              )}
               <Button variant="outline" onClick={() => setRecording(true)}>
                 บันทึกพฤติกรรม
               </Button>
-              <LinkButton href={`/care-cases?student=${studentId}`}>
-                {careCase ? "ดู case ช่วยเหลือ" : "เปิด case ช่วยเหลือ"}
-              </LinkButton>
+              {full && (
+                <LinkButton href={`/care-cases?student=${studentId}`}>
+                  {careCase ? "ดูกรณีช่วยเหลือ" : "เปิดกรณีช่วยเหลือ"}
+                </LinkButton>
+              )}
             </div>
           </CardContent>
         </Card>
 
 
+        {allTerms.length > 1 && (
         <div className="mb-4 flex flex-wrap items-center gap-x-6 gap-y-3">
           <div className="flex flex-wrap items-center gap-2" role="group" aria-label="ภาคเรียน">
             <span className="text-[13px] text-muted-foreground">ภาคเรียน</span>
@@ -283,6 +307,7 @@ function StudentDetail({
             ))}
           </div>
         </div>
+        )}
         {pastTerm && (
           <div className="mb-4 rounded-lg bg-muted px-4 py-2.5 text-[13px]">
             กำลังดูข้อมูลย้อนหลัง · {termInfoOf(selected).label}{" "}
@@ -293,7 +318,7 @@ function StudentDetail({
         )}
 
         <div role="tablist" aria-label="หมวดข้อมูลนักเรียน" className="mb-5 flex gap-1 overflow-x-auto border-b border-border">
-          {TABS.map((t) => (
+          {tabs.map((t) => (
             <button
               key={t.key}
               type="button"
@@ -312,7 +337,7 @@ function StudentDetail({
         {tab === "screening" && <ScreeningTab studentId={studentId} terms={shownTerms} />}
         {tab === "conduct" && <ConductTab studentId={studentId} terms={shownTerms} />}
         {tab === "care" && <CareTab studentId={studentId} terms={shownTerms} />}
-        {tab === "general" && <GeneralTab studentId={studentId} info={<>
+        {tab === "general" && <GeneralTab studentId={studentId} showDc={full} info={<>
   <Card>
     <CardContent className="p-6">
       <h3 className="text-[15.5px] font-bold">ข้อมูลพื้นฐาน</h3>

@@ -6,6 +6,7 @@
  * สีกลุ่มเสี่ยง (เขียว/เหลือง/แดง) ใช้กับผลคัดกรองและผล SDQ/ความเสี่ยงเท่านั้น สถานะอื่นใช้สีกลาง ยกเว้นเฝ้าระวังด้านความประพฤติที่ใช้สีแดงตามที่กำหนด
  */
 
+import { colorResults, MENTAL_STATUS_LABEL } from "@/lib/screening-view";
 import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
@@ -89,9 +90,9 @@ function useTermData(studentId: string, termId: string) {
     .filter((s) => s.studentId === studentId && s.termId === termId)
     .sort((a, b) => b.screenedAt.localeCompare(a.screenedAt))[0];
   const overall: RiskGroup | null = screening
-    ? screening.results.some((r) => r.group === "red")
+    ? colorResults(screening.results).some((r) => r.group === "red")
       ? "red"
-      : screening.results.some((r) => r.group === "amber")
+      : colorResults(screening.results).some((r) => r.group === "amber")
         ? "amber"
         : "green"
     : null;
@@ -103,7 +104,7 @@ function useTermData(studentId: string, termId: string) {
   const info = termInfoOf(termId);
   const endAt = `${info.end < DEMO_TODAY ? info.end : DEMO_TODAY}T23:59:59`;
   const endScore = store.behaviorScoreAt(studentId, endAt);
-  const records = store.behaviorOf(studentId).filter((r) => termOfDate(r.occurredAt).termId === termId);
+  const records = store.behaviorOf(studentId).filter((r) => termOfDate(r.occurredAt).termId === termId && store.behaviorVisible(r));
   const visits = store.appointments
     .filter((a) => a.studentId === studentId && termOfDate(a.proposedDate).termId === termId)
     .sort((a, b) => b.proposedDate.localeCompare(a.proposedDate));
@@ -168,7 +169,7 @@ export function OverviewTab({
           {active.caseId} · กำลังดำเนินการ <span className="text-muted-foreground">· {caseUrgencyText(active)}</span>
         </span>
       ) : (
-        <span className="text-muted-foreground">ไม่มี case ที่เปิดอยู่</span>
+        <span className="text-muted-foreground">ไม่มีกรณีที่เปิดอยู่</span>
       ),
     },
     {
@@ -290,6 +291,7 @@ export function ScreeningTab({ studentId, terms }: { studentId: string; terms: s
 function ScreeningTerm({ studentId, termId }: { studentId: string; termId: string }) {
   const store = useStore();
   const d = useTermData(studentId, termId);
+  const mental = store.mentalStatusOf(studentId, termId);
   const redFlag = store.redFlags.find((r) => r.studentId === studentId && r.termId === termId);
   const nineS = store.nineS.find((r) => r.studentId === studentId && r.termId === termId);
   const eq = store.eq.find((e) => e.studentId === studentId && e.termId === termId);
@@ -305,12 +307,27 @@ function ScreeningTerm({ studentId, termId }: { studentId: string; termId: strin
           </div>
           {d.screening ? (
             <div className="grid gap-2 sm:grid-cols-2">
-              {d.screening.results.map((r) => (
+              {colorResults(d.screening.results).map((r) => (
                 <div key={r.dimension} className="flex items-center justify-between rounded-lg bg-surface px-3.5 py-2.5">
                   <span className="text-[13.5px] font-medium">{DIMENSION_LABEL[r.dimension]}</span>
                   <RiskBadge group={r.group} short />
                 </div>
               ))}
+              {/* มิติที่ 6 สุขภาพจิต ไม่ใช้สี เขียว เหลือง แดง (UC6 สถานการณ์ B) */}
+              <div className="flex items-center justify-between rounded-lg bg-surface px-3.5 py-2.5">
+                <span className="text-[13.5px] font-medium">{DIMENSION_LABEL.mental}</span>
+                {mental && (
+                  <span
+                    className={
+                      mental === "needs_care"
+                        ? "rounded-full bg-foreground px-2.5 py-1 text-xs font-semibold text-background"
+                        : "rounded-full bg-muted px-2.5 py-1 text-xs font-semibold text-muted-foreground"
+                    }
+                  >
+                    {MENTAL_STATUS_LABEL[mental]}
+                  </span>
+                )}
+              </div>
             </div>
           ) : (
             <p className="py-4 text-sm text-muted-foreground">ยังไม่มีข้อมูลการคัดกรองในภาคเรียนนี้</p>
@@ -535,9 +552,9 @@ export function CareTab({ studentId, terms }: { studentId: string; terms: string
       <Card>
         <CardContent className="p-6">
           <div className="mb-3 flex items-center justify-between">
-            <h3 className="text-[15.5px] font-bold">การดูแลช่วยเหลือ (case) · {cases.length}</h3>
+            <h3 className="text-[15.5px] font-bold">การดูแลช่วยเหลือ (กรณี) · {cases.length}</h3>
             <LinkButton variant="outline" href={`/care-cases?student=${studentId}`}>
-              เปิดหน้า case
+              เปิดหน้ากรณี
             </LinkButton>
           </div>
           {cases.length > 0 ? (
@@ -580,7 +597,7 @@ export function CareTab({ studentId, terms }: { studentId: string; terms: string
               ))}
             </div>
           ) : (
-            <p className="py-4 text-sm text-muted-foreground">ไม่มี case ช่วยเหลือในภาคเรียนที่เลือก</p>
+            <p className="py-4 text-sm text-muted-foreground">ไม่มีกรณีช่วยเหลือในภาคเรียนที่เลือก</p>
           )}
         </CardContent>
       </Card>
@@ -620,9 +637,9 @@ export function CareTab({ studentId, terms }: { studentId: string; terms: string
 }
 
 // ---------------------------------------------------------------- ข้อมูลทั่วไป (ไม่ขึ้นกับภาคเรียน)
-export function GeneralTab({ info, studentId }: { info: ReactNode; studentId: string }) {
+export function GeneralTab({ info, studentId, showDc = true }: { info: ReactNode; studentId: string; showDc?: boolean }) {
   const store = useStore();
-  const dc = store.dcResultOf(studentId);
+  const dc = showDc ? store.dcResultOf(studentId) : undefined;
   return (
     <div className="space-y-5">
       {info}

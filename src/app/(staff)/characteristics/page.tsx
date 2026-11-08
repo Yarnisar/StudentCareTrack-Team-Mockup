@@ -130,8 +130,8 @@ function AssessForm({ studentId }: { studentId: string }) {
     }
     const before = previous ? overall(previous.levels, method) : null;
     store.saveDcAssessment(studentId, levels, note.trim(), true);
-    if (total === 0) setMessage("ส่งผลแล้ว ผลรวมไม่ผ่าน · ระบบแจ้งครูที่ปรึกษาให้พิจารณาเปิดหรือเชื่อม case ช่วยเหลือ");
-    else if (before === 0) setMessage("ส่งผลแล้ว ผลประเมินซ้ำเปลี่ยนเป็นผ่าน · ทบทวน case เดิมของนักเรียน");
+    if (total === 0) setMessage("ส่งผลแล้ว ผลรวมไม่ผ่าน · ระบบแจ้งครูที่ปรึกษาให้พิจารณาเปิดหรือเชื่อมกรณีช่วยเหลือ");
+    else if (before === 0) setMessage("ส่งผลแล้ว ผลประเมินซ้ำเปลี่ยนเป็นผ่าน · ทบทวนกรณีเดิมของนักเรียน");
     else setMessage("ส่งผลแล้ว");
   };
 
@@ -165,7 +165,7 @@ function AssessForm({ studentId }: { studentId: string }) {
               href={`/care-cases?student=${studentId}`}
               className="mt-4 inline-flex rounded-lg border border-border px-3 py-2 text-[13px] font-semibold hover:bg-muted"
             >
-              ไปพิจารณาเปิด case ช่วยเหลือ
+              ไปพิจารณาเปิดกรณีช่วยเหลือ
             </Link>
           )}
         </CardContent>

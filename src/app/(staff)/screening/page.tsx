@@ -1,5 +1,6 @@
 "use client";
 
+import { colorResults } from "@/lib/screening-view";
 import { PageHeader } from "@/components/layout/page-header";
 import { RiskBadge } from "@/components/shared/risk-badge";
 import { LinkButton } from "@/components/ui/link-button";
@@ -30,7 +31,8 @@ export default function ScreeningListPage() {
                 const screening = store.latestScreening(student.studentId);
                 const risk = store.overallRiskOf(student.studentId);
                 const hasDraft = store.getDraft(draftKey("screening", student.studentId)) !== undefined;
-                const flagged = screening?.results
+                const mental = store.mentalStatusOf(student.studentId);
+                const flagged = (screening ? colorResults(screening.results) : [])
                   .filter((r) => r.group !== "green")
                   .map((r) => DIMENSION_LABEL[r.dimension])
                   .join(", ");
@@ -43,14 +45,14 @@ export default function ScreeningListPage() {
                       <div className="truncate text-xs text-muted-foreground">
                         {student.roomName} เลขที่ {student.classNo}
                         {screening
-                          ? ` · คัดกรองล่าสุด ${formatThaiDate(screening.screenedAt)}${flagged ? ` · พบ: ${flagged}` : ""}`
+                          ? ` · คัดกรองล่าสุด ${formatThaiDate(screening.screenedAt)}${flagged ? ` · พบ: ${flagged}` : ""}${mental === "pending" ? " · รอประเมินสุขภาพจิต" : mental === "needs_care" ? " · สุขภาพจิตควรดูแล" : ""}`
                           : " · ยังไม่เคยคัดกรอง"}
                       </div>
                     </div>
                     <div className="flex shrink-0 flex-col items-end gap-1">
                       {store.screeningWatch[student.studentId] && (
                         <span
-                          title={`ไม่เปิด case: ${store.screeningWatch[student.studentId].reason}`}
+                          title={`ไม่เปิดกรณี: ${store.screeningWatch[student.studentId].reason}`}
                           className="rounded-md bg-muted px-2 py-0.5 text-[11px] font-semibold"
                         >
                           เฝ้าดูผลคัดกรอง

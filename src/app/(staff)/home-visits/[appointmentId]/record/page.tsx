@@ -1,5 +1,6 @@
 "use client";
 
+import { colorResults } from "@/lib/screening-view";
 import { use, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -164,7 +165,10 @@ export default function HomeVisitRecordPage({
 
   /** มิติที่ผลคัดกรองเข้าเกณฑ์ — ไม่ได้กรอกให้ แต่เตือนให้ถามเรื่องนั้นเป็นพิเศษ */
   const flaggedDimensions = new Set(
-    screening?.results.filter((r) => r.group !== "green").map((r) => r.dimension) ?? []
+    [
+      ...(screening ? colorResults(screening.results) : []).filter((r) => r.group !== "green").map((r) => r.dimension),
+      ...(store.mentalStatusOf(student?.studentId ?? "") === "needs_care" ? (["mental"] as const) : []),
+    ]
   );
 
   // ทุกช่องอยู่ในก้อนเดียว บันทึกเป็นร่างอัตโนมัติทุกครั้งที่เปลี่ยน (ไม่ต้องกดบันทึกร่าง)
@@ -1607,12 +1611,12 @@ function VisitSaved({
               </ul>
               <p className="mt-3 text-[13px] text-muted-foreground">
                 {hasCase
-                  ? "นักเรียนมี case ช่วยเหลืออยู่แล้ว ควรบันทึกผลการเยี่ยมบ้านเป็นการติดตามใน case"
-                  : "ควรเปิด case ช่วยเหลือเพื่อวางแผนดูแลต่อ"}
+                  ? "นักเรียนมีกรณีช่วยเหลืออยู่แล้ว ควรบันทึกผลการเยี่ยมบ้านเป็นการติดตามในกรณี"
+                  : "ควรเปิดกรณีช่วยเหลือเพื่อวางแผนดูแลต่อ"}
               </p>
               <div className="mt-4 flex flex-wrap gap-3">
                 <LinkButton href={`/care-cases?student=${studentId}&from=home_visit`}>
-                  {hasCase ? "ไปที่ case ของนักเรียน" : "เปิด case ช่วยเหลือ"}
+                  {hasCase ? "ไปที่กรณีของนักเรียน" : "เปิดกรณีช่วยเหลือ"}
                 </LinkButton>
                 <LinkButton variant="outline" href="/home-visits">
                   กลับไปรายการนัดหมาย

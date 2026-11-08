@@ -10,6 +10,8 @@ import {
   CareCase,
   DcCriteria,
   DcSummary,
+  NineSAssessment,
+  RedFlagAssessment,
   EducationDocument,
   HomeVisitAppointment,
   HomeVisitRecord,
@@ -210,6 +212,35 @@ export const otherStudents: Student[] = [
     address: "-",
     sourceSystem: "team_b_registry",
   },
+];
+
+/**
+ * ผล Red Flag / 9S ของภาคเรียนปัจจุบัน (ตัวอย่างให้เห็นทุกสถานะของมิติสุขภาพจิต)
+ * - 30118: Red Flag ควรดูแล (ตรงกับ SDQ 3 ฝ่ายและ case ที่มีอยู่)
+ * - 30152, 30160: Red Flag และ 9S ปกติ → ไม่ต้องดูแลเพิ่ม
+ * - 30125: Red Flag ปกติ เหลือ 9S · 30131, 30140: ยังไม่ทำ Red Flag
+ */
+const rfAnswers = (yes: string[]) => ({ rf1: yes.includes("rf1"), rf2: yes.includes("rf2"), rf3: yes.includes("rf3") });
+export const redFlagSeeds: RedFlagAssessment[] = [
+  { id: "RF-S1", studentId: "30118", termId: "T2569-2", answers: rfAnswers(["rf2"]), result: "needs_care", assessedBy: CURRENT_TEACHER.name, assessedAt: "2570-02-12T10:40:00" },
+  { id: "RF-S2", studentId: "30125", termId: "T2569-2", answers: rfAnswers([]), result: "normal", assessedBy: CURRENT_TEACHER.name, assessedAt: "2570-02-12T10:20:00" },
+  { id: "RF-S3", studentId: "30152", termId: "T2569-2", answers: rfAnswers([]), result: "normal", assessedBy: CURRENT_TEACHER.name, assessedAt: "2570-02-10T14:05:00" },
+  { id: "RF-S4", studentId: "30160", termId: "T2569-2", answers: rfAnswers([]), result: "normal", assessedBy: CURRENT_TEACHER.name, assessedAt: "2570-02-10T14:30:00" },
+];
+
+const nineSNormal = (id: string, studentId: string, at: string): NineSAssessment => ({
+  id,
+  studentId,
+  termId: "T2569-2",
+  clusterScores: { adhd: 1, depression: 0, social: 1 },
+  clusterResults: { adhd: "normal", depression: "normal", social: "normal" },
+  result: "normal",
+  assessedBy: CURRENT_TEACHER.name,
+  assessedAt: at,
+});
+export const nineSSeeds: NineSAssessment[] = [
+  nineSNormal("NS-S1", "30152", "2570-02-10T14:15:00"),
+  nineSNormal("NS-S2", "30160", "2570-02-10T14:40:00"),
 ];
 
 export const screenings: Screening[] = [

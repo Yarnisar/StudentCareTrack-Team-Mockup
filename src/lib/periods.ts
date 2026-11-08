@@ -94,10 +94,10 @@ export const INITIAL_WINDOWS: AssessmentWindow[] = [
     id: "W1",
     kind: "screening",
     label: "คัดกรองนักเรียน 6 มิติ",
-    openDate: "2569-11-01",
-    closeDate: "2569-11-30",
+    openDate: "2570-02-01",
+    closeDate: "2570-03-13",
     enabled: true,
-    lockAfterClose: false,
+    lockAfterClose: true,
     remindDaysBefore: 7,
     raters: ["teacher"],
   },
@@ -105,10 +105,10 @@ export const INITIAL_WINDOWS: AssessmentWindow[] = [
     id: "W2",
     kind: "red_flag",
     label: "ประเมิน Red Flag (กลุ่มเสี่ยง/มีปัญหา)",
-    openDate: "2569-12-01",
-    closeDate: "2569-12-15",
+    openDate: "2570-02-01",
+    closeDate: "2570-03-13",
     enabled: true,
-    lockAfterClose: false,
+    lockAfterClose: true,
     remindDaysBefore: 3,
     raters: ["teacher"],
   },
@@ -116,10 +116,10 @@ export const INITIAL_WINDOWS: AssessmentWindow[] = [
     id: "W3",
     kind: "nine_s",
     label: "ประเมิน 9S",
-    openDate: "2569-12-16",
-    closeDate: "2569-12-31",
+    openDate: "2570-02-01",
+    closeDate: "2570-03-13",
     enabled: true,
-    lockAfterClose: false,
+    lockAfterClose: true,
     remindDaysBefore: 3,
     raters: ["teacher"],
   },
@@ -154,7 +154,7 @@ export const INITIAL_WINDOWS: AssessmentWindow[] = [
     openDate: "2570-02-10",
     closeDate: "2570-03-15",
     enabled: true,
-    lockAfterClose: false,
+    lockAfterClose: true,
     remindDaysBefore: 5,
     raters: ["student"], // มัธยม: นักเรียนประเมินตนเอง
   },
@@ -167,7 +167,7 @@ export const INITIAL_WINDOWS: AssessmentWindow[] = [
     openDate: "2569-12-01",
     closeDate: "2570-03-20",
     enabled: true,
-    lockAfterClose: false,
+    lockAfterClose: true,
     remindDaysBefore: 14,
     raters: ["teacher"],
   },
@@ -207,7 +207,7 @@ export function windowFor(
   );
 }
 
-/** พ้นวันปิดและตั้ง "ห้ามบันทึกย้อนหลัง" ไว้ → แบบฟอร์มปิดรับ (UC9) */
+/** พ้นวันปิด → แบบฟอร์มปิดรับ แก้ไขและส่งไม่ได้ (UC6 Alt-F, UC9 ไม่มีตัวเลือกให้บันทึกย้อนหลัง) */
 export const isLocked = (w: AssessmentWindow, today: string = DEMO_TODAY) =>
   windowStatus(w, today) === "closed" && w.lockAfterClose;
 

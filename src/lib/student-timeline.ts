@@ -7,6 +7,7 @@ import { EQ_DOMAIN_LABEL, EQ_DOMAINS, EQ_LEVEL_LABEL } from "./eq";
 import { recordScoreDelta, ruleKind, recordScoreText } from "./behavior-rules";
 import { clampScore, watchLevelOf } from "./behavior-score";
 import type { useStore } from "./store";
+import { colorResults } from "./screening-view";
 import { termOfDate } from "./terms";
 import {
   APPOINTMENT_STATUS_LABEL,
@@ -56,8 +57,9 @@ export function buildTimeline(store: Store, studentId: string): TimelineEvent[] 
 
   // ---- คัดกรอง / ประเมิน
   for (const sc of store.screenings.filter((s) => s.studentId === studentId)) {
-    const groups = sc.results.map((r) => r.group);
-    const flagged = sc.results.filter((r) => r.group !== "green").map((r) => DIMENSION_LABEL[r.dimension]);
+    const colored = colorResults(sc.results);
+    const groups = colored.map((r) => r.group);
+    const flagged = colored.filter((r) => r.group !== "green").map((r) => DIMENSION_LABEL[r.dimension]);
     push({
       id: `sc-${sc.screeningId}`,
       at: sc.screenedAt,
@@ -220,9 +222,9 @@ export function buildTimeline(store: Store, studentId: string): TimelineEvent[] 
   // ---- การช่วยเหลือ
   for (const c of store.careCases.filter((x) => x.studentId === studentId)) {
     const href = `/care-cases?student=${studentId}`;
-    push({ id: `cc-${c.caseId}-open`, at: c.openedAt, kind: "care", title: `เปิด case ${c.caseId}`, detail: `ที่มา: ${c.triggerSource}`, alert: true, href });
-    for (const f of c.followups) push({ id: `cf-${f.followupId}`, at: f.followupDate, kind: "care", title: `ติดตาม case ${c.caseId}`, detail: f.actionTaken, href });
-    if (c.closedAt) push({ id: `cc-${c.caseId}-close`, at: c.closedAt, kind: "care", title: `ปิด case ${c.caseId}`, detail: c.closingSummary, href });
+    push({ id: `cc-${c.caseId}-open`, at: c.openedAt, kind: "care", title: `เปิดกรณี ${c.caseId}`, detail: `ที่มา: ${c.triggerSource}`, alert: true, href });
+    for (const f of c.followups) push({ id: `cf-${f.followupId}`, at: f.followupDate, kind: "care", title: `ติดตามกรณี ${c.caseId}`, detail: f.actionTaken, href });
+    if (c.closedAt) push({ id: `cc-${c.caseId}-close`, at: c.closedAt, kind: "care", title: `ปิดกรณี ${c.caseId}`, detail: c.closingSummary, href });
   }
 
   return out.sort((a, b) => b.at.localeCompare(a.at));

@@ -1,5 +1,6 @@
 "use client";
 
+import { colorResults } from "@/lib/screening-view";
 import { use, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -147,8 +148,8 @@ export default function ScreeningFormPage({
 
     const hadCase = store.caseOf(studentId)?.status === "active";
     const saved = store.saveScreening(studentId, byDimension);
-    const red = saved.results.filter((r) => r.group === "red").map((r) => DIMENSION_LABEL[r.dimension]);
-    const amber = saved.results.filter((r) => r.group === "amber").map((r) => DIMENSION_LABEL[r.dimension]);
+    const red = colorResults(saved.results).filter((r) => r.group === "red").map((r) => DIMENSION_LABEL[r.dimension]);
+    const amber = colorResults(saved.results).filter((r) => r.group === "amber").map((r) => DIMENSION_LABEL[r.dimension]);
     if (red.length === 0 && amber.length === 0) goRedFlag();
     else setOutcome({ red, amber, caseLinked: hadCase });
   };
@@ -368,8 +369,8 @@ function ScreeningOutcome({
             <p className="mt-4 flex gap-2 rounded-lg bg-surface px-3 py-2.5 text-[13px]">
               <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-primary" />
               {outcome.caseLinked
-                ? "ระบบเชื่อมผลนี้กับ case ติดตามช่วยเหลือที่เปิดอยู่แล้ว"
-                : "ระบบเปิด case ติดตามช่วยเหลือให้แล้ว วางแผนช่วยเหลือได้ที่หน้าติดตามช่วยเหลือ"}
+                ? "ระบบเชื่อมผลนี้กับกรณีติดตามช่วยเหลือที่เปิดอยู่แล้ว"
+                : "ระบบเปิดกรณีติดตามช่วยเหลือให้แล้ว วางแผนช่วยเหลือได้ที่หน้าติดตามช่วยเหลือ"}
             </p>
             <Button className="mt-5 w-full" onClick={onContinue}>
               ทำแบบคัดกรอง Red Flag ต่อ
@@ -377,17 +378,17 @@ function ScreeningOutcome({
           </>
         ) : !skipping ? (
           <>
-            <p className="mt-4 text-[13.5px]">จะเปิด case ติดตามช่วยเหลือให้นักเรียนคนนี้ไหม</p>
+            <p className="mt-4 text-[13.5px]">จะเปิดกรณีติดตามช่วยเหลือให้นักเรียนคนนี้ไหม</p>
             <div className="mt-4 grid gap-2 sm:grid-cols-2">
               <Button variant="outline" onClick={() => setSkipping(true)}>
-                ไม่เปิด case
+                ไม่เปิดกรณี
               </Button>
-              <Button onClick={onOpenCase}>{outcome.caseLinked ? "เชื่อมกับ case ที่เปิดอยู่" : "เปิด case"}</Button>
+              <Button onClick={onOpenCase}>{outcome.caseLinked ? "เชื่อมกับกรณีที่เปิดอยู่" : "เปิดกรณี"}</Button>
             </div>
           </>
         ) : (
           <>
-            <p className="mt-4 text-[13.5px] font-semibold">เหตุผลที่ไม่เปิด case</p>
+            <p className="mt-4 text-[13.5px] font-semibold">เหตุผลที่ไม่เปิดกรณี</p>
             <p className="text-[12px] text-muted-foreground">นักเรียนจะอยู่ในสถานะ “เฝ้าดูผลคัดกรอง” และเก็บเหตุผลไว้ในประวัติ</p>
             <div className="mt-2 flex flex-wrap gap-1.5">
               {[...SKIP_REASONS, "อื่น ๆ"].map((r) => (

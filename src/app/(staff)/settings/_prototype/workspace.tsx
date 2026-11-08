@@ -36,7 +36,7 @@ import { AuditLogList, useAuditEntries } from "./audit-log";
 import { BehaviorScoreCard } from "./behavior-score-card";
 import { DcRoundSettings } from "./dc-round-settings";
 import { useConfirm } from "./confirm";
-import { windowEnabledConfirm, windowLockConfirm, type ImpactContext } from "./confirm-text";
+import { windowEnabledConfirm, type ImpactContext } from "./confirm-text";
 import { RuleRecorderPicker } from "./rule-recorder-picker";
 import { RATER_LABEL, STATUS_META, type SettingsPrototype, windowStatus } from "./state";
 
@@ -511,19 +511,6 @@ export function SettingsWorkspace({
                     }
                   />
                   {confirm.inlineFor(`win-${win.id}-enabled`)}
-                  <CheckRow
-                    checked={win.lockAfterClose}
-                    label="ปิดรอบแล้วห้ามบันทึกย้อนหลัง"
-                    onChange={() =>
-                      confirm.request({
-                        id: `win-${win.id}-lock`,
-                        ...windowLockConfirm(win),
-                        apply: () => proto.updateWindow(win.id, { lockAfterClose: !win.lockAfterClose }),
-                        undo: () => proto.updateWindow(win.id, { lockAfterClose: win.lockAfterClose }),
-                      })
-                    }
-                  />
-                  {confirm.inlineFor(`win-${win.id}-lock`)}
                 </>
               )}
 
