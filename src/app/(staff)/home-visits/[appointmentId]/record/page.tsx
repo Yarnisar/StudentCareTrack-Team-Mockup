@@ -398,7 +398,7 @@ export default function HomeVisitRecordPage({
 
           {/* สรุปการกรอกอัตโนมัติ */}
           {step === 0 && (
-          <div className="rounded-xl border border-blue-200 bg-accent p-5">
+          <div className="rounded-xl border border-violet-200 bg-accent p-5">
             <div className="flex flex-wrap items-center gap-3">
               <Sparkles className="size-5 text-primary" />
               <div className="flex-1">

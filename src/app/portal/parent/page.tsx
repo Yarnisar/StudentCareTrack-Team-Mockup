@@ -191,7 +191,7 @@ function ActionCard({
   const styles =
     tone === "warn"
       ? "border-amber-200 bg-risk-amber-bg"
-      : "border-blue-200 bg-accent";
+      : "border-violet-200 bg-accent";
   const ctaColor = tone === "warn" ? "text-risk-amber" : "text-primary";
 
   return (

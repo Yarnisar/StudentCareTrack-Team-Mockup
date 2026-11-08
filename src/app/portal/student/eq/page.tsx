@@ -148,7 +148,7 @@ export default function StudentEqPage() {
     <MobileShell title="แบบประเมิน EQ" subtitle="นักเรียนประเมินตนเอง" role="student" back="/portal/student">
       <div className="space-y-4 p-5">
         <AssessmentTabs studentId={PORTAL_STUDENT_ID} />
-        <div className="flex gap-2.5 rounded-xl border border-blue-200 bg-accent p-3.5">
+        <div className="flex gap-2.5 rounded-xl border border-violet-200 bg-accent p-3.5">
           <HeartHandshake className="size-5 shrink-0 text-primary" />
           <p className="text-[12.5px] leading-relaxed text-accent-foreground">
             คำตอบเป็นความลับ ครูประจำชั้นเห็นผลสรุปเพื่อใช้ดูแลช่วยเหลือเท่านั้น

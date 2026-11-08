@@ -234,15 +234,15 @@ function CardsContent() {
             </div>
             <div className="grid flex-1 gap-3 overflow-y-auto p-5 sm:grid-cols-2">
               <div className="rounded-xl bg-primary p-4 text-white">
-                <div className="text-[11px] text-blue-100">{SCHOOL_NAME} · ด้านหน้า</div>
+                <div className="text-[11px] text-violet-100">{SCHOOL_NAME} · ด้านหน้า</div>
                 <div className="mt-3 flex items-center gap-3">
                   <div className="flex size-14 items-center justify-center rounded-lg bg-white/20 text-[11px]">รูป</div>
                   <div>
                     <div className="text-[14px] font-bold">{ready[0].fullName}</div>
-                    <div className="text-[11.5px] text-blue-100">
+                    <div className="text-[11.5px] text-violet-100">
                       รหัส {ready[0].studentId} · {ready[0].roomName}
                     </div>
-                    <div className="text-[11.5px] text-blue-100">ปีการศึกษา {CURRENT_TERM.academicYear}</div>
+                    <div className="text-[11.5px] text-violet-100">ปีการศึกษา {CURRENT_TERM.academicYear}</div>
                   </div>
                 </div>
               </div>

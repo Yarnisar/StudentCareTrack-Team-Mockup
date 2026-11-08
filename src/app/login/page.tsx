@@ -23,13 +23,13 @@ export default function LoginPage() {
           <h2 className="max-w-md text-[34px] leading-snug font-bold text-white">
             ระบบคัดกรอง ประเมิน และติดตามการดูแลช่วยเหลือนักเรียนภายในสถานศึกษา
           </h2>
-          <p className="mt-4 max-w-md text-[15.5px] leading-relaxed text-blue-100">
+          <p className="mt-4 max-w-md text-[15.5px] leading-relaxed text-violet-100">
             คัดกรองและประเมินนักเรียน บันทึกความประพฤติ เยี่ยมบ้าน และติดตามการช่วยเหลือต่อเนื่องทุกภาคเรียน
             สำหรับครู นักเรียน และผู้ปกครอง
           </p>
         </div>
 
-        <p className="relative text-xs text-blue-200">
+        <p className="relative text-xs text-violet-200">
           © 2569 {SCHOOL_NAME} — งานกิจการนักเรียนและสนับสนุนผู้เรียน
         </p>
       </div>

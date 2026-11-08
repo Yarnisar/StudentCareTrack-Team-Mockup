@@ -134,7 +134,7 @@ export function concernsOf(summaries: ProcessSummary[], audience: "admin" | "tea
 export const FOCUS_PRIMARY =
   "inline-flex h-10 items-center gap-1.5 rounded-lg bg-primary px-4 text-[13.5px] font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-60";
 export const FOCUS_SECONDARY =
-  "inline-flex h-10 items-center gap-1.5 rounded-lg border border-primary/30 bg-white px-4 text-[13.5px] font-semibold text-primary hover:bg-blue-50 disabled:opacity-60";
+  "inline-flex h-10 items-center gap-1.5 rounded-lg border border-primary/30 bg-white px-4 text-[13.5px] font-semibold text-primary hover:bg-violet-50 disabled:opacity-60";
 
 /** ① กล่องโฟกัส: เรื่องเดียวที่ด่วนที่สุด ที่เหลือเป็นบรรทัด "ถัดไป" */
 export function FocusBox({
@@ -187,7 +187,7 @@ export function FocusBox({
               key={`${c.process}-${c.status}`}
               type="button"
               onClick={() => onPickOther(c)}
-              className="rounded-full border border-primary/25 bg-white px-2.5 py-0.5 font-medium text-primary hover:bg-blue-50"
+              className="rounded-full border border-primary/25 bg-white px-2.5 py-0.5 font-medium text-primary hover:bg-violet-50"
             >
               {c.headline} {n(c.count)}
             </button>

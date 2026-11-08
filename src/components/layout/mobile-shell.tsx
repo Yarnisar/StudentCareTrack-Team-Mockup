@@ -42,7 +42,7 @@ export function MobileShell({
       {brand ? (
         <header className="bg-primary px-5 py-5">
           <h1 className="text-[18.5px] font-bold text-primary-foreground">{title}</h1>
-          {subtitle && <p className="mt-0.5 text-[12.5px] text-blue-100">{subtitle}</p>}
+          {subtitle && <p className="mt-0.5 text-[12.5px] text-violet-100">{subtitle}</p>}
         </header>
       ) : (
         <header className="flex items-center gap-2.5 border-b border-border bg-card px-5 py-4">

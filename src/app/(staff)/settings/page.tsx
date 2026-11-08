@@ -5,21 +5,18 @@
  * แบ่งเป็นแท็บตามเรื่อง (?tab=windows|rules|score|audit) รายการเป็นแถวสรุป กดแล้วแก้ในแผงด้านข้าง
  * รวมแบบร่าง A, B, C เดิมเหลือแบบเดียว เพราะหน้ายาวต้องเลื่อนมากและเข้าถึงเรื่องที่จะแก้ได้ช้า
  *
- * PROTOTYPE: ยังเปรียบเทียบวิธีถามยืนยันก่อนสลับสวิตช์อยู่ ?confirm=A|B|C (ลูกศร ↑ ↓ แสดงเฉพาะตอน dev)
+ * วิธีถามยืนยันก่อนสลับสวิตช์ใช้แบบ A (กล่องกลางจอ) ลิงก์ที่ใส่ ?confirm=B|C ยังใช้ทดลองแบบอื่นได้ แต่ไม่มีแผงสลับบนหน้าจอแล้ว
  */
 
 import { Suspense, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import { PageHeader } from "@/components/layout/page-header";
-import { PrototypeSwitcher } from "@/components/prototype/prototype-switcher";
 import { useStore } from "@/lib/store";
 import { CURRENT_TERM, SCHOOL_NAME } from "@/lib/mock-data";
-import { CONFIRM_VARIANTS, ConfirmProvider, type ConfirmStyle } from "./_prototype/confirm";
+import { ConfirmProvider, type ConfirmStyle } from "./_prototype/confirm";
 import type { ImpactContext } from "./_prototype/confirm-text";
 import { useSettingsPrototype, windowStatus } from "./_prototype/state";
 import { SettingsWorkspace } from "./_prototype/workspace";
-
-const LAYOUT = [{ key: "A", name: "แท็บ + แถวสรุป + แผงแก้ไข" }];
 
 export default function SettingsPage() {
   return (
@@ -65,15 +62,6 @@ function SettingsContent() {
       />
 
       <SettingsWorkspace proto={proto} ruleUsage={ruleUsage} impact={impact} />
-
-      <PrototypeSwitcher
-        variants={LAYOUT}
-        secondary={{
-          param: "confirm",
-          label: "การยืนยัน",
-          variants: CONFIRM_VARIANTS,
-        }}
-      />
     </ConfirmProvider>
   );
 }

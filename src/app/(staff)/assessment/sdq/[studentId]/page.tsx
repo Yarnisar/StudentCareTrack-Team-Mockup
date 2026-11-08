@@ -74,7 +74,7 @@ function SdqContent({ studentId }: { studentId: string }) {
           <StepIndicator current={3} />
 
           {triggerText && (
-            <div className="mb-4 flex items-center gap-3 rounded-xl border border-blue-200 bg-accent px-4 py-3">
+            <div className="mb-4 flex items-center gap-3 rounded-xl border border-violet-200 bg-accent px-4 py-3">
               <Sparkles className="size-5 shrink-0 text-primary" />
               <p className="text-[13.5px] text-accent-foreground">
                 {triggerText} — ระบบเปิดแบบประเมิน SDQ ให้ทั้ง 3 ฝ่ายโดยอัตโนมัติแล้ว

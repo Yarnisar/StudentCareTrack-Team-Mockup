@@ -205,7 +205,7 @@ export default function ScreeningFormPage({
           </CardContent>
         </Card>
 
-        <div className="mb-4 flex items-center gap-3 rounded-xl border border-blue-200 bg-accent px-4 py-3">
+        <div className="mb-4 flex items-center gap-3 rounded-xl border border-violet-200 bg-accent px-4 py-3">
           <Info className="size-5 shrink-0 text-primary" />
           <p className="text-[13.5px] text-accent-foreground">
             ทุกมิติต้องติ๊กรายการที่พบ หรือเลือก <b>ไม่พบรายการใดในมิตินี้</b> · พบรายการเกณฑ์เสี่ยง ={" "}

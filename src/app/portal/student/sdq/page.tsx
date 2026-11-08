@@ -40,7 +40,7 @@ export default function StudentSdqPage() {
     >
       <div className="space-y-4 p-5">
         <AssessmentTabs studentId={DEMO_STUDENT_ID} />
-        <div className="flex gap-2.5 rounded-xl border border-blue-200 bg-accent p-3.5">
+        <div className="flex gap-2.5 rounded-xl border border-violet-200 bg-accent p-3.5">
           <HeartHandshake className="size-5 shrink-0 text-primary" />
           <p className="text-[12.5px] leading-relaxed text-accent-foreground">
             คำตอบของนักเรียนเป็นความลับ ครูจะเห็นเฉพาะผลสรุปเพื่อใช้ดูแลช่วยเหลือเท่านั้น

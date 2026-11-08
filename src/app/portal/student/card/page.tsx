@@ -26,11 +26,11 @@ export default function StudentCardPage() {
           <div className="absolute -top-10 -right-8 size-36 rounded-full bg-white/10" />
           <div className="relative flex items-center gap-2">
             <div className="flex size-7 items-center justify-center rounded-lg bg-white/20 text-[11px] font-bold text-white">SC</div>
-            <span className="text-xs font-semibold text-blue-100">{SCHOOL_NAME}</span>
+            <span className="text-xs font-semibold text-violet-100">{SCHOOL_NAME}</span>
           </div>
           <div className="relative mt-4">
             <div className="text-[16.5px] font-bold text-white">{student.fullName}</div>
-            <div className="mt-1 text-[12.5px] text-blue-100">
+            <div className="mt-1 text-[12.5px] text-violet-100">
               {student.roomName} เลขที่ {student.classNo} · รหัส {student.studentId}
             </div>
           </div>
