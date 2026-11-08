@@ -335,7 +335,7 @@ export function AdminOverview() {
                         setProcess("all");
                         setStatus("open");
                       }}
-                      className="ml-auto text-[12.5px] text-muted-foreground underline underline-offset-4 hover:text-foreground"
+                      className="ml-auto text-[12.5px] font-semibold text-primary hover:underline"
                     >
                       ดูทุกกระบวนการ
                     </button>
@@ -349,7 +349,8 @@ export function AdminOverview() {
                         <span className="min-w-0 flex-1 truncate text-[13px] text-muted-foreground">{r.teacher}</span>
                         <span className="shrink-0 text-[13px]">
                           {status === "done" ? "ทำแล้ว" : status === "watch" ? "เฝ้าระวัง" : "ค้าง"}{" "}
-                          <b className="text-[17px] tabular-nums">{n(selected)}</b> {roomUnit}
+                          {/* เฝ้าระวังที่ถึงเกณฑ์ใช้สีแดงตามกฎความประพฤติ */}
+                          <b className={`text-[17px] tabular-nums ${status === "watch" ? "text-risk-red" : ""}`}>{n(selected)}</b> {roomUnit}
                         </span>
                       </button>
                       <RemindButton
@@ -502,7 +503,7 @@ function RoomContact({
   );
 }
 
-function RemindButton({ sent, onClick, label = "เตือน" }: { sent: boolean; onClick: () => void; label?: string }) {
+function RemindButton({ sent, onClick, label = "เตือนครู" }: { sent: boolean; onClick: () => void; label?: string }) {
   return (
     <Button size="sm" variant="outline" disabled={sent} onClick={onClick} className="shrink-0">
       {sent ? <Check className="size-3.5" /> : <Bell className="size-3.5" />}

@@ -26,7 +26,8 @@ import {
   Filter,
   FocusBox,
   ProcessCards,
-  RiskPanel,
+  RiskPanelByDimension,
+  type DimensionRow,
   STATUS_TAG,
   WATCH_ACTIVE_TAG,
 } from "../_shared/process-table";
@@ -41,6 +42,7 @@ import {
 import { calendarEvents } from "./calendar-events";
 import { HomeroomCalendar } from "./homeroom-calendar";
 import { StudentId } from "@/components/shared/student-id";
+import { DIMENSION_LABEL, DIMENSION_ORDER } from "@/lib/types";
 
 /** "open" = ทุกอย่างที่ยังไม่เสร็จ (ค่าเริ่มต้น เพราะครูเปิดหน้านี้เพื่อหาว่าต้องทำอะไรต่อ) */
 type StatusFilter = Status | "open" | "all";
@@ -248,11 +250,15 @@ export function HomeroomOverview() {
               </CardContent>
             </Card>
             <div className="lg:sticky lg:top-4">
-              <RiskPanel
+              <RiskPanelByDimension
                 risk={riskOf(store)}
+                screened={dimensionsOf(store).screened}
                 total={store.students.length}
-                behavior={summaries.find((r) => r.process === "behavior")}
-                watchActive={process === "behavior"}
+                dimensions={dimensionsOf(store).rows}
+                behaviorRecorded={summaries.find((r) => r.process === "behavior")?.recorded ?? 0}
+                watchActiveCount={items.filter((i) => i.watch && !i.watch.pendingWithdrawal).length}
+                watchPendingCount={items.filter((i) => i.watch?.pendingWithdrawal).length}
+                watchSelected={process === "behavior"}
                 onPickWatch={() => pick("behavior", "watch")}
               />
             </div>
@@ -371,7 +377,34 @@ function ItemRow({ item, showProcess }: { item: Item; showProcess: boolean }) {
   );
 }
 
-/** ผลคัดกรองของห้อง แสดงเป็นแถบสีข้างรายการ */
+/** ผลคัดกรองรายมิติของห้อง (ไม่รวมสุขภาพจิต) จากผลล่าสุดของนักเรียนที่คัดกรองแล้ว */
+function dimensionsOf(store: ReturnType<typeof useStore>): { screened: number; rows: DimensionRow[] } {
+  const results = store.students
+    .map((s) => ({ student: s, screening: store.latestScreening(s.studentId) }))
+    .filter((x): x is { student: typeof x.student; screening: NonNullable<typeof x.screening> } => !!x.screening);
+  const rows = DIMENSION_ORDER.filter((d) => d !== "mental").map<DimensionRow>((d) => {
+    const groups = results.map(({ student, screening }) => ({
+      student,
+      group: screening.results.find((r) => r.dimension === d)?.group ?? "green",
+    }));
+    const red = groups.filter((g) => g.group === "red");
+    const amber = groups.filter((g) => g.group === "amber");
+    return {
+      key: d,
+      label: DIMENSION_LABEL[d],
+      red: red.length,
+      amber: amber.length,
+      cells: [...red.map(() => "red" as const), ...amber.map(() => "amber" as const), ...groups.filter((g) => g.group === "green").map(() => "green" as const)],
+      students: [
+        ...red.map((g) => ({ id: g.student.studentId, name: g.student.fullName, group: "red" as const })),
+        ...amber.map((g) => ({ id: g.student.studentId, name: g.student.fullName, group: "amber" as const })),
+      ],
+    };
+  });
+  return { screened: results.length, rows };
+}
+
+/** ผลคัดกรองของห้อง (สรุปรายคน) */
 function riskOf(store: ReturnType<typeof useStore>) {
   const count = (g: "green" | "amber" | "red") =>
     store.students.filter((s) => store.overallRiskOf(s.studentId) === g).length;

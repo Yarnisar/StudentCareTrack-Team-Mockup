@@ -40,6 +40,10 @@
   --risk-amber-bg: #fef3c7;
   --risk-red: #dc2626;
   --risk-red-bg: #fee2e2;
+  /* โทนอ่อนสำหรับแถบสรุปหลายชิ้น: แดงอิ่มสีเดียว เหลืองและเขียวลดความอิ่มให้ตาไปที่แดงก่อน */
+  --risk-amber-soft: #f2b441;
+  --risk-green-soft: #8fd3a6;
+  --risk-none: #e8edf3;
 
   --surface: #f8fafc;
 }
@@ -71,6 +75,9 @@
   --color-risk-amber-bg: var(--risk-amber-bg);
   --color-risk-red: var(--risk-red);
   --color-risk-red-bg: var(--risk-red-bg);
+  --color-risk-amber-soft: var(--risk-amber-soft);
+  --color-risk-green-soft: var(--risk-green-soft);
+  --color-risk-none: var(--risk-none);
   --color-surface: var(--surface);
 
   --radius-sm: calc(var(--radius) - 4px);

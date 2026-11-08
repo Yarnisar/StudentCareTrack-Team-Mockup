@@ -8,7 +8,8 @@
  * สถานะงานใช้สีกลาง (พื้นเข้ม = ด่วน) เพราะสีเขียว/เหลือง/แดงสงวนไว้สำหรับผลคัดกรองเท่านั้น
  */
 
-import { RiskDot } from "@/components/shared/risk-badge";
+import { useState } from "react";
+import Link from "next/link";
 import { formatThaiDate } from "@/lib/format";
 import { DEMO_TODAY } from "@/lib/mock-data";
 import { daysBetween } from "@/lib/periods";
@@ -309,7 +310,10 @@ export function ProcessCards({
   );
 }
 
-/** ③ ผลคัดกรองเป็นแถบสีแถบเดียว (จุดเดียวในหน้าที่ใช้สีกลุ่มเสี่ยง) + ความประพฤติ */
+/**
+ * ③ ผลคัดกรองของทั้งโรงเรียน (แอดมิน เป็นจำนวน): ตัวเลขนำ "คนต้องดูแล" แล้วเป็นแถบบางเรียงหนัก → เบา
+ * แดงอิ่มสีเดียว เหลืองและเขียวเป็นโทนอ่อน มีช่องขาวคั่น (ฝั่งครูใช้ RiskPanelByDimension) เฝ้าระวังที่ถึงเกณฑ์ใช้แดงตามกฎ
+ */
 export function RiskPanel({
   risk,
   total,
@@ -323,64 +327,62 @@ export function RiskPanel({
   watchActive?: boolean;
   onPickWatch?: () => void;
 }) {
-  const none = Math.max(0, total - risk.green - risk.amber - risk.red);
+  const screened = risk.green + risk.amber + risk.red;
+  const none = Math.max(0, total - screened);
+  const need = risk.red + risk.amber;
   const segs = [
-    { key: "green", value: risk.green, className: "bg-risk-green" },
-    { key: "amber", value: risk.amber, className: "bg-risk-amber" },
     { key: "red", value: risk.red, className: "bg-risk-red" },
-    { key: "none", value: none, className: "bg-muted" },
+    { key: "amber", value: risk.amber, className: "bg-risk-amber-soft" },
+    { key: "green", value: risk.green, className: "bg-risk-green-soft" },
+    { key: "none", value: none, className: "bg-risk-none" },
   ];
   const watch = behavior?.counts.watch ?? 0;
   return (
     <div className="rounded-2xl border border-border bg-card p-5">
       <h2 className="text-[15px] font-bold">ผลคัดกรอง</h2>
-      <div className="mt-3 flex h-3 overflow-hidden rounded-full bg-muted" role="img" aria-label="สัดส่วนผลคัดกรอง">
+      <div className="mt-2 flex flex-wrap items-baseline gap-x-2">
+        <span className="text-[34px] leading-none font-bold tabular-nums">{n(need)}</span>
+        <span className="text-[14px] font-semibold">คนต้องดูแล</span>
+        <span className="ml-auto text-[12px] text-muted-foreground">จาก {n(screened)} คนที่คัดกรองแล้ว</span>
+      </div>
+      <div className="mt-3 flex h-1.5 gap-[2px]" role="img" aria-label="สัดส่วนผลคัดกรอง">
         {total > 0 &&
           segs.map((s) =>
-            s.value > 0 ? <span key={s.key} className={s.className} style={{ width: `${(s.value / total) * 100}%` }} /> : null
+            s.value > 0 ? <span key={s.key} className={`rounded-full ${s.className}`} style={{ width: `${(s.value / total) * 100}%` }} /> : null
           )}
       </div>
-      <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3">
-        <Legend dot={<RiskDot group="red" />} label="กลุ่มมีปัญหา" value={risk.red} strong />
-        <Legend dot={<RiskDot group="amber" />} label="กลุ่มเสี่ยง" value={risk.amber} strong />
-        <Legend dot={<RiskDot group="green" />} label="ปกติ" value={risk.green} />
-        <Legend dot={<span className="inline-block size-2.5 rounded-full bg-muted-foreground/30" />} label="ยังไม่ได้คัดกรอง" value={none} />
-      </dl>
+      <p className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12.5px] text-muted-foreground">
+        <span className="inline-flex items-center gap-1.5">
+          <i className="inline-block size-2.5 rounded-full bg-risk-red" /> มีปัญหา <b className="text-foreground tabular-nums">{n(risk.red)}</b>
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <i className="inline-block size-2.5 rounded-full bg-risk-amber-soft" /> เสี่ยง <b className="text-foreground tabular-nums">{n(risk.amber)}</b>
+        </span>
+        <span className="tabular-nums">ปกติ {n(risk.green)}</span>
+        {none > 0 && <span className="tabular-nums">ยังไม่คัดกรอง {n(none)}</span>}
+      </p>
       {behavior && (
-        <div className="mt-4 flex items-center justify-between gap-3 border-t border-border pt-3 text-[13px]">
-          <span>
+        <div className="mt-4 border-t border-border pt-3 text-[13px]">
+          <div>
             <span className="font-semibold">ความประพฤติ</span>
             <span className="ml-2 text-muted-foreground">บันทึก {n(behavior.recorded ?? 0)} รายการ</span>
-          </span>
-          {watch > 0 && onPickWatch ? (
-            <button
-              type="button"
-              aria-pressed={watchActive}
-              onClick={onPickWatch}
-              className={`rounded-lg border px-2.5 py-0.5 font-semibold tabular-nums ${
-                watchActive ? "border-primary bg-accent text-primary" : "border-border hover:bg-muted"
-              }`}
-            >
-              เฝ้าระวัง {n(watch)}
-            </button>
-          ) : (
-            <span className="text-muted-foreground">เฝ้าระวัง {n(watch)}</span>
-          )}
+          </div>
+          <div className="mt-2">
+            {watch > 0 && onPickWatch ? (
+              <button
+                type="button"
+                aria-pressed={watchActive}
+                onClick={onPickWatch}
+                className={`rounded-lg bg-risk-red px-2.5 py-0.5 font-semibold text-white tabular-nums ${watchActive ? "ring-2 ring-primary/40" : ""}`}
+              >
+                เฝ้าระวัง {n(watch)}
+              </button>
+            ) : (
+              <span className="text-muted-foreground">ไม่มีผู้เฝ้าระวัง</span>
+            )}
+          </div>
         </div>
       )}
-    </div>
-  );
-}
-
-function Legend({ dot, label, value, strong }: { dot: React.ReactNode; label: string; value: number; strong?: boolean }) {
-  return (
-    <div>
-      <dt className="flex items-center gap-1.5 text-[12px] text-muted-foreground">
-        {dot} {label}
-      </dt>
-      <dd className={`mt-0.5 text-[20px] leading-tight tabular-nums ${strong ? "font-bold" : "font-semibold text-muted-foreground"}`}>
-        {n(value)}
-      </dd>
     </div>
   );
 }
@@ -403,5 +405,153 @@ export function Filter({ label, children }: { label: string; children: React.Rea
       {label}
       {children}
     </label>
+  );
+}
+
+/** ผลคัดกรองรายมิติของห้อง (5 มิติแรก สุขภาพจิตไม่ใช้สี) ใช้กับการ์ดแบบรายมิติของครู */
+export interface DimensionRow {
+  key: string;
+  label: string;
+  red: number;
+  amber: number;
+  /** หนึ่งช่องต่อนักเรียนหนึ่งคนที่คัดกรองแล้ว เรียงแดง → เหลือง → ปกติ */
+  cells: ("red" | "amber" | "green")[];
+  /** นักเรียนที่ผลไม่ปกติในมิตินี้ */
+  students: { id: string; name: string; group: "red" | "amber" }[];
+}
+
+const CELL_CLASS = { red: "bg-risk-red", amber: "bg-risk-amber-soft", green: "bg-risk-none" } as const;
+
+/**
+ * ③ ผลคัดกรองแบบรายมิติ (ครู): ตัวเลขนำ "คนต้องดูแล" แล้วบอกว่าปัญหากระจุกที่มิติไหน
+ * กดแถวมิติเพื่อดูรายชื่อนักเรียนที่ติดมิตินั้นและไปที่หน้านักเรียนได้ สีกลุ่มเสี่ยงใช้เฉพาะการ์ดนี้
+ * แดงอิ่มสีเดียว เหลืองและเขียวเป็นโทนอ่อน เรียงหนักไปเบา เฝ้าระวังความประพฤติที่ถึงเกณฑ์ใช้แดง
+ */
+export function RiskPanelByDimension({
+  risk,
+  screened,
+  total,
+  dimensions,
+  behaviorRecorded,
+  watchActiveCount,
+  watchPendingCount,
+  watchSelected,
+  onPickWatch,
+}: {
+  risk: { green: number; amber: number; red: number };
+  screened: number;
+  total: number;
+  dimensions: DimensionRow[];
+  behaviorRecorded: number;
+  watchActiveCount: number;
+  watchPendingCount: number;
+  watchSelected?: boolean;
+  onPickWatch?: () => void;
+}) {
+  const [open, setOpen] = useState<string | null>(null);
+  const need = risk.red + risk.amber;
+  const rows = [...dimensions].sort((a, b) => b.red - a.red || b.amber - a.amber);
+  const notScreened = Math.max(0, total - screened);
+  const watchTotal = watchActiveCount + watchPendingCount;
+  return (
+    <div className="rounded-2xl border border-border bg-card p-5">
+      <h2 className="text-[15px] font-bold">ผลคัดกรอง</h2>
+      {screened === 0 ? (
+        <p className="mt-3 text-[13px] text-muted-foreground">ยังไม่มีนักเรียนที่คัดกรองแล้ว</p>
+      ) : (
+        <>
+          <div className="mt-2 flex flex-wrap items-baseline gap-x-2">
+            <span className="text-[34px] leading-none font-bold tabular-nums">{n(need)}</span>
+            <span className="text-[14px] font-semibold">คนต้องดูแล</span>
+            <span className="ml-auto text-[12px] text-muted-foreground">จาก {n(screened)} คนที่คัดกรองแล้ว</span>
+          </div>
+          <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12.5px] text-muted-foreground">
+            <span className="inline-flex items-center gap-1.5">
+              <i className="inline-block size-2.5 rounded-full bg-risk-red" /> มีปัญหา <b className="text-foreground">{n(risk.red)}</b>
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <i className="inline-block size-2.5 rounded-full bg-risk-amber-soft" /> เสี่ยง <b className="text-foreground">{n(risk.amber)}</b>
+            </span>
+            <span>ปกติ {n(risk.green)}</span>
+            {notScreened > 0 && <span>ยังไม่คัดกรอง {n(notScreened)}</span>}
+          </p>
+          <div className="mt-3">
+            {rows.map((d) => {
+              const expanded = open === d.key;
+              const count = [d.red > 0 && `แดง ${d.red}`, d.amber > 0 && `เหลือง ${d.amber}`].filter(Boolean).join(" · ") || "–";
+              return (
+                <div key={d.key}>
+                  <button
+                    type="button"
+                    aria-expanded={expanded}
+                    disabled={d.students.length === 0}
+                    onClick={() => setOpen(expanded ? null : d.key)}
+                    className="grid w-full grid-cols-[104px_1fr_78px] items-center gap-2.5 rounded-lg px-2 py-1.5 text-left enabled:hover:bg-surface disabled:cursor-default"
+                  >
+                    <span className={`text-[12.5px] leading-tight ${d.students.length === 0 ? "text-muted-foreground" : ""}`}>{d.label}</span>
+                    <span className="flex gap-[3px]" aria-hidden>
+                      {d.cells.map((c, i) => (
+                        <i key={i} className={`h-3.5 flex-1 rounded-[4px] ${CELL_CLASS[c]}`} />
+                      ))}
+                    </span>
+                    <span className={`text-[11.5px] tabular-nums ${d.red > 0 ? "font-semibold text-foreground" : "text-muted-foreground"}`}>{count}</span>
+                  </button>
+                  {expanded && (
+                    <ul className="mb-1 ml-2 space-y-1 border-l border-border py-1 pl-3">
+                      {d.students.map((s) => (
+                        <li key={s.id}>
+                          <Link
+                            href={`/students/${s.id}?tab=screening`}
+                            className="flex items-center gap-2 rounded-md px-1.5 py-1 text-[12.5px] hover:bg-surface"
+                          >
+                            <i className={`inline-block size-2.5 rounded-full ${s.group === "red" ? "bg-risk-red" : "bg-risk-amber-soft"}`} />
+                            <span className="flex-1">{s.name}</span>
+                            <span className="text-muted-foreground">{s.group === "red" ? "มีปัญหา" : "เสี่ยง"}</span>
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
+      <div className="mt-4 border-t border-border pt-3 text-[13px]">
+        <div>
+          <span className="font-semibold">ความประพฤติ</span>
+          <span className="ml-2 text-muted-foreground">บันทึก {n(behaviorRecorded)} รายการ</span>
+        </div>
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          {watchTotal > 0 && onPickWatch ? (
+            <>
+              {watchActiveCount > 0 && (
+                <button
+                  type="button"
+                  aria-pressed={watchSelected}
+                  onClick={onPickWatch}
+                  className={`rounded-lg bg-risk-red px-2.5 py-0.5 font-semibold text-white tabular-nums ${watchSelected ? "ring-2 ring-primary/40" : ""}`}
+                >
+                  เฝ้าระวัง {n(watchActiveCount)}
+                </button>
+              )}
+              {watchPendingCount > 0 && (
+                <button
+                  type="button"
+                  aria-pressed={watchSelected}
+                  onClick={onPickWatch}
+                  className="rounded-lg border border-border px-2.5 py-0.5 font-semibold tabular-nums hover:bg-muted"
+                >
+                  รอยืนยันถอน {n(watchPendingCount)}
+                </button>
+              )}
+            </>
+          ) : (
+            <span className="text-muted-foreground">ไม่มีผู้เฝ้าระวัง</span>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
