@@ -32,12 +32,14 @@ interface CloseInfo {
   /** ช่วงเวลาที่ปิดล่าสุด ใช้เปิดแผงในหน้าตั้งค่าตรงตัว */
   windowId?: string;
   date?: string;
+  /** เหลือกี่วันก่อนปิดรอบ (ติดลบ = ปิดแล้ว ไม่มี = ไม่มีวันปิด) ใช้เรียงการ์ด */
+  days?: number;
   detail: string;
 }
 
 /** วันปิดรอบที่ใกล้ที่สุดที่ยังไม่ผ่าน หรือวันปิดล่าสุดที่ผ่านไปแล้ว */
 function closeInfo(row: ProcessSummary): CloseInfo {
-  if (row.process === "care") return { text: "ตามวันนัดติดตามของแต่ละ case", closed: false, locked: false, detail: "" };
+  if (row.process === "care") return { text: "ตามวันนัดติดตามของแต่ละกรณี", closed: false, locked: false, detail: "" };
   if (row.closes.length === 0) return { text: "ยังไม่ตั้งช่วงเวลา", closed: false, locked: false, detail: "" };
   const detail = row.closes.map((c) => `${c.label} ${formatThaiDate(c.date)}`).join("\n");
   const sorted = [...row.closes].sort((a, b) => a.date.localeCompare(b.date));
@@ -52,11 +54,12 @@ function closeInfo(row: ProcessSummary): CloseInfo {
       locked: target.locked,
       windowId: target.id,
       date: target.date,
+      days: daysBetween(DEMO_TODAY, target.date),
       detail,
     };
   }
   const left = daysBetween(DEMO_TODAY, upcoming.date);
-  return { text: left === 0 ? "ปิดรอบวันนี้" : `อีก ${left} วันปิดรอบ`, closed: false, locked: false, windowId: upcoming.id, detail };
+  return { text: left === 0 ? "ปิดรอบวันนี้" : `อีก ${left} วันปิดรอบ`, closed: false, locked: false, windowId: upcoming.id, days: left, detail };
 }
 
 /** เรื่องที่ต้องตามจากแต่ละกระบวนการ เรียงจากด่วนที่สุด: ปิดรับแล้ว > ยังไม่เริ่มช่วยเหลือ / เลยกำหนด > ใกล้ครบกำหนด */
@@ -88,9 +91,9 @@ export function concernsOf(summaries: ProcessSummary[], audience: "admin" | "tea
         ...base,
         status: "overdue",
         count: row.counts.overdue,
-        headline: care ? `${label} เลยวันนัด` : `${label}ยังค้าง`,
+        headline: care ? `${label} เลยวันนัด` : `${label}ยังไม่เสร็จ`,
         note: care
-          ? "case ที่เลยวันนัดติดตามครั้งถัดไปแล้ว"
+          ? "กรณีที่เลยวันนัดติดตามครั้งถัดไปแล้ว"
           : info.locked
             ? audience === "admin"
               ? `ปิดรับแล้วเมื่อ ${date} ครูส่งเพิ่มไม่ได้จนกว่าจะขยายช่วงเวลา`
@@ -106,7 +109,7 @@ export function concernsOf(summaries: ProcessSummary[], audience: "admin" | "tea
         status: "near_due",
         count: row.counts.near_due,
         headline: `${label}ใกล้ครบกำหนด`,
-        note: care ? "case ที่ใกล้วันนัดติดตาม" : `${info.text} ยังทำไม่เสร็จ`,
+        note: care ? "กรณีที่ใกล้วันนัดติดตาม" : `${info.text} ยังทำไม่เสร็จ`,
         rank: 2,
       });
     }
@@ -117,7 +120,7 @@ export function concernsOf(summaries: ProcessSummary[], audience: "admin" | "tea
         status: "pending",
         count: row.counts.pending,
         headline: "การช่วยเหลือที่ยังไม่เริ่ม",
-        note: "กลุ่มมีปัญหาที่ยังไม่มีแผนช่วยเหลือ หรือ case ที่ยังไม่กำหนดวันติดตาม",
+        note: "กลุ่มมีปัญหาที่ยังไม่มีแผนช่วยเหลือ หรือกรณีที่ยังไม่กำหนดวันติดตาม",
         rank: 1,
       });
     }
@@ -177,7 +180,7 @@ export function FocusBox({
       </div>
       {rest.length > 0 && (
         <div className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1.5 border-t border-primary/15 pt-3 text-[12.5px] text-muted-foreground">
-          ถัดไป
+          เรื่องอื่นที่ใกล้ครบกำหนด
           {rest.map((c) => (
             <button
               key={`${c.process}-${c.status}`}
@@ -200,16 +203,36 @@ export function ProcessCards({
   selected,
   onPick,
   totalNote,
+  audience = "admin",
 }: {
   summaries: ProcessSummary[];
   selected: ProcessKey | null;
   onPick: (process: ProcessKey, status: PickStatus) => void;
   /** คำอธิบายตัวหาร เช่น "จาก 308 คนที่ต้องทำ SDQ" */
   totalNote: (row: ProcessSummary) => string;
+  /** ครู: ตัวเลขใหญ่คืองานที่ครูลงมือได้ และเรียงการ์ดตามวันปิดรอบที่ใกล้สุด */
+  audience?: "admin" | "teacher";
 }) {
+  const teacher = audience === "teacher";
+  // ครู: เรียงการ์ดตามวันปิดรอบ ใกล้สุดก่อน (ปิดแล้วขึ้นก่อน) การติดตามช่วยเหลือไม่มีวันปิดรอบ ไว้ท้าย
+  const order = teacher
+    ? [...CARD_PROCESSES].sort((a, b) => {
+        const da = summaries.find((r) => r.process === a);
+        const db = summaries.find((r) => r.process === b);
+        const ka = da ? (closeInfo(da).days ?? 9999) : 9999;
+        const kb = db ? (closeInfo(db).days ?? 9999) : 9999;
+        return ka - kb;
+      })
+    : [...CARD_PROCESSES];
+  const nearestId = teacher
+    ? order.find((p) => {
+        const r = summaries.find((x) => x.process === p);
+        return r && r.process !== "care" && r.actionable > 0 && (closeInfo(r).days ?? 9999) <= 14;
+      })
+    : undefined;
   return (
     <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-      {CARD_PROCESSES.map((p) => {
+      {order.map((p) => {
         const row = summaries.find((r) => r.process === p);
         if (!row) return null;
         const active = selected === p;
@@ -218,8 +241,17 @@ export function ProcessCards({
         const care = p === "care";
         const pct = row.total === 0 ? 0 : Math.round((row.counts.done / row.total) * 100);
         // การติดตามช่วยเหลือไม่มีรอบให้ทำครบ ตัวเลขหลักจึงเป็น case ที่เลยวันนัด แทนแถบความคืบหน้า
-        const big = care ? (row.counts.overdue > 0 ? row.counts.overdue : open) : open;
-        const bigLabel = care ? (row.counts.overdue > 0 ? "เลยวันนัด" : "case เปิดอยู่") : "ค้าง";
+        const big = teacher ? row.actionable : care ? (row.counts.overdue > 0 ? row.counts.overdue : open) : open;
+        const bigLabel = teacher
+          ? care
+            ? "กรณีที่ต้องลงมือ"
+            : "คนที่ทำได้เลย"
+          : care
+            ? row.counts.overdue > 0
+              ? "เลยวันนัด"
+              : "กรณีเปิดอยู่"
+            : "ค้าง";
+        const nearest = p === nearestId;
         return (
           <button
             key={p}
@@ -227,7 +259,7 @@ export function ProcessCards({
             aria-pressed={active}
             onClick={() => onPick(p, care && row.counts.overdue > 0 ? "overdue" : "open")}
             className={`flex flex-col rounded-2xl border bg-card p-4 text-left sm:p-5 transition-colors hover:border-foreground/30 ${
-              active ? "border-primary ring-2 ring-primary/20" : "border-border"
+              active ? "border-primary ring-2 ring-primary/20" : nearest ? "border-2 border-foreground/40" : "border-border"
             }`}
           >
             <span className="text-[13.5px] font-semibold text-muted-foreground">{PROCESS_LABEL[p]}</span>
@@ -239,12 +271,14 @@ export function ProcessCards({
             </span>
             {care ? (
               <span className="mt-3 text-[12.5px] text-muted-foreground">
-                {/* ตัวเลขหลักเป็น "case เปิดอยู่" แล้ว ไม่พูดซ้ำ */}
+                {/* ตัวเลขหลักเป็น "กรณีเปิดอยู่" แล้ว ไม่พูดซ้ำ */}
                 {[
-                  row.counts.overdue > 0 && `เปิดอยู่ ${n(open)}`,
+                  teacher && row.counts.done > 0 && `ปิดแล้ว ${n(row.counts.done)}`,
+                  !teacher && row.counts.overdue > 0 && `เปิดอยู่ ${n(open)}`,
+                  row.counts.overdue > 0 && teacher && `เลยวันนัด ${n(row.counts.overdue)}`,
                   row.counts.pending > 0 && `ยังไม่เริ่ม ${n(row.counts.pending)}`,
                   row.counts.near_due > 0 && `ใกล้วันนัด ${n(row.counts.near_due)}`,
-                  row.counts.done > 0 && `ปิดแล้ว ${n(row.counts.done)}`,
+                  !teacher && row.counts.done > 0 && `ปิดแล้ว ${n(row.counts.done)}`,
                 ]
                   .filter(Boolean)
                   .join(" · ")}
@@ -254,6 +288,9 @@ export function ProcessCards({
                 <span className="mt-3 h-1.5 overflow-hidden rounded-full bg-muted">
                   <span className="block h-full rounded-full bg-primary" style={{ width: `${pct}%` }} />
                 </span>
+                {teacher && row.waiting > 0 && (
+                  <span className="mt-2 text-[12px] text-muted-foreground tabular-nums">รอผู้อื่น {n(row.waiting)}</span>
+                )}
                 <span className="mt-1.5 text-[12px] text-muted-foreground tabular-nums">
                   {row.total === 0 ? "ยังไม่มีคนที่ต้องทำในรอบนี้" : <>ทำแล้ว {n(row.counts.done)} {totalNote(row)}</>}
                 </span>
@@ -261,7 +298,7 @@ export function ProcessCards({
             )}
             <span
               title={info.detail || undefined}
-              className={`mt-auto pt-3 text-[12px] ${info.locked ? "font-semibold text-foreground" : "text-muted-foreground"}`}
+              className={`mt-auto pt-3 text-[12px] ${info.locked || nearest ? "font-semibold text-foreground" : "text-muted-foreground"}`}
             >
               {info.text}
             </span>
@@ -349,6 +386,9 @@ function Legend({ dot, label, value, strong }: { dot: React.ReactNode; label: st
 }
 
 /** สถานะของงาน แยกจากสีกลุ่มเสี่ยง: เกินกำหนดเข้มที่สุด ใกล้ครบกำหนดรองลงมา */
+/** เฝ้าระวังในเกณฑ์จริง = สีแดง (ข้อยกเว้นที่ตกลงไว้ว่าถึงเกณฑ์ความประพฤติใช้แดง) */
+export const WATCH_ACTIVE_TAG = "bg-risk-red text-white";
+
 export const STATUS_TAG: Record<Status, string> = {
   overdue: "bg-foreground text-background",
   near_due: "border border-foreground/40 text-foreground",

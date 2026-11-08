@@ -18,9 +18,9 @@ export type EventKind = "visit" | "case_followup" | "close" | "case_target";
 
 export const EVENT_LABEL: Record<EventKind, string> = {
   visit: "นัดเยี่ยมบ้าน",
-  case_followup: "วันติดตาม case",
+  case_followup: "วันติดตามกรณี",
   close: "ปิดรอบ",
-  case_target: "วันเป้าหมาย case",
+  case_target: "วันเป้าหมายกรณี",
 };
 
 export const EVENT_KINDS = Object.keys(EVENT_LABEL) as EventKind[];
@@ -116,7 +116,7 @@ export function calendarEvents(
         detail: "ถึงวันที่ตั้งเป้าไว้ ควรประเมินผลหรือปรับแผน",
         student,
         href,
-        action: "ดู case",
+        action: "ดูกรณี",
       });
     }
   }

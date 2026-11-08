@@ -101,7 +101,7 @@ export function AdminOverview() {
     .map(({ room: r, own }) => ({ room: r, own, selected: own.filter((i) => matches(i, process, status)).length }))
     .sort((a, b) => b.selected - a.selected || a.room.room.localeCompare(b.room.room, "th"));
   // ทุกกระบวนการรวมกัน คนเดียวนับได้หลายงาน จึงไม่ใช้หน่วย "คน"
-  const roomUnit = process === "all" ? "งาน" : process === "care" ? "case" : "คน";
+  const roomUnit = process === "all" ? "งาน" : process === "care" ? "กรณี" : "คน";
   const topRooms = roomRows.filter((r) => r.selected > 0).slice(0, TOP_ROOMS);
   const roomPager = usePagination(roomRows, pageSize);
 
@@ -258,7 +258,7 @@ export function AdminOverview() {
           <div className="mt-5">
             <FocusBox
               concerns={concerns}
-              unit={(c) => (c.process === "care" ? "case" : "คน")}
+              unit={(c) => (c.process === "care" ? "กรณี" : "คน")}
               onPickOther={(c) => pick(c.process, c.status)}
               actions={(c) => {
                 const list = roomsWith(c);

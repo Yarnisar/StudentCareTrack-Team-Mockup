@@ -178,17 +178,17 @@ export function adminItems(students: ProtoStudent[], windows: AssessmentWindow[]
     else open(s, "home_visit", "home_visit", "ยังไม่ได้เยี่ยมบ้าน");
 
     if (s.care?.status === "closed") {
-      items.push({ student: s, process: "care", status: "done", detail: "ปิด case แล้ว" });
+      items.push({ student: s, process: "care", status: "done", detail: "ปิดกรณีแล้ว" });
     } else if (s.care) {
       items.push({
         student: s,
         process: "care",
         status: dueStatus(s.care.nextFollowupDate),
-        detail: "case กำลังดำเนินการ",
+        detail: "กรณีกำลังดำเนินการ",
         due: s.care.nextFollowupDate,
       });
     } else if (s.risk === "red") {
-      items.push({ student: s, process: "care", status: "pending", detail: "กลุ่มมีปัญหายังไม่มี case" });
+      items.push({ student: s, process: "care", status: "pending", detail: "กลุ่มมีปัญหายังไม่มีกรณี" });
     }
 
     if (s.behaviorWatch) {
@@ -218,6 +218,8 @@ export function adminSummaries(
           date: w.closeDate,
           locked: w.lockAfterClose,
         })),
+      actionable: 0,
+      waiting: 0,
       counts,
       total: process === "behavior" ? students.length : own.length,
       unit: process === "care" ? "รายการ" : "คน",

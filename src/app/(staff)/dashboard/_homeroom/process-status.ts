@@ -8,7 +8,7 @@
 
 import { formatThaiDate } from "@/lib/format";
 import { CURRENT_TERM, DEMO_TODAY } from "@/lib/mock-data";
-import { dueStatus, isLocked, KIND_LABEL, windowFor, type AssessmentKind } from "@/lib/periods";
+import { daysBetween, dueStatus, isLocked, KIND_LABEL, windowFor, type AssessmentKind } from "@/lib/periods";
 import { draftKey, type useStore } from "@/lib/store";
 import { needsReview } from "@/lib/assessment-review";
 import { termOfDate } from "@/lib/terms";
@@ -69,6 +69,8 @@ export interface Item {
   action?: string;
   /** ช่วงเวลาปิดรับแล้ว ครูส่งเพิ่มไม่ได้จนกว่าแอดมินจะขยายเวลา */
   locked?: boolean;
+  /** ความประพฤติ: อยู่ในเกณฑ์เฝ้าระวังจริง หรือคะแนนกลับมาแล้วรอครูยืนยันถอน (สองอย่างต่างกัน) */
+  watch?: { level: number; score: number; pendingWithdrawal: boolean; overdueDays?: number };
   /** งานที่ให้ "พิจารณา" เปิด case ครูเลือกยังไม่เปิดพร้อมเหตุผลได้ (basis = เหตุที่พิจารณา) */
   consider?: { basis: string };
 }
@@ -78,6 +80,9 @@ export interface ProcessSummary {
   /** วันปิดของแต่ละช่วงเวลาในกระบวนการนี้ (locked = ตั้งห้ามบันทึกย้อนหลัง) */
   closes: { id: string; label: string; date: string; locked: boolean }[];
   counts: Record<Status, number>;
+  /** งานที่ครูลงมือได้ตอนนี้ (มีปุ่มทำต่อ) กับงานที่รอคนอื่นตอบหรือทำก่อน — ตัวเลขใหญ่ของการ์ดใช้ actionable */
+  actionable: number;
+  waiting: number;
   /** จำนวนหน่วยทั้งหมดของกระบวนการ (คน หรือ case) */
   total: number;
   unit: string;
@@ -119,7 +124,7 @@ export function processStatus(store: Store, termId: string): { items: Item[]; su
       items.push(
         open("screening", "nine_s", {
           student,
-          detail: "Red Flag ผลปกติ เหลือ 9S ของมิติสุขภาพจิต",
+          detail: "รอประเมินสุขภาพจิต · Red Flag ผลปกติ เหลือ 9S",
           href: `/assessment/nine-s/${id}`,
           action: "ทำ 9S",
         })
@@ -128,7 +133,7 @@ export function processStatus(store: Store, termId: string): { items: Item[]; su
       items.push(
         open("screening", "red_flag", {
           student,
-          detail: "คัดกรอง 6 มิติแล้ว เหลือ Red Flag ของมิติสุขภาพจิต",
+          detail: "รอประเมินสุขภาพจิต · เหลือ Red Flag",
           href: `/assessment/red-flag/${id}`,
           action: "ทำ Red Flag",
         })
@@ -256,7 +261,7 @@ export function processStatus(store: Store, termId: string): { items: Item[]; su
         process: "care",
         status: "pending",
         student,
-        detail: `ระบบเปิด case ให้จาก${activeCase.triggerSource} · ยังไม่วางแผนช่วยเหลือ`,
+        detail: `ระบบเปิดกรณีให้จาก${activeCase.triggerSource} · ยังไม่วางแผนช่วยเหลือ`,
         href: `/care-cases?student=${id}`,
         action: "วางแผนช่วยเหลือ",
       });
@@ -308,37 +313,46 @@ export function processStatus(store: Store, termId: string): { items: Item[]; su
           process: "care",
           status: "pending",
           student,
-          detail: `ยังไม่มี case · ${reasons.join(" · ")}`,
+          detail: `ยังไม่มีกรณี · ${reasons.join(" · ")}`,
           href: `/care-cases?student=${id}${level > 0 || refers.length > 0 ? "&from=behavior" : ""}`,
-          action: "เปิด case",
+          action: "เปิดกรณี",
           consider: { basis: key },
         });
       }
     }
     for (const c of cases.filter((c) => c.status === "closed")) {
-      items.push({ process: "care", status: "done", student, detail: `ปิด case เมื่อ ${formatThaiDate(c.closedAt ?? "")}` });
+      items.push({ process: "care", status: "done", student, detail: `ปิดกรณีเมื่อ ${formatThaiDate(c.closedAt ?? "")}` });
     }
 
     // ---- ความประพฤติ: ไม่มีรอบ แสดงเฉพาะคนที่ถึงเกณฑ์เฝ้าระวัง
     // เกณฑ์เฝ้าระวังมาจากหน้าตั้งค่า (UC7 Scenario D)
     if (store.isBehaviorWatch(id)) {
       const score = store.behaviorScoreOf(id);
+      const level = store.behaviorWatchLevelOf(id);
+      const pendingWithdrawal = store.watchWithdrawalPending(id);
+      const wait = pendingWithdrawal ? store.withdrawalWait(id) : null;
+      const overdueDays = wait?.overdue ? Math.max(1, daysBetween(wait.dueOn, DEMO_TODAY)) : undefined;
+      const full = store.behaviorScoreConfig.ceiling ?? store.behaviorScoreConfig.startScore;
       items.push({
         process: "behavior",
         status: "watch",
         student,
-        detail: store.watchWithdrawalPending(id)
-          ? `คะแนนกลับเข้าเกณฑ์แล้ว (${score}) · รอครูที่ปรึกษายืนยันถอนสถานะเฝ้าระวังระดับ ${store.behaviorWatchLevelOf(id)}`
-          : `เฝ้าระวังระดับ ${store.behaviorWatchLevelOf(id)} · คะแนนความประพฤติ ${score}`,
-        href: store.watchWithdrawalPending(id) ? "/behavior/withdrawals" : `/students/${id}`,
-        action: store.watchWithdrawalPending(id) ? "พิจารณาถอนสถานะ" : "ดูประวัติ",
+        watch: { level, score, pendingWithdrawal, overdueDays },
+        detail: pendingWithdrawal
+          ? `คะแนนกลับมา ${score}/${full}${overdueDays ? ` · เลยกำหนดยืนยัน ${overdueDays} วัน` : ""}`
+          : `คะแนน ${score}/${full}`,
+        href: pendingWithdrawal ? "/behavior/withdrawals" : `/students/${id}?tab=conduct`,
+        action: pendingWithdrawal ? "ยืนยันถอน" : "ดูประวัติ",
       });
     }
   }
 
+  /** เฝ้าระวังในเกณฑ์จริงขึ้นก่อน รองลงมาคือเลยกำหนดยืนยันถอน */
+  const rank = (i: Item) =>
+    i.watch ? (i.watch.pendingWithdrawal ? (i.watch.overdueDays ? -1 : 3) : -2) : STATUS_RANK[i.status];
   items.sort(
     (a, b) =>
-      STATUS_RANK[a.status] - STATUS_RANK[b.status] ||
+      rank(a) - rank(b) ||
       PROCESS_ORDER.indexOf(a.process) - PROCESS_ORDER.indexOf(b.process) ||
       (a.urgency ? URGENCY_RANK[a.urgency] : 3) - (b.urgency ? URGENCY_RANK[b.urgency] : 3) ||
       a.student.classNo - b.student.classNo
@@ -349,8 +363,11 @@ export function processStatus(store: Store, termId: string): { items: Item[]; su
     const own = items.filter((i) => i.process === process);
     const counts = { done: 0, pending: 0, near_due: 0, overdue: 0, watch: 0 };
     for (const i of own) counts[i.status]++;
+    const undone = own.filter((i) => i.status !== "done" && i.status !== "watch");
     return {
       process,
+      actionable: undone.filter((i) => i.action && !i.locked).length,
+      waiting: undone.filter((i) => !i.action && !i.locked).length,
       closes: windows
         .filter((w) => w.enabled && (PROCESS_KINDS[process] ?? []).includes(w.kind))
         .map((w) => ({

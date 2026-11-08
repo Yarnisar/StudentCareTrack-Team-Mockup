@@ -28,6 +28,7 @@ import {
   ProcessCards,
   RiskPanel,
   STATUS_TAG,
+  WATCH_ACTIVE_TAG,
 } from "../_shared/process-table";
 import {
   PROCESS_LABEL,
@@ -45,11 +46,11 @@ import { StudentId } from "@/components/shared/student-id";
 type StatusFilter = Status | "open" | "all";
 
 const STATUS_FILTER_LABEL: Record<StatusFilter, string> = {
-  open: "งานค้าง",
+  open: "ที่ต้องทำ",
   overdue: STATUS_LABEL.overdue,
   near_due: STATUS_LABEL.near_due,
   pending: STATUS_LABEL.pending,
-  watch: STATUS_LABEL.watch,
+  watch: "เฝ้าระวังความประพฤติ",
   done: STATUS_LABEL.done,
   all: "ทุกสถานะ",
 };
@@ -107,11 +108,6 @@ export function HomeroomOverview() {
       ]),
       store.logExport(`ภาพรวมห้อง ${CURRENT_TEACHER.roomName} · ${shown.length} รายการ`)
     );
-
-  const listTitle = [
-    process === "all" ? "ทุกกระบวนการ" : PROCESS_LABEL[process],
-    STATUS_FILTER_LABEL[status],
-  ].join(" · ");
 
   return (
     <div className="flex-1 overflow-y-auto p-4 sm:p-8">
@@ -172,7 +168,7 @@ export function HomeroomOverview() {
             <FocusBox
               audience="teacher"
               concerns={concernsOf(summaries, "teacher")}
-              unit={(c) => (c.process === "care" ? "case" : "คน")}
+              unit={(c) => (c.process === "care" ? "กรณี" : "คน")}
               onPickOther={(c) => showList(c.process, c.status)}
               actions={(c) => (
                 <button
@@ -189,6 +185,7 @@ export function HomeroomOverview() {
           {/* ② การ์ดกระบวนการ */}
           <div className="mt-4">
             <ProcessCards
+              audience="teacher"
               summaries={summaries}
               selected={process === "all" ? null : process}
               onPick={(p, st) => pick(p, st)}
@@ -205,21 +202,9 @@ export function HomeroomOverview() {
                 <div className="flex flex-wrap items-end gap-3">
                   <div className="min-w-0 flex-1">
                     <h2 className="text-[15px] font-bold">
-                      {listTitle} · {shown.length} รายการ
+                      รายการที่ต้องทำ <span className="font-normal text-muted-foreground">· {shown.length} รายการ</span>
                     </h2>
                   </div>
-                  {(process !== "all" || status !== "open") && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setProcess("all");
-                        setStatus("open");
-                      }}
-                    >
-                      ล้างการเลือก
-                    </Button>
-                  )}
                   <Filter label="สถานะ">
                     <NativeSelect
                       value={status}
@@ -233,7 +218,22 @@ export function HomeroomOverview() {
                       ))}
                     </NativeSelect>
                   </Filter>
+                  {(process !== "all" || status !== "open") && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setProcess("all");
+                        setStatus("open");
+                      }}
+                    >
+                      ล้างตัวกรอง
+                    </Button>
+                  )}
                 </div>
+                {process !== "all" && (
+                  <p className="mt-2 text-[12.5px] text-muted-foreground">เฉพาะ {PROCESS_LABEL[process]}</p>
+                )}
 
                 <div className="mt-4 space-y-2">
                   {shown.map((item, i) => (
@@ -273,9 +273,19 @@ function ItemRow({ item, showProcess }: { item: Item; showProcess: boolean }) {
   const finalReason = reason === "อื่น ๆ" ? other.trim() : reason;
   return (
     <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border p-3.5">
-      <span className={`w-28 shrink-0 rounded-md px-2.5 py-1 text-center text-[11.5px] font-semibold ${STATUS_TAG[item.status]}`}>
-        {STATUS_LABEL[item.status]}
-      </span>
+      {item.watch ? (
+        <span
+          className={`w-28 shrink-0 rounded-md px-2.5 py-1 text-center text-[11.5px] font-semibold ${
+            item.watch.pendingWithdrawal ? STATUS_TAG.watch : WATCH_ACTIVE_TAG
+          }`}
+        >
+          {item.watch.pendingWithdrawal ? "รอยืนยันถอน" : `เฝ้าระวังระดับ ${item.watch.level}`}
+        </span>
+      ) : (
+        <span className={`w-28 shrink-0 rounded-md px-2.5 py-1 text-center text-[11.5px] font-semibold ${STATUS_TAG[item.status]}`}>
+          {STATUS_LABEL[item.status]}
+        </span>
+      )}
       <span className="flex min-w-0 flex-1 items-start gap-2.5">
         <StudentId id={item.student.studentId} className="pt-0.5" />
         <span className="min-w-0 flex-1">
@@ -286,7 +296,8 @@ function ItemRow({ item, showProcess }: { item: Item; showProcess: boolean }) {
             )}
           </span>
           <span className="block text-[12px] text-muted-foreground">
-            เลขที่ {item.student.classNo} · {item.detail}
+            เลขที่ {item.student.classNo} ·{" "}
+            <span className={item.watch?.overdueDays ? "font-semibold text-foreground" : undefined}>{item.detail}</span>
             {item.due && item.status !== "done" && ` · ครบกำหนด ${formatThaiDate(item.due)}`}
           </span>
         </span>
@@ -317,7 +328,7 @@ function ItemRow({ item, showProcess }: { item: Item; showProcess: boolean }) {
       )}
       {asking && item.consider && (
         <div className="w-full rounded-lg bg-surface px-3.5 py-3">
-          <div className="text-[12.5px] font-semibold">เหตุผลที่ยังไม่เปิด case</div>
+          <div className="text-[12.5px] font-semibold">เหตุผลที่ยังไม่เปิดกรณี</div>
           <div className="mt-2 flex flex-wrap gap-2">
             {[...CONSIDER_REASONS, "อื่น ๆ"].map((r) => (
               <button
