@@ -169,7 +169,7 @@ export function FocusBox({
         {top.status === "near_due" ? "ใกล้ครบกำหนด" : urgent}
       </div>
       <div className="mt-1 flex flex-wrap items-end gap-x-6 gap-y-4">
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1 basis-60">
           <div className="flex flex-wrap items-baseline gap-x-3">
             <span className="text-[17px] font-semibold">{top.headline}</span>
             <span className="text-[40px] leading-none font-bold text-primary tabular-nums">{n(top.count)}</span>

@@ -202,7 +202,7 @@ export function SettingsWorkspace({
                       selectedWindow === w.id ? "bg-accent" : ""
                     }`}
                   >
-                    <span className="min-w-0 flex-1 text-[13.5px] font-medium">
+                    <span className="min-w-[12rem] flex-1 text-[13.5px] font-medium">
                       {w.label}
                       <span className="ml-2 text-[12px] font-normal text-muted-foreground">
                         {termInfoOf(w.termId ?? CURRENT_TERM.termId).short} · {targetLabel(w.target)}
