@@ -672,7 +672,7 @@ export function GeneralTab({ info, studentId, showDc = true }: { info: ReactNode
                 );
               })}
             </div>
-            <p className="mt-3 text-[11.5px] text-muted-foreground">ผลคุณลักษณะฯ ยังไม่ผูกกับภาคเรียน จึงไม่เปลี่ยนตามตัวกรอง</p>
+            <p className="mt-3 text-[11.5px] text-muted-foreground">แสดงผลของภาคเรียนปัจจุบัน ไม่เปลี่ยนตามตัวกรองภาคเรียน</p>
           </CardContent>
         </Card>
       )}

@@ -7,6 +7,7 @@
  * - ให้ระดับแต่ละข้อด้วยปุ่ม บันทึกร่างหรือส่งผล ระบบตรวจว่าครบ 8 ข้อ (ข้อ 4–8, Alt-A, Alt-B)
  * - ผลไม่ผ่าน: แจ้งให้พิจารณาเปิดหรือเชื่อม case ไม่เปิดเอง / ประเมินซ้ำแล้วผ่าน: ให้ทบทวน case เดิม (ข้อ 10–11)
  * - เกณฑ์รายข้อ วิธีสรุปผลรวม และวันปิดส่งผลมาจากรอบที่แอดมินเปิดใช้ (UC12) ไม่มีรอบเปิดหรือพ้นวันปิดส่งผลแล้วส่งผลไม่ได้ (Pre-condition 2–3)
+ * - แท็บ "ภาพรวมห้อง": ตารางนักเรียน × 8 ข้อพร้อมผลรวม เรียงคนที่ไม่ผ่านขึ้นก่อน เลือกดูภาคเรียนย้อนหลังได้ กดแถวเพื่อไปประเมินคนนั้น
  */
 
 import { useState } from "react";
@@ -25,6 +26,20 @@ import { StudentId } from "@/components/shared/student-id";
 
 const LEVELS: DcLevel[] = [3, 2, 1, 0];
 
+const PREV_TERM = { termId: "T2569-1", label: "ภาคเรียนที่ 1 ปีการศึกษา 2569" };
+
+/**
+ * ระดับผลใช้โทนม่วงไล่ความเข้ม (สีเขียว/เหลือง/แดงสงวนไว้ให้ผลคัดกรอง) และใส่ตัวเลขระดับในจุดด้วย
+ * จึงไม่ต้องพึ่งสีอย่างเดียว ผู้ที่แยกสีไม่ได้ก็อ่านผลได้ (3 ดีเยี่ยม · 2 ดี · 1 ผ่าน · 0 ไม่ผ่าน)
+ */
+const LEVEL_DOT: Record<DcLevel, string> = {
+  3: "bg-primary text-white",
+  2: "bg-violet-300 text-violet-950",
+  1: "bg-violet-100 text-violet-800 ring-1 ring-violet-300",
+  0: "bg-foreground text-background",
+};
+const DOT = "inline-flex size-6 items-center justify-center rounded-full align-middle text-[12px] font-bold";
+
 /** ผลรวมตามวิธีที่แอดมินกำหนดในรอบประเมิน (UC12) */
 function overall(levels: Record<number, DcLevel | null>, method: DcSummaryMethod = "min"): DcLevel | null {
   return summarizeDc(dcCriteria.map((c) => levels[c.criteriaId]), method);
@@ -33,6 +48,7 @@ function overall(levels: Record<number, DcLevel | null>, method: DcSummaryMethod
 export default function CharacteristicsPage() {
   const store = useStore();
   const [selected, setSelected] = useState<string | null>(null);
+  const [view, setView] = useState<"assess" | "overview">("assess");
   const round = store.activeDcRound;
   const method = round?.method ?? "min";
 
@@ -46,6 +62,32 @@ export default function CharacteristicsPage() {
             ? `รอบ${round.termLabel} · ส่งผลได้ถึง ${formatThaiDate(round.deadline)} · สรุปผลรวมโดย${DC_SUMMARY_METHOD_LABEL[round.method]}`
             : "แอดมินยังไม่เปิดรอบประเมินของภาคเรียนนี้ จึงยังประเมินไม่ได้"}
         </p>
+        <div className="mb-4 flex gap-1.5" role="group" aria-label="มุมมอง">
+          {(
+            [
+              ["assess", "ประเมินรายคน"],
+              ["overview", "ภาพรวมห้อง"],
+            ] as const
+          ).map(([key, label]) => (
+            <button
+              key={key}
+              type="button"
+              aria-pressed={view === key}
+              onClick={() => setView(key)}
+              className={`rounded-lg border px-3 py-1.5 text-[13px] ${view === key ? "border-primary bg-accent font-semibold text-primary" : "border-border hover:bg-muted"}`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        {view === "overview" ? (
+          <RoomOverview
+            onOpen={(id) => {
+              setSelected(id);
+              setView("assess");
+            }}
+          />
+        ) : (
         <div className="grid gap-5 xl:grid-cols-[320px_1fr]">
           <Card className="h-fit">
             <CardContent className="p-5">
@@ -96,8 +138,125 @@ export default function CharacteristicsPage() {
             </Card>
           )}
         </div>
+        )}
       </div>
     </>
+  );
+}
+
+/** ภาพรวมห้อง: นักเรียน × 8 ข้อ ใช้จุดม่วงไล่ความเข้มแทนข้อความ เรียงคนที่ไม่ผ่านขึ้นก่อน */
+function RoomOverview({ onOpen }: { onOpen: (studentId: string) => void }) {
+  const store = useStore();
+  const [termId, setTermId] = useState<string>(CURRENT_TERM.termId);
+  const isCurrent = termId === CURRENT_TERM.termId;
+  const method = store.dcRounds.find((r) => r.termId === termId)?.method ?? "min";
+
+  const rows = store.students
+    .map((s) => {
+      const result = store.dcResultOf(s.studentId, termId);
+      const draft = !result && store.latestDc(s.studentId, termId)?.status === "draft";
+      return { student: s, levels: result?.levels, total: result ? overall(result.levels, method) : null, draft };
+    })
+    // ไม่ผ่านก่อน แล้วที่ยังไม่ส่ง แล้วเรียงตามเลขที่
+    .sort((a, b) => {
+      const rank = (r: typeof a) => (r.total === 0 ? 0 : !r.levels ? 1 : 2);
+      return rank(a) - rank(b) || a.student.classNo - b.student.classNo;
+    });
+  const sent = rows.filter((r) => r.levels).length;
+  const failed = rows.filter((r) => r.total === 0).length;
+
+  return (
+    <Card>
+      <CardContent className="p-5 sm:p-6">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <div className="min-w-0 flex-1">
+            <h2 className="text-[15px] font-bold">ภาพรวมห้อง {CURRENT_TEACHER.roomName}</h2>
+            <p className="text-[12.5px] text-muted-foreground">
+              ส่งผลแล้ว {sent} จาก {rows.length} คน · ผลรวมไม่ผ่าน {failed} คน
+            </p>
+          </div>
+          <div className="flex gap-1.5" role="group" aria-label="ภาคเรียน">
+            {[
+              { termId: CURRENT_TERM.termId, label: "ภาคเรียนนี้" },
+              { termId: PREV_TERM.termId, label: "ภาคเรียนก่อน" },
+            ].map((t) => (
+              <button
+                key={t.termId}
+                type="button"
+                aria-pressed={termId === t.termId}
+                onClick={() => setTermId(t.termId)}
+                className={`rounded-lg border px-3 py-1.5 text-[13px] ${termId === t.termId ? "border-primary bg-accent font-semibold text-primary" : "border-border hover:bg-muted"}`}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        {!isCurrent && <p className="mt-2 text-[12px] text-muted-foreground">{PREV_TERM.label} · ดูอย่างเดียว</p>}
+
+        <div className="mt-3 overflow-x-auto">
+          <table className="w-full min-w-[780px] text-[13.5px]">
+            <thead>
+              <tr className="border-b border-border text-left text-[12px] text-muted-foreground">
+                {/* ตรึงคอลัมน์ชื่อไว้ซ้ายเมื่อเลื่อนตารางบนจอแคบ */}
+                <th className="sticky left-0 z-10 min-w-[11rem] bg-card py-2 font-medium">นักเรียน</th>
+                {dcCriteria.map((c) => (
+                  <th key={c.criteriaId} title={c.name} className="w-[72px] px-0.5 py-2 text-center font-medium">
+                    <span className="block text-[12.5px] font-bold text-foreground">{c.criteriaId}</span>
+                    <span className="block text-[11px] leading-tight">{c.shortName}</span>
+                  </th>
+                ))}
+                <th className="w-24 py-2 text-right font-medium">ผลรวม</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map(({ student: s, levels, total, draft }) => (
+                <tr key={s.studentId} className="border-b border-border">
+                  <td className="sticky left-0 z-10 bg-card py-2">
+                    <button
+                      type="button"
+                      onClick={() => onOpen(s.studentId)}
+                      className="flex min-w-0 items-baseline gap-2 text-left hover:text-primary"
+                    >
+                      <span className="w-6 shrink-0 text-[12px] text-muted-foreground tabular-nums">{s.classNo}</span>
+                      <span className="truncate font-medium">{s.fullName}</span>
+                    </button>
+                  </td>
+                  {dcCriteria.map((c) => {
+                    const lv = levels?.[c.criteriaId];
+                    return (
+                      <td key={c.criteriaId} className="py-2 text-center">
+                        {lv == null ? (
+                          <span className="inline-block size-6 rounded-full border border-dashed border-muted-foreground/50 align-middle" title="ยังไม่ส่งผล" />
+                        ) : (
+                          <span className={`${DOT} ${LEVEL_DOT[lv]}`} title={DC_LEVEL_LABEL[lv]} aria-hidden>
+                            {lv}
+                          </span>
+                        )}
+                        <span className="sr-only">{lv == null ? "ยังไม่ส่งผล" : DC_LEVEL_LABEL[lv]}</span>
+                      </td>
+                    );
+                  })}
+                  <td className={`py-2 text-right text-[12.5px] ${total === 0 ? "font-bold" : total == null ? "text-muted-foreground" : "font-semibold"}`}>
+                    {total != null ? DC_LEVEL_LABEL[total] : draft ? "ร่าง" : "ยังไม่ส่ง"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] text-muted-foreground">
+          {LEVELS.map((lv) => (
+            <span key={lv} className="inline-flex items-center gap-1.5">
+              <i className={`${DOT} size-5 not-italic ${LEVEL_DOT[lv]}`}>{lv}</i> {DC_LEVEL_LABEL[lv]}
+            </span>
+          ))}
+          <span className="inline-flex items-center gap-1.5">
+            <i className="inline-block size-5 rounded-full border border-dashed border-muted-foreground/50" /> ยังไม่ส่งผล
+          </span>
+        </p>
+      </CardContent>
+    </Card>
   );
 }
 

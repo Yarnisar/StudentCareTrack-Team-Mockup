@@ -309,10 +309,10 @@ interface StoreValue {
   dcRoundHasResults: (termId: string) => boolean;
   /** ผลประเมินคุณลักษณะทุกรอบ (UC13) */
   dcAssessments: DcAssessment[];
-  /** ผลล่าสุดที่ส่งแล้วของนักเรียน ใช้ทำ ปพ.4 / ปพ.6 / ปพ.3 */
-  dcResultOf: (studentId: string) => DcSummary | undefined;
-  /** รอบล่าสุดของนักเรียน (รวมร่าง) */
-  latestDc: (studentId: string) => DcAssessment | undefined;
+  /** ผลล่าสุดที่ส่งแล้วของนักเรียนในภาคเรียนนั้น (ค่าเริ่มต้นภาคปัจจุบัน) ใช้ทำ ปพ.4 / ปพ.6 / ปพ.3 */
+  dcResultOf: (studentId: string, termId?: string) => DcSummary | undefined;
+  /** รอบล่าสุดของนักเรียนในภาคเรียนนั้น (รวมร่าง ค่าเริ่มต้นภาคปัจจุบัน) */
+  latestDc: (studentId: string, termId?: string) => DcAssessment | undefined;
   /** บันทึกร่างหรือส่งผลของรอบล่าสุดที่ยังไม่ส่ง ถ้าไม่มีรอบที่เปิดอยู่จะเปิดรอบใหม่ */
   saveDcAssessment: (studentId: string, levels: Record<number, DcLevel | null>, note: string, submit: boolean) => void;
   /** เริ่มประเมินซ้ำ เปิดรอบใหม่ที่ว่างอยู่ (ข้อ 2, 9) */
@@ -361,19 +361,34 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [behaviorRules, setBehaviorRules] = useState<BehaviorRule[]>(seedBehaviorRules);
   const [behaviorScoreConfig, setBehaviorScoreConfig] = useState<BehaviorScoreConfig>(DEFAULT_BEHAVIOR_SCORE);
   const [drafts, setDrafts] = useState<Record<string, unknown>>({});
-  const [dcAssessments, setDcAssessments] = useState<DcAssessment[]>(() =>
-    // ข้อมูลตัวอย่าง: คนที่ประเมินครบ 8 ข้อถือว่าส่งแล้ว ที่ยังขาดเป็นร่าง
-    dcSummaries.map((d, i) => ({
+  const [dcAssessments, setDcAssessments] = useState<DcAssessment[]>(() => [
+    // ข้อมูลตัวอย่างภาคเรียนปัจจุบัน: คนที่ประเมินครบ 8 ข้อถือว่าส่งแล้ว ที่ยังขาดเป็นร่าง
+    ...dcSummaries.map<DcAssessment>((d, i) => ({
       id: `DC-SEED-${i}`,
       studentId: d.studentId,
+      termId: CURRENT_TERM.termId,
       round: 1,
       levels: d.levels,
       note: "",
       status: Object.values(d.levels).some((l) => l === null) ? "draft" : "submitted",
       assessedAt: "2570-02-10",
       assessedBy: CURRENT_TEACHER.name,
-    }))
-  );
+    })),
+    // ภาคเรียนก่อนหน้า (1/2569) ส่งผลครบแล้วทุกคน ใช้เทียบและเลือกดูย้อนหลัง
+    ...dcSummaries.map<DcAssessment>((d, i) => ({
+      id: `DC-SEED-PREV-${i}`,
+      studentId: d.studentId,
+      termId: "T2569-1",
+      round: 1,
+      levels: Object.fromEntries(
+        Object.entries(d.levels).map(([k, v]) => [Number(k), (v == null ? 2 : Math.max(d.studentId === "30131" ? 0 : 1, v - (Number(k) % 3 === i % 3 ? 1 : 0))) as DcLevel])
+      ),
+      note: "",
+      status: "submitted",
+      assessedAt: "2569-10-20",
+      assessedBy: CURRENT_TEACHER.name,
+    })),
+  ]);
   const [dcRounds, setDcRounds] = useState<DcRound[]>([
     {
       termId: CURRENT_TERM.termId,
@@ -1431,19 +1446,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const saveDcRound: StoreValue["saveDcRound"] = (round) =>
       setDcRounds((prev) => [round, ...prev.filter((r) => r.termId !== round.termId)]);
     const activeDcRound = dcRounds.find((r) => r.termId === CURRENT_TERM.termId && r.status === "open");
-    // PROTOTYPE: ผลประเมินในต้นแบบเป็นของภาคเรียนปัจจุบันทั้งหมด
-    const dcRoundHasResults = (termId: string) =>
-      termId === CURRENT_TERM.termId && dcAssessments.some((a) => a.status === "submitted");
+    const dcRoundHasResults = (termId: string) => dcAssessments.some((a) => a.termId === termId && a.status === "submitted");
 
     const markNotificationRead = (id: string) =>
       setReadNotifications((prev) => (prev.includes(id) ? prev : [...prev, id]));
 
-    const latestDc = (studentId: string) =>
-      dcAssessments.filter((a) => a.studentId === studentId).sort((a, b) => b.round - a.round)[0];
+    const latestDc = (studentId: string, termId: string = CURRENT_TERM.termId) =>
+      dcAssessments.filter((a) => a.studentId === studentId && a.termId === termId).sort((a, b) => b.round - a.round)[0];
 
-    const dcResultOf = (studentId: string) => {
+    const dcResultOf = (studentId: string, termId: string = CURRENT_TERM.termId) => {
       const done = dcAssessments
-        .filter((a) => a.studentId === studentId && a.status === "submitted")
+        .filter((a) => a.studentId === studentId && a.termId === termId && a.status === "submitted")
         .sort((a, b) => b.round - a.round)[0];
       return done ? { studentId, levels: done.levels } : undefined;
     };
@@ -1456,6 +1469,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           : {
               id: nextId("DC"),
               studentId,
+              termId: CURRENT_TERM.termId,
               round: (current?.round ?? 0) + 1,
               levels: {},
               note: "",
@@ -1481,6 +1495,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         {
           id: nextId("DC"),
           studentId,
+          termId: CURRENT_TERM.termId,
           round: (current?.round ?? 0) + 1,
           levels: {},
           note: "",

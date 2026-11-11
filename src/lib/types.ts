@@ -456,6 +456,8 @@ export const DC_LEVEL_LABEL: Record<DcLevel, string> = {
 export interface DcAssessment {
   id: string;
   studentId: string;
+  /** ภาคเรียนของผลประเมิน (round นับแยกตามภาคเรียน) */
+  termId: string;
   round: number;
   levels: Record<number, DcLevel | null>;
   note: string;

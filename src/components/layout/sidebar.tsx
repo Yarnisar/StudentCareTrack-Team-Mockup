@@ -55,6 +55,7 @@ const NAV: { title?: string; items: NavItem[] }[] = [
     items: [
       { href: "/behavior", label: "ความประพฤติ", icon: AlertTriangle },
       { href: "/characteristics", label: "คุณลักษณะอันพึงประสงค์", icon: Star },
+      { href: "/dc-summary", label: "สรุปคุณลักษณะฯ", icon: Star },
     ],
   },
   {
