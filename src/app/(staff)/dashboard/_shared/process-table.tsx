@@ -314,20 +314,32 @@ export function ProcessCards({
  * ③ ผลคัดกรองของทั้งโรงเรียน (แอดมิน เป็นจำนวน): ตัวเลขนำ "คนต้องดูแล" แล้วเป็นแถบบางเรียงหนัก → เบา
  * แดงอิ่มสีเดียว เหลืองและเขียวเป็นโทนอ่อน มีช่องขาวคั่น (ฝั่งครูใช้ RiskPanelByDimension) เฝ้าระวังที่ถึงเกณฑ์ใช้แดงตามกฎ
  */
+/** จำนวนนักเรียนที่ผลไม่ปกติในแต่ละมิติ (แอดมินเห็นเป็นจำนวนเท่านั้น ไม่มีรายชื่อ) */
+export interface DimensionTally {
+  key: string;
+  label: string;
+  red: number;
+  amber: number;
+}
+
 export function RiskPanel({
   risk,
   total,
+  dimensions,
   behavior,
   watchActive,
   onPickWatch,
 }: {
   risk: { green: number; amber: number; red: number };
   total: number;
+  /** ผลรายมิติ (ไม่รวมสุขภาพจิต) ฐานคือคนที่คัดกรองแล้ว เรียงมิติที่มีปัญหามากไว้ก่อน */
+  dimensions?: DimensionTally[];
   behavior?: ProcessSummary;
   watchActive?: boolean;
   onPickWatch?: () => void;
 }) {
   const screened = risk.green + risk.amber + risk.red;
+  const dimRows = [...(dimensions ?? [])].sort((a, b) => b.red - a.red || b.amber - a.amber);
   const none = Math.max(0, total - screened);
   const need = risk.red + risk.amber;
   const segs = [
@@ -361,6 +373,34 @@ export function RiskPanel({
         <span className="tabular-nums">ปกติ {n(risk.green)}</span>
         {none > 0 && <span className="tabular-nums">ยังไม่คัดกรอง {n(none)}</span>}
       </p>
+      {dimRows.length > 0 && screened > 0 && (
+        <div className="mt-4 border-t border-border pt-3">
+          <h3 className="text-[13px] font-semibold">รายมิติ</h3>
+          <ul className="mt-1.5 space-y-1.5">
+            {dimRows.map((d) => (
+              <li key={d.key} className="grid grid-cols-[104px_minmax(0,1fr)] items-center gap-x-2.5 gap-y-0.5 sm:grid-cols-[104px_minmax(0,1fr)_auto]">
+                <span className="text-[12.5px] leading-tight">{d.label}</span>
+                <span className="flex h-2 gap-[2px] overflow-hidden rounded-full bg-risk-none" role="img" aria-label={`${d.label} มีปัญหา ${d.red} เสี่ยง ${d.amber}`}>
+                  {d.red > 0 && <i className="bg-risk-red" style={{ width: `${(d.red / screened) * 100}%` }} />}
+                  {d.amber > 0 && <i className="bg-risk-amber-soft" style={{ width: `${(d.amber / screened) * 100}%` }} />}
+                </span>
+                <span className="col-start-2 text-[11.5px] tabular-nums text-muted-foreground sm:col-start-auto sm:min-w-[92px] sm:text-right">
+                  {d.red > 0 || d.amber > 0 ? (
+                    <>
+                      {d.red > 0 && <b className="text-foreground">มีปัญหา {n(d.red)}</b>}
+                      {d.red > 0 && d.amber > 0 && " · "}
+                      {d.amber > 0 && <>เสี่ยง {n(d.amber)}</>}
+                    </>
+                  ) : (
+                    "–"
+                  )}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-1.5 text-[11.5px] text-muted-foreground">นับเฉพาะคนที่คัดกรองแล้ว คนเดียวติดได้หลายมิติ จึงไม่รวมตัวเลขข้ามมิติ</p>
+        </div>
+      )}
       {behavior && (
         <div className="mt-4 border-t border-border pt-3 text-[13px]">
           <div>

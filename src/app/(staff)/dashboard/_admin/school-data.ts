@@ -9,8 +9,10 @@
  */
 
 import { DEMO_TODAY } from "@/lib/mock-data";
+import { DIMENSION_LABEL, DIMENSION_ORDER } from "@/lib/types";
 import { dueStatus, KIND_LABEL, shiftDate, windowFor, type AssessmentKind, type AssessmentWindow } from "@/lib/periods";
 import type { CaseUrgency } from "@/lib/types";
+import type { DimensionTally } from "../_shared/process-table";
 import {
   PROCESS_KINDS,
   PROCESS_ORDER,
@@ -234,4 +236,26 @@ export function riskCounts(students: ProtoStudent[]) {
     amber: students.filter((s) => s.risk === "amber").length,
     red: students.filter((s) => s.risk === "red").length,
   };
+}
+
+/**
+ * ผลรายมิติ (5 มิติ ไม่รวมสุขภาพจิต) ของนักเรียนที่คัดกรองแล้ว
+ * สุ่มด้วยเมล็ดแยกตามรหัสนักเรียน จึงไม่กระทบตัวเลขเดิมของภาพรวม และให้ผลรวมเป็นไปตามกลุ่มของแต่ละคน:
+ * กลุ่มมีปัญหา = มีอย่างน้อยหนึ่งมิติแดง · กลุ่มเสี่ยง = ไม่มีแดงแต่มีเหลือง · กลุ่มปกติ = เขียวทุกมิติ
+ */
+export function dimensionTallies(students: ProtoStudent[]): DimensionTally[] {
+  const keys = DIMENSION_ORDER.filter((d) => d !== "mental");
+  const tally = keys.map((key) => ({ key, label: DIMENSION_LABEL[key], red: 0, amber: 0 }));
+  for (const s of students) {
+    if (!s.risk || s.risk === "green") continue;
+    const rnd = seeded(Number(s.id) * 13 + 1);
+    const main = Math.floor(rnd() * keys.length);
+    keys.forEach((_, i) => {
+      const roll = rnd();
+      if (i === main) tally[i][s.risk === "red" ? "red" : "amber"]++;
+      else if (s.risk === "red" ? roll < 0.15 : false) tally[i].red++;
+      else if (roll < (s.risk === "red" ? 0.45 : 0.25)) tally[i].amber++;
+    });
+  }
+  return tally;
 }

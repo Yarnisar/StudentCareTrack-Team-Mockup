@@ -37,6 +37,7 @@ import {
   adminSummaries,
   allRooms,
   allStudents,
+  dimensionTallies,
   LEVELS,
   riskCounts,
   type AdminItem,
@@ -377,6 +378,7 @@ export function AdminOverview() {
             <RiskPanel
               risk={riskCounts(students)}
               total={students.length}
+              dimensions={dimensionTallies(students)}
               behavior={summaries.find((r) => r.process === "behavior")}
               watchActive={process === "behavior"}
               onPickWatch={() => pick("behavior", "watch")}
