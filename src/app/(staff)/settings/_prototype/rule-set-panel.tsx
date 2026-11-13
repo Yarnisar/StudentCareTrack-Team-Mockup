@@ -10,13 +10,14 @@
 
 import { useMemo, useState } from "react";
 import { CalendarClock, FileClock, Lock, PencilLine } from "lucide-react";
+import { ruleScoreText } from "@/lib/behavior-rules";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatThaiDate } from "@/lib/format";
 import { CURRENT_TERM, DEMO_TODAY } from "@/lib/mock-data";
-import { runningScore, watchLevelOf } from "@/lib/behavior-score";
-import { diffRules, ruleEditWindowError, type RuleDiff } from "@/lib/rule-sets";
+import { runningScore, validateScoreConfig, watchLevelOf, type BehaviorScoreConfig } from "@/lib/behavior-score";
+import { diffConfig, diffRules, ruleEditWindowError, type RuleDiff } from "@/lib/rule-sets";
 import { shiftDate } from "@/lib/periods";
 import { useStore } from "@/lib/store";
 import { academicYearOfDate, termInfo } from "@/lib/terms";
@@ -32,6 +33,8 @@ export function RuleSetBar({ proto }: { proto: SettingsPrototype }) {
   const store = useStore();
   const [editingWindow, setEditingWindow] = useState(false);
   const [publishing, setPublishing] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [openVersion, setOpenVersion] = useState<string | null>(null);
   const win = store.ruleEditWindow;
   const winError = ruleEditWindowError(win, CURRENT_TERM.academicYear);
   const current = store.ruleVersions[store.ruleVersions.length - 1];
@@ -40,6 +43,11 @@ export function RuleSetBar({ proto }: { proto: SettingsPrototype }) {
     () => (store.ruleDraft ? diffRules(store.behaviorRules, store.ruleDraft) : []),
     [store.ruleDraft, store.behaviorRules]
   );
+  const configDiffs = useMemo(
+    () => (store.configDraft ? diffConfig(store.behaviorScoreConfig, store.configDraft) : []),
+    [store.configDraft, store.behaviorScoreConfig]
+  );
+  const changeCount = diffs.length + configDiffs.length;
 
   return (
     <div className="mb-4 space-y-3">
@@ -147,17 +155,17 @@ export function RuleSetBar({ proto }: { proto: SettingsPrototype }) {
           <div className="mt-3 rounded-lg border border-dashed border-foreground/40 p-3">
             <p className="text-[13px] font-semibold">กำลังแก้ฉบับร่าง</p>
             <p className="mt-0.5 text-[12.5px] text-muted-foreground">
-              {diffs.length === 0 ? "ยังไม่มีการเปลี่ยนแปลง" : `เปลี่ยนแล้ว ${diffs.length} รายการ`} · ครูและคะแนนนักเรียนยังใช้ชุดเดิมจนกว่าจะเผยแพร่
+              {changeCount === 0 ? "ยังไม่มีการเปลี่ยนแปลง" : `เปลี่ยนแล้ว ${changeCount} รายการ`} · ครูและคะแนนนักเรียนยังใช้ชุดเดิมจนกว่าจะเผยแพร่
             </p>
             <div className="mt-2 flex flex-wrap gap-2">
-              <Button size="sm" disabled={diffs.length === 0} onClick={() => setPublishing(true)}>
+              <Button size="sm" disabled={changeCount === 0} onClick={() => setPublishing(true)}>
                 ตรวจผลกระทบและเผยแพร่
               </Button>
               <Button
                 size="sm"
                 variant="outline"
                 onClick={() => {
-                  if (diffs.length === 0 || window.confirm("ทิ้งฉบับร่างและการเปลี่ยนแปลงทั้งหมดไหม")) store.discardRuleDraft();
+                  if (changeCount === 0 || window.confirm("ทิ้งฉบับร่างและการเปลี่ยนแปลงทั้งหมดไหม")) store.discardRuleDraft();
                 }}
               >
                 ทิ้งร่าง
@@ -167,10 +175,67 @@ export function RuleSetBar({ proto }: { proto: SettingsPrototype }) {
         )}
       </div>
 
-      {publishing && store.ruleDraft && (
+      <div className="rounded-xl border border-border bg-card p-4">
+        <button
+          type="button"
+          aria-expanded={showHistory}
+          onClick={() => setShowHistory((v) => !v)}
+          className="flex w-full items-center gap-2 text-left text-[13.5px] font-semibold"
+        >
+          ประวัติชุดกฎ ({store.ruleVersions.length + (scheduled ? 1 : 0)} ฉบับ)
+          <span className="text-[12px] font-normal text-muted-foreground">ดูกฎที่เคยใช้ในแต่ละปีการศึกษา</span>
+        </button>
+        {showHistory && (
+          <ul className="mt-3 divide-y divide-border">
+            {[...store.ruleVersions, ...(scheduled ? [scheduled] : [])]
+              .sort((a, b) => b.effectiveFrom.localeCompare(a.effectiveFrom))
+              .map((v) => (
+                <li key={v.versionId} className="py-2.5">
+                  <button
+                    type="button"
+                    aria-expanded={openVersion === v.versionId}
+                    onClick={() => setOpenVersion(openVersion === v.versionId ? null : v.versionId)}
+                    className="flex w-full flex-wrap items-center gap-x-3 gap-y-0.5 text-left text-[13px]"
+                  >
+                    <span className="font-semibold">ฉบับ {v.number}</span>
+                    <span>ใช้ตั้งแต่ {formatThaiDate(v.effectiveFrom)}</span>
+                    <span className="text-[12px] text-muted-foreground">ปีการศึกษา {academicYearOfDate(v.effectiveFrom)}</span>
+                    <span className="rounded-full bg-muted px-2 py-0.5 text-[11.5px] font-semibold">
+                      {v === scheduled ? "รอวันเริ่มใช้" : v.versionId === current.versionId ? "ใช้งานอยู่" : "เลิกใช้แล้ว"}
+                    </span>
+                  </button>
+                  <p className="mt-0.5 text-[12px] text-muted-foreground">
+                    เผยแพร่โดย {v.publishedBy} · {v.reason}
+                  </p>
+                  {openVersion === v.versionId && (
+                    <ul className="mt-2 space-y-0.5 rounded-lg bg-surface p-3 text-[12.5px]">
+                      {v.rules
+                        .filter((r) => r.name.trim() !== "")
+                        .map((r) => (
+                          <li key={r.ruleId} className="flex gap-3">
+                            <span className="min-w-0 flex-1">{r.name}</span>
+                            <span className="tabular-nums">{ruleScoreText(r)}</span>
+                            <span className="w-20 text-right text-muted-foreground">{r.cancelled ? "ยกเลิก" : r.isActive ? "ใช้งาน" : "ปิด"}</span>
+                          </li>
+                        ))}
+                      <li className="pt-1.5 text-muted-foreground">
+                        เริ่ม {v.config.startScore} · เพดาน {v.config.ceiling ?? "ไม่จำกัด"} · ต่ำสุด {v.config.minScore} · เฝ้าระวัง{" "}
+                        {v.config.watchLevels.map((l) => `≤${l.atOrBelow}`).join(", ")}
+                      </li>
+                    </ul>
+                  )}
+                </li>
+              ))}
+          </ul>
+        )}
+      </div>
+
+      {publishing && store.ruleDraft && store.configDraft && (
         <PublishDialog
           diffs={diffs}
+          configDiffs={configDiffs}
           draft={store.ruleDraft}
+          configDraft={store.configDraft}
           onClose={() => setPublishing(false)}
           onPublish={(effectiveFrom, reason) => {
             store.publishRuleDraft(effectiveFrom, reason);
@@ -184,12 +249,16 @@ export function RuleSetBar({ proto }: { proto: SettingsPrototype }) {
 
 function PublishDialog({
   diffs,
+  configDiffs,
   draft,
+  configDraft,
   onClose,
   onPublish,
 }: {
   diffs: RuleDiff[];
+  configDiffs: { label: string; from: string; to: string }[];
   draft: BehaviorRule[];
+  configDraft: BehaviorScoreConfig;
   onClose: () => void;
   onPublish: (effectiveFrom: string, reason: string) => void;
 }) {
@@ -203,34 +272,37 @@ function PublishDialog({
     { label: "เปิดภาคเรียนถัดไป", date: nextTermStart() },
   ];
 
-  /** ผลต่อสถานะเฝ้าระวัง: คะแนนของรายการเก็บค่า ณ ตอนบันทึกแล้ว จึงเปลี่ยนได้เฉพาะเมื่อมีกฎที่ยกเลิก (นับเป็นจำนวนคน) */
+  /**
+   * ผลต่อสถานะเฝ้าระวัง (นับเป็นจำนวนคน) เทียบชุดที่ใช้อยู่กับฉบับร่างที่เริ่มใช้ตามวันที่เลือก
+   * คะแนนของรายการเก็บค่า ณ ตอนบันทึก จึงเปลี่ยนได้จากกฎที่ยกเลิก และค่าตั้งต้นที่มีผลเฉพาะรายการตั้งแต่วันเริ่มใช้
+   */
   const impact = useMemo(() => {
-    const cfg = store.behaviorScoreConfig;
-    const levelWith = (studentId: string, rules: BehaviorRule[]) => {
-      const items = store.behaviorOf(studentId)
+    const itemsOf = (studentId: string, rules: BehaviorRule[]) =>
+      store.behaviorOf(studentId)
         .filter((rec) => academicYearOfDate(rec.occurredAt) === CURRENT_TERM.academicYear)
         .map((rec) => {
           const rule = rules.find((r) => r.ruleId === rec.ruleId);
           return { delta: rec.cancelled || !rule || rule.cancelled ? 0 : (rec.scoreDelta ?? rule.scoreDelta), at: rec.occurredAt };
         });
-      return watchLevelOf(runningScore(items, cfg), cfg);
-    };
+    const nowCfg = effectiveFrom <= DEMO_TODAY ? configDraft : store.behaviorScoreConfig;
+    const fromDraft = (at: string) => (at === "" || at.slice(0, 10) >= effectiveFrom ? configDraft : store.configOn(at));
     let entering = 0;
     let leaving = 0;
     let changed = 0;
     for (const s of store.students) {
-      const before = levelWith(s.studentId, store.behaviorRules);
-      const after = levelWith(s.studentId, draft);
+      const before = watchLevelOf(runningScore(itemsOf(s.studentId, store.behaviorRules), store.configOn), store.behaviorScoreConfig);
+      const after = watchLevelOf(runningScore(itemsOf(s.studentId, draft), fromDraft), nowCfg);
       if (before === after) continue;
       changed++;
       if (before === 0) entering++;
       else if (after === 0) leaving++;
     }
     return { entering, leaving, changed };
-  }, [store, draft]);
+  }, [store, draft, configDraft, effectiveFrom]);
 
   const dateError = effectiveFrom < DEMO_TODAY ? "วันเริ่มใช้ต้องไม่ก่อนวันนี้" : "";
-  const missing = reason.trim() === "" ? "ระบุเหตุผลในการเปลี่ยนแปลง" : dateError;
+  const configErrors = validateScoreConfig(configDraft);
+  const missing = configErrors.length > 0 ? configErrors[0] : reason.trim() === "" ? "ระบุเหตุผลในการเปลี่ยนแปลง" : dateError;
   const when = effectiveFrom <= DEMO_TODAY ? "มีผลทันที" : `เริ่มใช้ ${formatThaiDate(effectiveFrom)}`;
 
   return (
@@ -244,7 +316,7 @@ function PublishDialog({
         <h3 className="text-[16px] font-bold">ตรวจผลกระทบและเผยแพร่</h3>
 
         <div className="mt-3">
-          <div className="text-[12.5px] font-semibold">สิ่งที่เปลี่ยน ({diffs.length})</div>
+          <div className="text-[12.5px] font-semibold">สิ่งที่เปลี่ยน ({diffs.length + configDiffs.length})</div>
           <ul className="mt-1.5 space-y-1.5 text-[13px]">
             {diffs.map((d) => (
               <li key={d.ruleId + d.kind}>
@@ -255,6 +327,14 @@ function PublishDialog({
                     {c.to}
                   </span>
                 ))}
+              </li>
+            ))}
+            {configDiffs.map((c) => (
+              <li key={c.label}>
+                <span className="font-medium">ปรับ{c.label}</span>
+                <span className="ml-2 text-[12px] text-muted-foreground">
+                  {c.from} → {c.to}
+                </span>
               </li>
             ))}
           </ul>
@@ -270,7 +350,7 @@ function PublishDialog({
             </p>
           )}
           <p className="mt-1.5 text-[12px] text-muted-foreground">
-            รายการที่เกิดก่อนวันเริ่มใช้ไม่ถูกเปลี่ยนคะแนน ยกเว้นรายการของกฎที่ยกเลิก ซึ่งจะไม่นับคะแนน
+            รายการที่เกิดก่อนวันเริ่มใช้ไม่ถูกเปลี่ยนคะแนน ยกเว้นรายการของกฎที่ยกเลิก ซึ่งจะไม่นับคะแนน นักเรียนที่พ้นเกณฑ์ ระบบคงสถานะไว้ให้ครูที่ปรึกษายืนยันถอน
           </p>
         </div>
 
@@ -304,7 +384,7 @@ function PublishDialog({
             placeholder="เช่น ปรับตามมติที่ประชุมฝ่ายปกครอง"
           />
         </div>
-        {missing && reason.trim() !== "" && <p className="mt-2 text-[12.5px] text-destructive">{missing}</p>}
+        {missing && (reason.trim() !== "" || configErrors.length > 0) && <p className="mt-2 text-[12.5px] text-destructive">{missing}</p>}
 
         <div className="mt-5 flex flex-wrap justify-end gap-2">
           <Button variant="outline" onClick={onClose}>

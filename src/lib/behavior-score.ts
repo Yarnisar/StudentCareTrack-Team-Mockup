@@ -66,6 +66,14 @@ export interface ScoreItem {
 /** ห่างเกณฑ์เฝ้าระวังระดับ 1 ไม่เกินกี่คะแนนถือว่า "ใกล้เกณฑ์" — PROTOTYPE: เพิ่มเอง ไม่อยู่ในรายงาน ค่าตัวอย่างรอทีมยืนยัน */
 export const NEAR_WATCH_POINTS = 10;
 
+/**
+ * ค่าตั้งต้นที่ใช้คิดคะแนน: ค่าเดียว หรือฟังก์ชันที่ให้ค่าที่มีผล ณ วันที่ของแต่ละรายการ
+ * ค่าที่แอดมินเปลี่ยนจึงมีผลกับพฤติกรรมที่เกิดตั้งแต่วันเริ่มใช้เป็นต้นไปเท่านั้น (UC7 Scenario D ข้อ 9)
+ * วันที่ว่าง ("") = ค่าที่ใช้อยู่ตอนนี้
+ */
+export type ScoreConfigSource = BehaviorScoreConfig | ((at: string) => BehaviorScoreConfig);
+const cfgAt = (src: ScoreConfigSource, at: string) => (typeof src === "function" ? src(at) : src);
+
 export function clampScore(score: number, cfg: BehaviorScoreConfig): number {
   const capped = cfg.ceiling === null ? score : Math.min(score, cfg.ceiling);
   return Math.max(capped, cfg.minScore);
@@ -75,12 +83,14 @@ export function clampScore(score: number, cfg: BehaviorScoreConfig): number {
  * วันเวลาของรายการที่ทำให้คะแนนกลับขึ้นพ้นเกณฑ์ระดับ 1 ล่าสุด ใช้นับระยะเวลารอยืนยันถอนสถานะ (UC8 Alt-F)
  * คะแนนยังอยู่ในเกณฑ์ หรือไม่เคยเข้าเกณฑ์ = null
  */
-export function lastRecoveryAt(items: ScoreItem[], cfg: BehaviorScoreConfig): string | null {
-  const first = cfg.watchLevels[0]?.atOrBelow;
-  if (first === undefined) return null;
-  let score = cfg.startScore;
+export function lastRecoveryAt(items: ScoreItem[], src: ScoreConfigSource): string | null {
+  const sorted = [...items].sort((a, b) => a.at.localeCompare(b.at));
+  let score = cfgAt(src, sorted[0]?.at ?? "").startScore;
   let at: string | null = null;
-  for (const item of [...items].sort((a, b) => a.at.localeCompare(b.at))) {
+  for (const item of sorted) {
+    const cfg = cfgAt(src, item.at);
+    const first = cfg.watchLevels[0]?.atOrBelow;
+    if (first === undefined) return null;
     const before = score;
     score = clampScore(score + item.delta, cfg);
     if (before <= first && score > first) at = item.at;
@@ -89,20 +99,21 @@ export function lastRecoveryAt(items: ScoreItem[], cfg: BehaviorScoreConfig): st
   return at;
 }
 
-export function runningScore(items: ScoreItem[], cfg: BehaviorScoreConfig): number {
-  return [...items]
-    .sort((a, b) => a.at.localeCompare(b.at))
-    .reduce((score, item) => clampScore(score + item.delta, cfg), cfg.startScore);
+export function runningScore(items: ScoreItem[], src: ScoreConfigSource): number {
+  const sorted = [...items].sort((a, b) => a.at.localeCompare(b.at));
+  return sorted.reduce((score, item) => clampScore(score + item.delta, cfgAt(src, item.at)), cfgAt(src, sorted[0]?.at ?? "").startScore);
 }
 
 /**
  * ระดับเฝ้าระวังสูงสุดที่เคยถึงหลังเวลา since (ไม่รวม) ไล่คะแนนตามลำดับวันที่
  * ใช้คงสถานะไว้จนครูที่ปรึกษายืนยันถอน (UC8 Scenario C, Alt-F: ไม่ถอนสถานะอัตโนมัติ)
  */
-export function peakWatchLevel(items: ScoreItem[], cfg: BehaviorScoreConfig, since: string): number {
-  let score = cfg.startScore;
+export function peakWatchLevel(items: ScoreItem[], src: ScoreConfigSource, since: string): number {
+  const sorted = [...items].sort((a, b) => a.at.localeCompare(b.at));
+  let score = cfgAt(src, sorted[0]?.at ?? "").startScore;
   let peak = 0;
-  for (const item of [...items].sort((a, b) => a.at.localeCompare(b.at))) {
+  for (const item of sorted) {
+    const cfg = cfgAt(src, item.at);
     score = clampScore(score + item.delta, cfg);
     if (item.at > since) peak = Math.max(peak, watchLevelOf(score, cfg));
   }

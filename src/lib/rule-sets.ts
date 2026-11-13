@@ -6,6 +6,7 @@
  */
 
 import { RULE_LEVEL_LABEL, recordersText } from "./behavior-rules";
+import { WATCH_NOTIFY_LABEL, type BehaviorScoreConfig } from "./behavior-score";
 import type { BehaviorRule } from "./types";
 
 export interface RuleSetVersion {
@@ -14,6 +15,8 @@ export interface RuleSetVersion {
   number: number;
   effectiveFrom: string;
   rules: BehaviorRule[];
+  /** ค่าตั้งต้นคะแนนและเกณฑ์เฝ้าระวังของฉบับนี้ (Scenario D) */
+  config: BehaviorScoreConfig;
   publishedAt: string;
   publishedBy: string;
   reason: string;
@@ -95,5 +98,24 @@ export function diffRules(before: BehaviorRule[], after: BehaviorRule[]): RuleDi
     if (!after.some((r) => r.ruleId === b.ruleId))
       out.push({ ruleId: b.ruleId, kind: "removed", summary: `ลบกฎ "${b.name}"`, changes: [{ label: "สถานะ", from: "ใช้งาน", to: "ลบ" }] });
   }
+  return out;
+}
+
+/** เทียบค่าตั้งต้นคะแนนที่ใช้อยู่กับฉบับร่าง (Scenario D) */
+export function diffConfig(before: BehaviorScoreConfig, after: BehaviorScoreConfig): { label: string; from: string; to: string }[] {
+  const out: { label: string; from: string; to: string }[] = [];
+  const add = (label: string, a: string | number, b: string | number) => {
+    if (String(a) !== String(b)) out.push({ label, from: String(a), to: String(b) });
+  };
+  const ceil = (c: BehaviorScoreConfig) => (c.ceiling === null ? "ไม่จำกัด" : c.ceiling);
+  add("คะแนนเริ่มต้น", before.startScore, after.startScore);
+  add("เพดานคะแนน", ceil(before), ceil(after));
+  add("คะแนนต่ำสุด", before.minScore, after.minScore);
+  add("บันทึกย้อนหลังได้ (วัน)", before.backdateDays, after.backdateDays);
+  add("แก้ไขรายการได้ (วัน)", before.editDays, after.editDays);
+  add("รอยืนยันถอนสถานะ (วัน)", before.withdrawalWaitDays, after.withdrawalWaitDays);
+  const levels = (c: BehaviorScoreConfig) =>
+    c.watchLevels.map((l, i) => `ระดับ ${i + 1}: ≤${l.atOrBelow}${l.notify.length ? ` (แจ้ง ${l.notify.map((n) => WATCH_NOTIFY_LABEL[n]).join(", ")})` : ""}`).join(" · ");
+  add("เกณฑ์เฝ้าระวัง", levels(before), levels(after));
   return out;
 }

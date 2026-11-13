@@ -36,7 +36,7 @@ import {
   scoreSdq,
 } from "./rules";
 import { formatThaiDate, nowThaiIso } from "./format";
-import { INITIAL_RULE_EDIT_WINDOW, diffRules, type RuleEditWindow, type RuleSetVersion } from "./rule-sets";
+import { INITIAL_RULE_EDIT_WINDOW, diffConfig, diffRules, type RuleEditWindow, type RuleSetVersion } from "./rule-sets";
 import { usePathname } from "next/navigation";
 import { DEFAULT_DC_CRITERIA, type DcRound } from "./dc-round";
 import { canRevealCitizenId, defaultRoleFor, recordableRooms, ROLE_INFO, TEACHER_ASSIGNMENTS, type Role } from "./roles";
@@ -127,6 +127,11 @@ interface StoreValue {
   scheduledRuleSet: RuleSetVersion | null;
   ruleDraft: BehaviorRule[] | null;
   setRuleDraft: React.Dispatch<React.SetStateAction<BehaviorRule[] | null>>;
+  /** ค่าตั้งต้นคะแนนและเกณฑ์เฝ้าระวังในฉบับร่าง (มีคู่กับ ruleDraft เสมอ) */
+  configDraft: BehaviorScoreConfig | null;
+  setConfigDraft: React.Dispatch<React.SetStateAction<BehaviorScoreConfig | null>>;
+  /** ค่าตั้งต้นที่มีผลในวันที่ระบุ ใช้คิดคะแนนของแต่ละรายการตามวันที่เกิดพฤติกรรม ("" = ที่ใช้อยู่ตอนนี้) */
+  configOn: (date: string) => BehaviorScoreConfig;
   ruleEditWindow: RuleEditWindow;
   setRuleEditWindow: (window: RuleEditWindow) => void;
   /** PROTOTYPE: จำลองว่าวันนี้อยู่ในช่วงที่แก้กฎได้ ใช้โชว์ทั้งสองสถานะเพราะวันตัวอย่างอยู่กลางภาคเรียน */
@@ -391,6 +396,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       number: 1,
       effectiveFrom: "2569-05-01",
       rules: seedBehaviorRules,
+      config: DEFAULT_BEHAVIOR_SCORE,
       publishedAt: "2569-04-20T09:00:00",
       publishedBy: "ค่าตั้งต้นของโรงเรียน",
       reason: "ชุดกฎตั้งต้น",
@@ -398,6 +404,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   ]);
   const [scheduledRuleSet, setScheduledRuleSet] = useState<RuleSetVersion | null>(null);
   const [ruleDraft, setRuleDraft] = useState<BehaviorRule[] | null>(null);
+  const [configDraft, setConfigDraft] = useState<BehaviorScoreConfig | null>(null);
   const [ruleEditWindow, setRuleEditWindow] = useState<RuleEditWindow>(INITIAL_RULE_EDIT_WINDOW);
   const [simulateRuleEditOpen, setSimulateRuleEditOpen] = useState(false);
   const [behaviorScoreConfig, setBehaviorScoreConfig] = useState<BehaviorScoreConfig>(DEFAULT_BEHAVIOR_SCORE);
@@ -583,6 +590,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         )
       );
 
+    /** ค่าตั้งต้นที่มีผลในวันที่ระบุ ว่าง = ที่ใช้อยู่ตอนนี้ (ใช้คิดคะแนนต่อรายการ) */
+    const configOn = (date: string): BehaviorScoreConfig => {
+      if (date === "") return behaviorScoreConfig;
+      const sorted = [...ruleVersions].sort((a, b) => a.effectiveFrom.localeCompare(b.effectiveFrom));
+      return (sorted.filter((v) => v.effectiveFrom <= date.slice(0, 10)).at(-1) ?? sorted[0]).config;
+    };
+
     const behaviorOf = (studentId: string) =>
       behaviorRecords
         .filter((b) => b.studentId === studentId)
@@ -606,12 +620,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
     const behaviorScoreOf = (studentId: string, extra?: { delta: number; at: string }) => {
       const items = scoreItems(studentId);
-      return runningScore(extra ? [...items, extra] : items, behaviorScoreConfig);
+      return runningScore(extra ? [...items, extra] : items, configOn);
     };
 
     // คะแนน ณ เวลานั้น คิดในปีการศึกษาของเวลานั้น
     const behaviorScoreAt = (studentId: string, at: string) =>
-      runningScore(scoreItems(studentId, academicYearOfDate(at)).filter((i) => i.at <= at), behaviorScoreConfig);
+      runningScore(scoreItems(studentId, academicYearOfDate(at)).filter((i) => i.at <= at), configOn);
 
     /** ระดับตามคะแนนตอนนี้ */
     const currentWatchLevel = (studentId: string, extra?: { delta: number; at: string }) =>
@@ -625,7 +639,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         .sort()
         .at(-1) ?? "";
       const items = scoreItems(studentId);
-      const peak = peakWatchLevel(extra ? [...items, extra] : items, behaviorScoreConfig, lastWithdraw);
+      const peak = peakWatchLevel(extra ? [...items, extra] : items, configOn, lastWithdraw);
       return Math.max(currentWatchLevel(studentId, extra), peak);
     };
 
@@ -683,7 +697,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const withdrawalWait: StoreValue["withdrawalWait"] = (studentId) => {
       if (!watchWithdrawalPending(studentId)) return null;
       const items = scoreItems(studentId);
-      const since = (lastRecoveryAt(items, behaviorScoreConfig) ?? items.map((i) => i.at).sort().at(-1) ?? DEMO_TODAY).slice(0, 10);
+      const since = (lastRecoveryAt(items, configOn) ?? items.map((i) => i.at).sort().at(-1) ?? DEMO_TODAY).slice(0, 10);
       const dueOn = shiftDate(since, behaviorScoreConfig.withdrawalWaitDays);
       return { since, dueOn, overdue: DEMO_TODAY > dueOn };
     };
@@ -866,8 +880,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         change === "cancel"
           ? others
           : [...others, { delta: change.ruleId === rec.ruleId ? recordDelta(rec) : deltaOf(change.ruleId), at: `${change.occurredOn}T${rec.occurredAt.split("T")[1] ?? "00:00:00"}` }];
-      const scoreAfter = runningScore(after, behaviorScoreConfig);
-      const levelAfter = Math.max(watchLevelOf(scoreAfter, behaviorScoreConfig), peakWatchLevel(after, behaviorScoreConfig, lastWithdraw));
+      const scoreAfter = runningScore(after, configOn);
+      const levelAfter = Math.max(watchLevelOf(scoreAfter, behaviorScoreConfig), peakWatchLevel(after, configOn, lastWithdraw));
       return {
         scoreBefore: behaviorScoreOf(rec.studentId),
         scoreAfter,
@@ -1201,26 +1215,60 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       return (sorted.filter((v) => v.effectiveFrom <= date).at(-1) ?? sorted[0]).rules;
     };
 
+    const copyConfig = (c: BehaviorScoreConfig): BehaviorScoreConfig => ({
+      ...c,
+      watchLevels: c.watchLevels.map((l) => ({ ...l, notify: [...l.notify] })),
+    });
+
     const startRuleDraft = () => {
       if (!ruleEditOpen || scheduledRuleSet || ruleDraft) return;
       setRuleDraft(behaviorRules.map((r) => ({ ...r })));
+      setConfigDraft(copyConfig(behaviorScoreConfig));
     };
 
-    const discardRuleDraft = () => setRuleDraft(null);
+    const discardRuleDraft = () => {
+      setRuleDraft(null);
+      setConfigDraft(null);
+    };
+
+    /** ระดับเฝ้าระวังตามคะแนนตอนนี้ภายใต้กฎและค่าตั้งต้นที่กำหนด ใช้เทียบก่อน/หลังชุดใหม่เริ่มใช้ */
+    const levelsUnder = (rules: BehaviorRule[], source: (at: string) => BehaviorScoreConfig, current: BehaviorScoreConfig) =>
+      Object.fromEntries(
+        students.map((st) => {
+          const items = behaviorRecords
+            .filter((rec) => rec.studentId === st.studentId && academicYearOfDate(rec.occurredAt) === CURRENT_TERM.academicYear)
+            .map((rec) => {
+              const rule = rules.find((r) => r.ruleId === rec.ruleId);
+              return { delta: rec.cancelled || !rule || rule.cancelled ? 0 : (rec.scoreDelta ?? rule.scoreDelta), at: rec.occurredAt };
+            });
+          const score = runningScore(items, source);
+          return [st.studentId, { score, level: watchLevelOf(score, current) }] as const;
+        })
+      );
 
     const applyRuleVersion = (version: RuleSetVersion) => {
+      // Alt-D: ถึงวันเริ่มใช้ แจ้งผู้เกี่ยวข้องเมื่อสถานะเฝ้าระวังของนักเรียนเปลี่ยน (พ้นสถานะ: ระบบคงสถานะไว้ให้ครูที่ปรึกษายืนยันถอนก่อน)
+      const before = levelsUnder(behaviorRules, configOn, behaviorScoreConfig);
+      const after = levelsUnder(version.rules, (at) => (at === "" || at.slice(0, 10) >= version.effectiveFrom ? version.config : configOn(at)), version.config);
+      for (const st of students) {
+        const b = before[st.studentId];
+        const a = after[st.studentId];
+        if (a.level > b.level) notifyWatchRaised(st.studentId, b.level, a.level, "ระบบ (ชุดกฎใหม่เริ่มใช้)", a.score);
+      }
       setRuleVersions((prev) => [...prev, version]);
       setBehaviorRules(version.rules);
+      setBehaviorScoreConfig(version.config);
     };
 
     const publishRuleDraft: StoreValue["publishRuleDraft"] = (effectiveFrom, reason) => {
-      if (!ruleDraft) return "applied";
+      if (!ruleDraft || !configDraft) return "applied";
       const number = Math.max(0, ...ruleVersions.map((v) => v.number)) + 1;
       const version: RuleSetVersion = {
         versionId: `RS-${number}`,
         number,
         effectiveFrom,
         rules: ruleDraft,
+        config: configDraft,
         publishedAt: nowThaiIso(),
         publishedBy: ROLE_INFO[role].user.name,
         reason,
@@ -1233,7 +1281,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           { label: "วันเริ่มใช้", from: "", to: formatThaiDate(effectiveFrom) },
         ]);
       }
+      const configChanges = diffConfig(behaviorScoreConfig, configDraft);
+      if (configChanges.length > 0)
+        logChange("rule", "CONFIG", "แก้ค่าตั้งต้นคะแนนและเกณฑ์เฝ้าระวัง", [
+          ...configChanges,
+          { label: "เหตุผล", from: "", to: reason },
+          { label: "วันเริ่มใช้", from: "", to: formatThaiDate(effectiveFrom) },
+        ]);
       setRuleDraft(null);
+      setConfigDraft(null);
       if (effectiveFrom <= DEMO_TODAY) {
         applyRuleVersion(version);
         return "applied";
@@ -1245,6 +1301,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const recallScheduledRules = () => {
       if (!scheduledRuleSet) return;
       setRuleDraft(scheduledRuleSet.rules.map((r) => ({ ...r })));
+      setConfigDraft(copyConfig(scheduledRuleSet.config));
       setScheduledRuleSet(null);
     };
 
@@ -1727,6 +1784,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       scheduledRuleSet,
       ruleDraft,
       setRuleDraft,
+      configDraft,
+      setConfigDraft,
+      configOn,
       ruleEditWindow,
       setRuleEditWindow,
       simulateRuleEditOpen,
@@ -1828,7 +1888,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       fulfillRequest,
       logCitizenIdView,
     };
-  }, [role, screenings, redFlags, nineS, sdq, eq, reviews, behaviorRecords, rawAppointments, careCases, homeVisitRecords, accessLogs, exportLog, changeLog, assessmentWindows, behaviorRules, ruleVersions, scheduledRuleSet, ruleDraft, ruleEditWindow, simulateRuleEditOpen, behaviorScoreConfig, drafts, screeningWatch, caseConsiderations, staffEvents, notificationLog, educationDocuments, documentRequests, dcAssessments, readNotifications, dcRounds, watchDecisions, registryCorrections, studentCards]);
+  }, [role, screenings, redFlags, nineS, sdq, eq, reviews, behaviorRecords, rawAppointments, careCases, homeVisitRecords, accessLogs, exportLog, changeLog, assessmentWindows, behaviorRules, ruleVersions, scheduledRuleSet, ruleDraft, configDraft, ruleEditWindow, simulateRuleEditOpen, behaviorScoreConfig, drafts, screeningWatch, caseConsiderations, staffEvents, notificationLog, educationDocuments, documentRequests, dcAssessments, readNotifications, dcRounds, watchDecisions, registryCorrections, studentCards]);
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }

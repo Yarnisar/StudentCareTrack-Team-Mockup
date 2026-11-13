@@ -5,17 +5,15 @@
  * ใช้ร่วมกันทุกแบบร่างของหน้าตั้งค่า เก็บใน store หน้าบันทึกพฤติกรรม ข้อมูลนักเรียน และภาพรวมจึงใช้ค่าเดียวกัน
  * - ข้อ 5: แต่ละระดับระบุคะแนนที่เข้าสถานะ และผู้ที่ต้องแจ้งเพิ่มเมื่อนักเรียนเข้าระดับนั้น
  * - ข้อ 6: คะแนนเริ่มต้น เพดาน (หรือไม่จำกัด) และคะแนนต่ำสุด ปรับด้วยปุ่ม −/+ แทนการพิมพ์
- * - ข้อ 7: ต้องระบุเหตุผลก่อนบันทึก
+ * - ข้อ 7: เหตุผลระบุตอนเผยแพร่ฉบับร่าง (rule-set-panel.tsx)
  * ค่าตั้งต้นอีก 3 ตัวของข้อ 6: ระยะเวลาบันทึกย้อนหลัง ระยะเวลาแก้ไขรายการ และระยะเวลารอครูที่ปรึกษายืนยันการถอนสถานะ
- * PROTOTYPE: คะแนนเริ่มต้น เพดาน คะแนนต่ำสุด และเกณฑ์เฝ้าระวัง บันทึกแล้วมีผลทันทีและคำนวณคะแนนเดิมใหม่ทั้งหมด
- *   รายงานให้มีผลหลังวันเริ่มใช้และไม่คำนวณย้อนหลัง (ข้อ 11, Scenario E) ส่วนคะแนนของกฎแต่ละข้อเก็บไว้ในรายการตอนบันทึกแล้ว
+ * แก้ผ่านฉบับร่างเท่านั้น ค่าที่เผยแพร่มีผลกับพฤติกรรมที่เกิดตั้งแต่วันเริ่มใช้ ไม่คำนวณคะแนนเดิมย้อนหลัง (ข้อ 9, Scenario E)
+ * PROTOTYPE: คะแนนเริ่มต้น เพดาน และคะแนนต่ำสุดใช้ตามวันที่ของแต่ละรายการ ส่วนเกณฑ์เฝ้าระวังประเมินจากคะแนนตอนนี้ด้วยค่าที่ใช้อยู่
  */
 
-import { useState } from "react";
 import { Minus, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import {
   WATCH_ALWAYS_NOTIFIED,
   WATCH_NOTIFY_LABEL,
@@ -31,19 +29,12 @@ const MAX_LEVELS = 4;
 
 export function BehaviorScoreCard() {
   const store = useStore();
-  const saved = store.behaviorScoreConfig;
-  const [draft, setDraft] = useState<BehaviorScoreConfig>(saved);
-  const [reason, setReason] = useState("");
-  const [message, setMessage] = useState("");
-
-  const changed = JSON.stringify(draft) !== JSON.stringify(saved);
+  // แก้ผ่านฉบับร่างเท่านั้น (สร้างและเผยแพร่ที่แถบชุดกฎด้านบน) ไม่มีฉบับร่างคือดูค่าที่ใช้อยู่อย่างเดียว
+  const editing = store.configDraft !== null;
+  const draft: BehaviorScoreConfig = store.configDraft ?? store.behaviorScoreConfig;
   const errors = validateScoreConfig(draft);
-  const canSave = changed && errors.length === 0 && reason.trim() !== "";
 
-  const set = (patch: Partial<BehaviorScoreConfig>) => {
-    setDraft((d) => ({ ...d, ...patch }));
-    setMessage("");
-  };
+  const set = (patch: Partial<BehaviorScoreConfig>) => store.setConfigDraft((d) => (d ? { ...d, ...patch } : d));
   const setLevel = (i: number, patch: Partial<WatchLevel>) =>
     set({ watchLevels: draft.watchLevels.map((l, j) => (j === i ? { ...l, ...patch } : l)) });
 
@@ -51,12 +42,6 @@ export function BehaviorScoreCard() {
     const last = draft.watchLevels.at(-1);
     const atOrBelow = Math.max(draft.minScore, (last?.atOrBelow ?? draft.startScore) - 20);
     set({ watchLevels: [...draft.watchLevels, { atOrBelow, notify: last?.notify ?? [] }] });
-  };
-
-  const save = () => {
-    store.setBehaviorScoreConfig(draft);
-    setReason("");
-    setMessage("บันทึกแล้ว คะแนนและระดับเฝ้าระวังของนักเรียนทุกคนคำนวณตามค่าใหม่");
   };
 
   return (
@@ -67,6 +52,12 @@ export function BehaviorScoreCard() {
           นักเรียนทุกคนเริ่มที่คะแนนเริ่มต้น คะแนนรวมอยู่ระหว่างคะแนนต่ำสุดถึงเพดาน ถึงเพดานแล้วยังบันทึกพฤติกรรมเชิงบวกได้แต่คะแนนไม่เพิ่ม
         </p>
 
+        {!editing && (
+          <p className="mb-3 rounded-lg bg-surface px-3 py-2.5 text-[12.5px] leading-relaxed text-muted-foreground">
+            ดูอย่างเดียว สร้างฉบับร่างในช่วงที่แก้กฎได้เพื่อแก้ไข ค่าที่เปลี่ยนมีผลกับพฤติกรรมที่เกิดตั้งแต่วันเริ่มใช้เป็นต้นไปเท่านั้น
+          </p>
+        )}
+        <fieldset disabled={!editing} className="min-w-0 border-0 p-0 disabled:opacity-60">
         <div className="grid gap-3 sm:grid-cols-3">
           <Stepper label="คะแนนเริ่มต้น" value={draft.startScore} onChange={(v) => set({ startScore: v })} />
           <div className="rounded-lg border border-border p-3">
@@ -161,35 +152,14 @@ export function BehaviorScoreCard() {
           </Button>
         )}
 
-        {errors.length > 0 && (
+        </fieldset>
+
+        {editing && errors.length > 0 && (
           <ul className="mt-3 list-disc pl-5 text-[12.5px] text-destructive">
             {errors.map((e) => (
               <li key={e}>{e}</li>
             ))}
           </ul>
-        )}
-
-        {changed && (
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            <Input
-              aria-label="เหตุผลในการแก้ไข"
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              placeholder="เหตุผลในการแก้ไข (จำเป็น)"
-              className="h-10 min-w-0 flex-1"
-            />
-            <Button variant="outline" onClick={() => setDraft(saved)}>
-              ยกเลิก
-            </Button>
-            <Button disabled={!canSave} onClick={save}>
-              บันทึก
-            </Button>
-          </div>
-        )}
-        {message && (
-          <p role="status" className="mt-3 text-[12.5px] text-muted-foreground">
-            {message}
-          </p>
         )}
       </CardContent>
     </Card>

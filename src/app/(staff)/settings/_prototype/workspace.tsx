@@ -302,7 +302,12 @@ export function SettingsWorkspace({
           </section>
         )}
 
-        {tab === "score" && <BehaviorScoreCard />}
+        {tab === "score" && (
+          <>
+            <RuleSetBar proto={proto} />
+            <BehaviorScoreCard />
+          </>
+        )}
 
         {tab === "dc" && <DcRoundSettings />}
 
