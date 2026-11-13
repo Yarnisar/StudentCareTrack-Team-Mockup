@@ -21,7 +21,7 @@ import { formatThaiDate, formatThaiTime } from "@/lib/format";
 import { CARETAKER_RELATION_OPTIONS } from "@/lib/home-visit-form";
 import { DEMO_TODAY } from "@/lib/mock-data";
 import { useStore } from "@/lib/store";
-import { APPOINTMENT_STATUS_LABEL } from "@/lib/types";
+import { AppointmentStatusBadge } from "@/components/shared/appointment-status";
 
 const ACTIVE = ["pending", "confirmed", "reschedule_requested", "awaiting_visit_confirmation", "visit_confirmed", "visit_disputed"];
 /** PROTOTYPE: ตัวเลือกเป็นข้อเสนอ */
@@ -68,7 +68,7 @@ export function AppointmentView({ viewer, studentId }: { viewer: "student" | "pa
         <CardContent className="p-5">
           <div className="flex items-center justify-between">
             <span className="text-[12.5px] font-semibold text-muted-foreground">นัดหมายเยี่ยมบ้าน</span>
-            <span className="rounded-full bg-muted px-2.5 py-1 text-[11.5px] font-semibold">{APPOINTMENT_STATUS_LABEL[appointment.status]}</span>
+            <AppointmentStatusBadge status={appointment.status} />
           </div>
           <div className="mt-3 text-[22px] font-bold">{formatThaiDate(appointment.proposedDate)}</div>
           <div className="mt-0.5 text-base font-semibold text-primary">เวลา {formatThaiTime(appointment.proposedDate)}</div>

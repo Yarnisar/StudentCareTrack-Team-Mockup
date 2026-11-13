@@ -13,22 +13,10 @@ import { draftKey, useStore } from "@/lib/store";
 import { CURRENT_TERM, DEMO_TODAY } from "@/lib/mock-data";
 import { ExportButton } from "@/components/shared/export-button";
 import { formatBaht, formatThaiDate, formatThaiTime } from "@/lib/format";
-import { APPOINTMENT_STATUS_LABEL, AppointmentStatus } from "@/lib/types";
+import { APPOINTMENT_STATUS_LABEL } from "@/lib/types";
+import { AppointmentStatusBadge } from "@/components/shared/appointment-status";
 import { formatCaretaker } from "@/lib/home-visit-form";
 import { StudentId } from "@/components/shared/student-id";
-
-/** สถานะใช้สีกลาง สีแดง/เหลือง/เขียวสงวนไว้สำหรับกลุ่มเสี่ยง */
-const STATUS_STYLE: Record<AppointmentStatus, string> = {
-  pending: "border border-border text-foreground",
-  confirmed: "bg-accent text-primary",
-  reschedule_requested: "border border-dashed border-foreground/40 text-foreground",
-  awaiting_visit_confirmation: "border border-border text-foreground",
-  visit_confirmed: "bg-accent text-primary",
-  visit_disputed: "border border-dashed border-foreground/40 text-foreground",
-  completed_no_response: "bg-muted text-muted-foreground",
-  completed: "bg-muted text-muted-foreground",
-  cancelled: "bg-muted text-muted-foreground line-through",
-};
 
 export default function HomeVisitsPage() {
   const store = useStore();
@@ -127,19 +115,15 @@ export default function HomeVisitsPage() {
                           : "w-full rounded-xl border border-border p-3 text-left hover:bg-muted/50"
                       }
                     >
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="flex min-w-0 items-baseline gap-2">
-                          {s && <StudentId id={s.studentId} />}
-                          <span className="truncate text-[13.5px] font-semibold">{s?.fullName}</span>
+                      <span className="flex min-w-0 items-baseline gap-2">
+                        {s && <StudentId id={s.studentId} />}
+                        <span className="truncate text-[13.5px] font-semibold">{s?.fullName}</span>
+                      </span>
+                      <div className="mt-1.5 flex items-center justify-between gap-2">
+                        <span className="text-[11.5px] text-muted-foreground">
+                          {formatThaiDate(a.proposedDate)} {formatThaiTime(a.proposedDate)}
                         </span>
-                        <span
-                          className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${STATUS_STYLE[a.status]}`}
-                        >
-                          {APPOINTMENT_STATUS_LABEL[a.status]}
-                        </span>
-                      </div>
-                      <div className="mt-1 text-[11.5px] text-muted-foreground">
-                        {formatThaiDate(a.proposedDate)} {formatThaiTime(a.proposedDate)}
+                        <AppointmentStatusBadge status={a.status} />
                       </div>
                     </button>
                   );
@@ -161,11 +145,7 @@ export default function HomeVisitsPage() {
                       {appointment.teacherName}
                     </p>
                   </div>
-                  <span
-                    className={`rounded-full px-3 py-1.5 text-[12.5px] font-semibold ${STATUS_STYLE[appointment.status]}`}
-                  >
-                    {APPOINTMENT_STATUS_LABEL[appointment.status]}
-                  </span>
+                  <AppointmentStatusBadge status={appointment.status} large />
                   {appointment.status === "confirmed" && (
                     <LinkButton href={`/home-visits/${appointment.appointmentId}/record`}>
                       <Check className="size-4" /> {recordLabel}
