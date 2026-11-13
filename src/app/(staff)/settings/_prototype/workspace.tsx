@@ -12,11 +12,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { CalendarClock, Gavel, Gauge, History, Minus, Plus, Star, X } from "lucide-react";
+import { CalendarClock, ChevronDown, Gavel, Gauge, History, Minus, Plus, Star, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RuleSetBar } from "./rule-set-panel";
+import { diffConfig } from "@/lib/rule-sets";
 import {
   RULE_KIND_LABEL,
   RULE_LEVEL_LABEL,
@@ -42,11 +43,10 @@ import { windowEnabledConfirm, type ImpactContext } from "./confirm-text";
 import { RuleRecorderPicker } from "./rule-recorder-picker";
 import { RATER_LABEL, STATUS_META, type SettingsPrototype, windowStatus } from "./state";
 
-type Tab = "windows" | "rules" | "score" | "dc" | "audit";
+type Tab = "windows" | "rules" | "dc" | "audit";
 const TABS: { key: Tab; label: string; icon: typeof CalendarClock }[] = [
   { key: "windows", label: "ช่วงเวลาประเมิน", icon: CalendarClock },
-  { key: "rules", label: "กฎความประพฤติ", icon: Gavel },
-  { key: "score", label: "คะแนนและเกณฑ์เฝ้าระวัง", icon: Gauge },
+  { key: "rules", label: "กฎและคะแนน", icon: Gavel },
   { key: "dc", label: "คุณลักษณะอันพึงประสงค์", icon: Star },
   { key: "audit", label: "ประวัติการใช้งาน", icon: History },
 ];
@@ -72,7 +72,8 @@ export function SettingsWorkspace({
   const pathname = usePathname();
   const params = useSearchParams();
   const tabParam = params.get("tab");
-  const tab: Tab = TABS.some((t) => t.key === tabParam) ? (tabParam as Tab) : "windows";
+  // ลิงก์เก่า ?tab=score เปิดแท็บกฎและคะแนน และกางส่วนคะแนนไว้
+  const tab: Tab = tabParam === "score" ? "rules" : TABS.some((t) => t.key === tabParam) ? (tabParam as Tab) : "windows";
 
   // มาจากปุ่ม "ขยายช่วงเวลา" ในหน้าภาพรวม → เปิดแผงของช่วงเวลานั้นทันที
   const [selectedWindow, setSelectedWindow] = useState<string | null>(() => params.get("window"));
@@ -152,7 +153,6 @@ export function SettingsWorkspace({
   const counts: Record<Tab, string> = {
     windows: String(proto.windows.length),
     rules: String(proto.rules.length),
-    score: "",
     dc: "",
     audit: String(entries.length),
   };
@@ -299,14 +299,8 @@ export function SettingsWorkspace({
                 );
               })}
             </div>
+            <ScoreSection openByLink={tabParam === "score"} />
           </section>
-        )}
-
-        {tab === "score" && (
-          <>
-            <RuleSetBar proto={proto} />
-            <BehaviorScoreCard />
-          </>
         )}
 
         {tab === "dc" && <DcRoundSettings />}
@@ -683,6 +677,41 @@ export function SettingsWorkspace({
             </div>
           </aside>
         </>
+      )}
+    </div>
+  );
+}
+
+/** คะแนนและเกณฑ์เฝ้าระวัง (UC7 Scenario D) อยู่ในชุดเดียวกับกฎ พับไว้ เปิดเองเมื่อมีการเปลี่ยนค่าในฉบับร่าง */
+function ScoreSection({ openByLink }: { openByLink: boolean }) {
+  const store = useStore();
+  const [open, setOpen] = useState<boolean | null>(openByLink ? true : null);
+  const changes = store.configDraft ? diffConfig(store.behaviorScoreConfig, store.configDraft).length : 0;
+  const expanded = open ?? changes > 0;
+  return (
+    <div className="mt-6">
+      <button
+        type="button"
+        aria-expanded={expanded}
+        onClick={() => setOpen(!expanded)}
+        className="flex w-full items-center gap-2 rounded-xl border border-border bg-card px-4 py-3 text-left"
+      >
+        <Gauge className="size-4 text-muted-foreground" />
+        <span className="flex-1">
+          <span className="block text-[14px] font-bold">คะแนนและเกณฑ์เฝ้าระวัง</span>
+          <span className="block text-[12px] text-muted-foreground">
+            คะแนนเริ่มต้น เพดาน คะแนนต่ำสุด ระยะเวลาบันทึก/แก้ไข และเกณฑ์เฝ้าระวัง · เผยแพร่พร้อมกฎด้านบน
+          </span>
+        </span>
+        {changes > 0 && (
+          <span className="rounded-full bg-accent px-2.5 py-0.5 text-[11.5px] font-semibold text-primary">เปลี่ยนในร่าง {changes}</span>
+        )}
+        <ChevronDown className={`size-4 text-muted-foreground transition-transform ${expanded ? "rotate-180" : ""}`} />
+      </button>
+      {expanded && (
+        <div className="mt-3">
+          <BehaviorScoreCard />
+        </div>
       )}
     </div>
   );
