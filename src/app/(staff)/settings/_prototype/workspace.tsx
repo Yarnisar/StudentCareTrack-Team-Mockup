@@ -6,7 +6,8 @@
  * - แบ่งเป็นแท็บตามเรื่อง (รวมเกณฑ์คุณลักษณะอันพึงประสงค์ UC12) เก็บแท็บใน URL (?tab=) ลิงก์ตรงมาที่แท็บได้
  * - รายการแสดงเป็นแถวสรุปบรรทัดเดียว กดแถวแล้วแก้ในแผงด้านข้าง (มือถือเป็นแผ่นเต็มจอ) ฟอร์มจึงมีที่เดียว
  * - กฎจัดกลุ่มตามชนิด ตัดคะแนน / เพิ่มคะแนน / ส่งต่อ (UC7 Scenario B ข้อ 7)
- * PROTOTYPE: ค่าที่แก้เก็บใน store มีผลทันทีกับทุกหน้า ยังไม่มีฉบับร่างและการเผยแพร่พร้อมวันเริ่มใช้ (UC7 Scenario E)
+ * - กฎความประพฤติแก้ผ่านฉบับร่างในช่วงที่แก้กฎได้ แล้วเผยแพร่พร้อมวันเริ่มใช้ (UC7 Scenario A, E) ดู rule-set-panel.tsx
+ * PROTOTYPE: ช่วงเวลาดำเนินงานแก้แล้วมีผลทันที ส่วนค่าตั้งต้นคะแนนและเกณฑ์เฝ้าระวัง (แท็บคะแนน) ยังไม่ผ่านฉบับร่าง
  */
 
 import { useEffect, useRef, useState } from "react";
@@ -15,6 +16,7 @@ import { CalendarClock, Gavel, Gauge, History, Minus, Plus, Star, X } from "luci
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { RuleSetBar } from "./rule-set-panel";
 import {
   RULE_KIND_LABEL,
   RULE_LEVEL_LABEL,
@@ -83,19 +85,12 @@ export function SettingsWorkspace({
   const rule = proto.rules.find((r) => r.ruleId === selectedRule) ?? null;
   /** จำนวนผู้ที่เริ่มตอบรอบนี้แล้ว มากกว่า 0 = ล็อกชนิดแบบประเมินและภาคเรียน (UC9 Scenario B ข้อ 4) */
   const started = win ? windowStarted(store, win) : 0;
-  // กฎที่มีอยู่แล้ว: เก็บค่าตอนเปิดแผงไว้เทียบ ถ้าแก้ต้องระบุเหตุผล (UC7 Scenario B ข้อ 7) กฎใหม่ไม่ต้อง
-  const [ruleBase, setRuleBase] = useState<string | null>(null);
-  const [editReason, setEditReason] = useState("");
-  const ruleChanged = !!rule && !rule.cancelled && ruleBase !== null && JSON.stringify(rule) !== ruleBase;
   const closePanel = () => {
-    if (rule && ruleChanged && editReason.trim() !== "") {
-      store.logChange("rule", rule.ruleId, `แก้กฎ "${rule.name}"`, [{ label: "เหตุผล", from: "", to: editReason.trim() }], true);
-    }
     setSelectedWindow(null);
     setSelectedRule(null);
-    setRuleBase(null);
-    setEditReason("");
   };
+  /** ฉบับร่างที่ยังไม่เผยแพร่ ใช้ติดป้ายกฎที่เพิ่งยกเลิกในร่าง */
+  const activeRule = rule ? store.behaviorRules.find((r) => r.ruleId === rule.ruleId) : undefined;
   /** ข้อมูลไม่ถูกต้องของแผงที่เปิดอยู่ (UC7 Alt-B, UC9 Alt-A) */
   const panelError =
     win && win.openDate > win.closeDate
@@ -120,9 +115,7 @@ export function SettingsWorkspace({
               ? "มีรอบนี้ของภาคเรียนและกลุ่มเป้าหมายเดียวกันอยู่แล้ว"
         : rule && !rule.cancelled && rule.name.trim() === ""
           ? "ต้องระบุชื่อพฤติกรรม"
-          : ruleChanged && editReason.trim() === ""
-            ? "ต้องระบุเหตุผลในการแก้ไขกฎก่อนปิดแผง"
-            : "";
+          : "";
   /** ปิดแผง: กฎใหม่ที่ยังไม่ตั้งชื่อและไม่เคยใช้ ถือว่ายกเลิกการเพิ่ม ส่วนข้อมูลผิดอื่นต้องแก้ก่อน */
   const requestClose = () => {
     if (rule && !rule.cancelled && rule.name.trim() === "" && !(ruleUsage[rule.ruleId] ?? 0)) {
@@ -235,11 +228,12 @@ export function SettingsWorkspace({
 
         {tab === "rules" && (
           <section>
+            <RuleSetBar proto={proto} />
             <SectionHead
               title="กฎความประพฤติ"
-              hint="รายการที่ครูเลือกตอนบันทึกพฤติกรรม กฎที่ยกเลิกแล้วไม่อยู่ในตัวเลือกของครู และรายการเดิมไม่นับคะแนน · กดแถวเพื่อแก้ไข"
+              hint={proto.hasDraft ? "กำลังแก้ฉบับร่าง · กดแถวเพื่อแก้ไข" : "ชุดที่ใช้งานอยู่ (ดูอย่างเดียว) · แก้ได้ผ่านฉบับร่างในช่วงที่แก้กฎได้"}
               action={
-                <Button onClick={() => setSelectedRule(proto.addRule())}>
+                <Button disabled={!proto.hasDraft} onClick={() => setSelectedRule(proto.addRule())}>
                   <Plus className="size-4" /> เพิ่มกฎ
                 </Button>
               }
@@ -257,7 +251,7 @@ export function SettingsWorkspace({
                       <h3 className="text-[13px] font-bold">{kind === "cancelled" ? "ยกเลิกแล้ว" : RULE_KIND_LABEL[kind]}</h3>
                       <span className="text-[12px] text-muted-foreground">{list.length} ข้อ</span>
                       <span className="flex-1" />
-                      {kind !== "cancelled" && (
+                      {kind !== "cancelled" && proto.hasDraft && (
                       <button
                         type="button"
                         onClick={() => setSelectedRule(proto.addRule(LEVELS_OF[kind as RuleKind][0]))}
@@ -275,8 +269,6 @@ export function SettingsWorkspace({
                           type="button"
                           onClick={() => {
                             setSelectedRule(r.ruleId);
-                            setRuleBase(JSON.stringify(r));
-                            setEditReason("");
                             setCancelling(false);
                             setCancelReason("");
                           }}
@@ -298,7 +290,7 @@ export function SettingsWorkspace({
                               r.isActive ? "bg-accent text-primary" : "bg-muted text-muted-foreground"
                             }`}
                           >
-                            {r.cancelled ? "ยกเลิกแล้ว" : r.isActive ? "ใช้งาน" : "ปิดใช้งาน"}
+                            {r.cancelled ? (store.behaviorRules.find((x) => x.ruleId === r.ruleId)?.cancelled ? "ยกเลิกแล้ว" : "ยกเลิก (รอเผยแพร่)") : r.isActive ? "ใช้งาน" : "ปิดใช้งาน"}
                           </span>
                         </button>
                       ))}
@@ -532,12 +524,12 @@ export function SettingsWorkspace({
                   ยกเลิกกฎนี้แล้วเมื่อ {formatThaiDate(rule.cancelled.at)} · เหตุผล: {rule.cancelled.reason}
                   <br />
                   <span className="text-[12px] text-muted-foreground">
-                    รายการเดิม {ruleUsage[rule.ruleId] ?? 0} รายการไม่นับคะแนน และแสดงในประวัติว่า “กฎถูกยกเลิก”
+                    {activeRule?.cancelled ? "" : "จะมีผลเมื่อเผยแพร่ฉบับร่าง · "}รายการเดิม {ruleUsage[rule.ruleId] ?? 0} รายการไม่นับคะแนน และแสดงในประวัติว่า “กฎถูกยกเลิก”
                   </span>
                 </p>
               )}
               {rule && (
-                <fieldset disabled={!!rule.cancelled} className="space-y-4 disabled:opacity-60">
+                <fieldset disabled={!!rule.cancelled || !proto.hasDraft} className="space-y-4 disabled:opacity-60">
                   <Field label="ชื่อพฤติกรรม">
                     <Input
                       value={rule.name}
@@ -599,7 +591,12 @@ export function SettingsWorkspace({
                   </Field>
                 </fieldset>
               )}
-              {rule && !rule.cancelled && (
+              {rule && !proto.hasDraft && (
+                <p className="rounded-lg bg-surface px-3 py-2.5 text-[12.5px] leading-relaxed text-muted-foreground">
+                  ดูอย่างเดียว สร้างฉบับร่างในช่วงที่แก้กฎได้เพื่อแก้ไข
+                </p>
+              )}
+              {rule && !rule.cancelled && proto.hasDraft && (
                 <div className="rounded-lg border border-border p-3">
                   {!cancelling ? (
                     <div className="flex flex-wrap items-center gap-2">
@@ -643,15 +640,6 @@ export function SettingsWorkspace({
                   )}
                 </div>
               )}
-              {ruleChanged && (
-                <Field label="เหตุผลในการแก้ไข (จำเป็น)">
-                  <Input
-                    value={editReason}
-                    onChange={(e) => setEditReason(e.target.value)}
-                    placeholder="เช่น ปรับตามมติที่ประชุมฝ่ายปกครอง"
-                  />
-                </Field>
-              )}
               {rule && (
                 <RuleHistory entries={store.changeLog.filter((c) => c.entity === "rule" && c.ref === rule.ruleId)} />
               )}
@@ -674,7 +662,7 @@ export function SettingsWorkspace({
                   ลบ
                 </Button>
               )}
-              {rule && !rule.cancelled && !(ruleUsage[rule.ruleId] ?? 0) && (
+              {rule && !rule.cancelled && proto.hasDraft && !(ruleUsage[rule.ruleId] ?? 0) && (
                 <Button
                   size="lg"
                   variant="outline"

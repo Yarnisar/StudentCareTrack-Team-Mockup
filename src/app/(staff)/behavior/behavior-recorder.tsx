@@ -62,7 +62,8 @@ export function BehaviorRecorder({ onClose, studentId }: { onClose: () => void; 
   const [testMode, setTestMode] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const activeRules = store.behaviorRules.filter((r) => r.isActive);
+  // กฎที่มีผลในวันที่เกิดพฤติกรรม (บันทึกย้อนหลังข้ามวันเริ่มใช้ของกฎชุดใหม่ใช้กฎเดิม)
+  const activeRules = store.rulesOn(occurredOn).filter((r) => r.isActive);
   const rule = activeRules.find((r) => r.ruleId === ruleId && canRecordRule(r));
   const ruleName = rule?.name ?? "";
   const refer = rule ? ruleKind(rule) === "refer" : false;
@@ -109,9 +110,11 @@ export function BehaviorRecorder({ onClose, studentId }: { onClose: () => void; 
       ? "วันที่เกิดเหตุต้องไม่เกินวันนี้"
       : occurredOn < minDate
         ? `บันทึกย้อนหลังได้ไม่เกิน ${store.behaviorScoreConfig.backdateDays} วัน`
-        : backdated && backdateReason.trim() === ""
-          ? "ระบุเหตุผลที่บันทึกย้อนหลัง"
-          : "";
+        : ruleId && !rule
+          ? "พฤติกรรมนี้ยังไม่มีผลในวันที่เลือก เลือกพฤติกรรมใหม่หรือเปลี่ยนวันที่"
+          : backdated && backdateReason.trim() === ""
+            ? "ระบุเหตุผลที่บันทึกย้อนหลัง"
+            : "";
   const hasDetails = occurredOn !== DEMO_TODAY || description.trim() !== "" || evidence.length > 0;
 
   const add = (student: Student, via: Entry["via"]) => {

@@ -35,7 +35,8 @@ import {
   evaluateRedFlag,
   scoreSdq,
 } from "./rules";
-import { nowThaiIso } from "./format";
+import { formatThaiDate, nowThaiIso } from "./format";
+import { INITIAL_RULE_EDIT_WINDOW, diffRules, type RuleEditWindow, type RuleSetVersion } from "./rule-sets";
 import { usePathname } from "next/navigation";
 import { DEFAULT_DC_CRITERIA, type DcRound } from "./dc-round";
 import { canRevealCitizenId, defaultRoleFor, recordableRooms, ROLE_INFO, TEACHER_ASSIGNMENTS, type Role } from "./roles";
@@ -118,6 +119,31 @@ interface StoreValue {
   /** กฎความประพฤติชุดเดียว หน้าตั้งค่าแก้ ตัวบันทึกและการคิดคะแนนอ่านจากที่นี่ (UC7, UC8) */
   behaviorRules: BehaviorRule[];
   setBehaviorRules: React.Dispatch<React.SetStateAction<BehaviorRule[]>>;
+  /**
+   * ชุดกฎแบบมีเวอร์ชัน (UC7 สถานการณ์ A, E): behaviorRules คือชุดที่ใช้งานอยู่ แก้ผ่านฉบับร่างแล้วเผยแพร่พร้อมวันเริ่มใช้เท่านั้น
+   * ruleVersions = ชุดที่เคยมีผลแล้ว (เรียงเก่าไปใหม่) · scheduledRuleSet = เผยแพร่แล้วแต่ยังไม่ถึงวันเริ่มใช้
+   */
+  ruleVersions: RuleSetVersion[];
+  scheduledRuleSet: RuleSetVersion | null;
+  ruleDraft: BehaviorRule[] | null;
+  setRuleDraft: React.Dispatch<React.SetStateAction<BehaviorRule[] | null>>;
+  ruleEditWindow: RuleEditWindow;
+  setRuleEditWindow: (window: RuleEditWindow) => void;
+  /** PROTOTYPE: จำลองว่าวันนี้อยู่ในช่วงที่แก้กฎได้ ใช้โชว์ทั้งสองสถานะเพราะวันตัวอย่างอยู่กลางภาคเรียน */
+  simulateRuleEditOpen: boolean;
+  setSimulateRuleEditOpen: (on: boolean) => void;
+  /** วันนี้อยู่ในช่วงที่แก้กฎได้ (หรือกำลังจำลอง) */
+  ruleEditOpen: boolean;
+  /** กฎที่มีผลในวันที่ระบุ (UC8 ข้อ 6 ตรวจตอนบันทึกย้อนหลัง) */
+  rulesOn: (date: string) => BehaviorRule[];
+  startRuleDraft: () => void;
+  discardRuleDraft: () => void;
+  /** เผยแพร่ฉบับร่าง วันเริ่มใช้ไม่เกินวันนี้ = มีผลทันที ไม่งั้นรอถึงวันเริ่มใช้ (สถานการณ์ E) */
+  publishRuleDraft: (effectiveFrom: string, reason: string) => "applied" | "scheduled";
+  /** เรียกฉบับที่รอวันเริ่มใช้กลับมาเป็นฉบับร่าง */
+  recallScheduledRules: () => void;
+  /** PROTOTYPE: จำลองว่าถึงวันเริ่มใช้ของฉบับที่รออยู่ (Alt-D) */
+  activateScheduledRules: () => void;
   /** คะแนนเริ่มต้น เพดาน คะแนนต่ำสุด และเกณฑ์เฝ้าระวังหลายระดับ ที่แอดมินตั้ง (UC7 Scenario D) */
   behaviorScoreConfig: BehaviorScoreConfig;
   setBehaviorScoreConfig: (config: BehaviorScoreConfig) => void;
@@ -359,6 +385,21 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [changeLog, setChangeLog] = useState<ChangeLogEntry[]>([]);
   const [assessmentWindows, setAssessmentWindows] = useState<AssessmentWindow[]>(INITIAL_WINDOWS);
   const [behaviorRules, setBehaviorRules] = useState<BehaviorRule[]>(seedBehaviorRules);
+  const [ruleVersions, setRuleVersions] = useState<RuleSetVersion[]>(() => [
+    {
+      versionId: "RS-1",
+      number: 1,
+      effectiveFrom: "2569-05-01",
+      rules: seedBehaviorRules,
+      publishedAt: "2569-04-20T09:00:00",
+      publishedBy: "ค่าตั้งต้นของโรงเรียน",
+      reason: "ชุดกฎตั้งต้น",
+    },
+  ]);
+  const [scheduledRuleSet, setScheduledRuleSet] = useState<RuleSetVersion | null>(null);
+  const [ruleDraft, setRuleDraft] = useState<BehaviorRule[] | null>(null);
+  const [ruleEditWindow, setRuleEditWindow] = useState<RuleEditWindow>(INITIAL_RULE_EDIT_WINDOW);
+  const [simulateRuleEditOpen, setSimulateRuleEditOpen] = useState(false);
   const [behaviorScoreConfig, setBehaviorScoreConfig] = useState<BehaviorScoreConfig>(DEFAULT_BEHAVIOR_SCORE);
   const [drafts, setDrafts] = useState<Record<string, unknown>>({});
   const [dcAssessments, setDcAssessments] = useState<DcAssessment[]>(() => [
@@ -1153,6 +1194,66 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       );
     };
 
+    const ruleEditOpen = simulateRuleEditOpen || (DEMO_TODAY >= ruleEditWindow.open && DEMO_TODAY <= ruleEditWindow.close);
+
+    const rulesOn: StoreValue["rulesOn"] = (date) => {
+      const sorted = [...ruleVersions].sort((a, b) => a.effectiveFrom.localeCompare(b.effectiveFrom));
+      return (sorted.filter((v) => v.effectiveFrom <= date).at(-1) ?? sorted[0]).rules;
+    };
+
+    const startRuleDraft = () => {
+      if (!ruleEditOpen || scheduledRuleSet || ruleDraft) return;
+      setRuleDraft(behaviorRules.map((r) => ({ ...r })));
+    };
+
+    const discardRuleDraft = () => setRuleDraft(null);
+
+    const applyRuleVersion = (version: RuleSetVersion) => {
+      setRuleVersions((prev) => [...prev, version]);
+      setBehaviorRules(version.rules);
+    };
+
+    const publishRuleDraft: StoreValue["publishRuleDraft"] = (effectiveFrom, reason) => {
+      if (!ruleDraft) return "applied";
+      const number = Math.max(0, ...ruleVersions.map((v) => v.number)) + 1;
+      const version: RuleSetVersion = {
+        versionId: `RS-${number}`,
+        number,
+        effectiveFrom,
+        rules: ruleDraft,
+        publishedAt: nowThaiIso(),
+        publishedBy: ROLE_INFO[role].user.name,
+        reason,
+      };
+      // บันทึกประวัติของกฎแต่ละข้อที่เปลี่ยน พร้อมเหตุผลและวันเริ่มใช้
+      for (const d of diffRules(behaviorRules, ruleDraft)) {
+        logChange("rule", d.ruleId, d.summary, [
+          ...d.changes,
+          { label: "เหตุผล", from: "", to: reason },
+          { label: "วันเริ่มใช้", from: "", to: formatThaiDate(effectiveFrom) },
+        ]);
+      }
+      setRuleDraft(null);
+      if (effectiveFrom <= DEMO_TODAY) {
+        applyRuleVersion(version);
+        return "applied";
+      }
+      setScheduledRuleSet(version);
+      return "scheduled";
+    };
+
+    const recallScheduledRules = () => {
+      if (!scheduledRuleSet) return;
+      setRuleDraft(scheduledRuleSet.rules.map((r) => ({ ...r })));
+      setScheduledRuleSet(null);
+    };
+
+    const activateScheduledRules = () => {
+      if (!scheduledRuleSet) return;
+      applyRuleVersion(scheduledRuleSet);
+      setScheduledRuleSet(null);
+    };
+
     const addBehaviorRecord: StoreValue["addBehaviorRecord"] = ({
       studentIds,
       ruleId,
@@ -1173,14 +1274,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         occurredAt,
         recordedByName: ROLE_INFO[role].user.name,
         recordedAt: now,
-        scoreDelta: behaviorRules.find((r) => r.ruleId === ruleId)?.scoreDelta ?? 0,
+        scoreDelta: rulesOn(occurredAt.slice(0, 10)).find((r) => r.ruleId === ruleId)?.scoreDelta ?? 0,
         source,
         ...(backdateReason && { backdateReason }),
         ...(evidence && evidence.length > 0 && { evidence }),
       }));
       setBehaviorRecords((prev) => [...created, ...prev]);
 
-      const rule = behaviorRules.find((r) => r.ruleId === ruleId);
+      // กฎที่มีผลในวันที่เกิดพฤติกรรม (บันทึกย้อนหลังข้ามวันเริ่มใช้ใช้กฎเดิม)
+      const rule = rulesOn(occurredAt.slice(0, 10)).find((r) => r.ruleId === ruleId);
       const refer = !!rule && ruleKind(rule) === "refer";
       const delta = refer ? 0 : (rule?.scoreDelta ?? 0);
       for (const studentId of studentIds) {
@@ -1621,6 +1723,21 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setAssessmentWindows,
       behaviorRules,
       setBehaviorRules,
+      ruleVersions,
+      scheduledRuleSet,
+      ruleDraft,
+      setRuleDraft,
+      ruleEditWindow,
+      setRuleEditWindow,
+      simulateRuleEditOpen,
+      setSimulateRuleEditOpen,
+      ruleEditOpen,
+      rulesOn,
+      startRuleDraft,
+      discardRuleDraft,
+      publishRuleDraft,
+      recallScheduledRules,
+      activateScheduledRules,
       behaviorScoreConfig,
       setBehaviorScoreConfig,
       getStudent,
@@ -1711,7 +1828,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       fulfillRequest,
       logCitizenIdView,
     };
-  }, [role, screenings, redFlags, nineS, sdq, eq, reviews, behaviorRecords, rawAppointments, careCases, homeVisitRecords, accessLogs, exportLog, changeLog, assessmentWindows, behaviorRules, behaviorScoreConfig, drafts, screeningWatch, caseConsiderations, staffEvents, notificationLog, educationDocuments, documentRequests, dcAssessments, readNotifications, dcRounds, watchDecisions, registryCorrections, studentCards]);
+  }, [role, screenings, redFlags, nineS, sdq, eq, reviews, behaviorRecords, rawAppointments, careCases, homeVisitRecords, accessLogs, exportLog, changeLog, assessmentWindows, behaviorRules, ruleVersions, scheduledRuleSet, ruleDraft, ruleEditWindow, simulateRuleEditOpen, behaviorScoreConfig, drafts, screeningWatch, caseConsiderations, staffEvents, notificationLog, educationDocuments, documentRequests, dcAssessments, readNotifications, dcRounds, watchDecisions, registryCorrections, studentCards]);
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }

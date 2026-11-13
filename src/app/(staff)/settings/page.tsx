@@ -52,13 +52,13 @@ function SettingsContent() {
   );
 
   const openNow = proto.windows.filter((w) => windowStatus(w) === "open").length;
-  const activeRules = proto.rules.filter((r) => r.isActive).length;
+  const activeRules = store.behaviorRules.filter((r) => r.isActive).length;
 
   return (
     <ConfirmProvider style={confirmStyle}>
       <PageHeader
         title="ตั้งค่าระบบ"
-        subtitle={`${SCHOOL_NAME} · ${CURRENT_TERM.label} · เปิดให้ทำอยู่ ${openNow} รอบ · กฎที่ใช้งาน ${activeRules} จาก ${proto.rules.length} ข้อ`}
+        subtitle={`${SCHOOL_NAME} · ${CURRENT_TERM.label} · เปิดให้ทำอยู่ ${openNow} รอบ · กฎที่ใช้งาน ${activeRules} จาก ${store.behaviorRules.length} ข้อ`}
       />
 
       <SettingsWorkspace proto={proto} ruleUsage={ruleUsage} impact={impact} />
