@@ -14,6 +14,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { LinkButton } from "@/components/ui/link-button";
 import { formatThaiDate } from "@/lib/format";
 import { DEMO_TODAY } from "@/lib/mock-data";
+import { daysBetween } from "@/lib/periods";
 import {
   EVENT_KINDS,
   EVENT_LABEL,
@@ -93,6 +94,7 @@ export function HomeroomCalendar({ events, periods }: { events: CalendarEvent[];
               วันนี้
             </Button>
             <span className="flex-1" />
+            <span className="text-[12.5px] text-muted-foreground">แสดง:</span>
             {EVENT_KINDS.map((kind) => {
               const Icon = EVENT_ICON[kind];
               const active = kinds.includes(kind);
@@ -104,8 +106,8 @@ export function HomeroomCalendar({ events, periods }: { events: CalendarEvent[];
                   onClick={() => toggleKind(kind)}
                   className={
                     active
-                      ? "flex h-8 items-center gap-1.5 rounded-lg border border-primary bg-accent px-3 text-[12.5px] font-semibold text-primary"
-                      : "flex h-8 items-center gap-1.5 rounded-lg border border-border px-3 text-[12.5px] text-muted-foreground hover:bg-muted"
+                      ? "flex h-7 items-center gap-1.5 rounded-lg bg-accent px-2.5 text-[12px] font-semibold text-primary"
+                      : "flex h-7 items-center gap-1.5 rounded-lg border border-border px-2.5 text-[12px] text-muted-foreground hover:bg-muted"
                   }
                 >
                   <Icon className="size-3.5" /> {EVENT_LABEL[kind]}
@@ -114,13 +116,7 @@ export function HomeroomCalendar({ events, periods }: { events: CalendarEvent[];
             })}
           </div>
 
-          {openPeriods.length > 0 && (
-            <div className="mt-4 space-y-1.5">
-              {openPeriods.map((p) => (
-                <PeriodBar key={p.id} period={p} monthStart={monthStart} monthEnd={monthEnd} total={total} />
-              ))}
-            </div>
-          )}
+          <CloseList periods={openPeriods} />
 
           <div className="mt-4 hidden md:block">
             <div className="grid grid-cols-7 text-center text-[12px] font-medium text-muted-foreground">
@@ -210,7 +206,7 @@ function DayCell({
       onClick={() => onSelect(date)}
       aria-pressed={selected}
       aria-label={`${dayTitle(date)} ${events.length} รายการ`}
-      className={`flex min-h-24 flex-col gap-1 rounded-lg border p-1.5 text-left ${
+      className={`flex min-h-[72px] flex-col gap-1 rounded-lg border p-1.5 text-left ${
         selected ? "border-primary bg-accent" : "border-border hover:bg-muted"
       }`}
     >
@@ -244,33 +240,29 @@ function DayCell({
   );
 }
 
-/** แถบช่วงเวลาของกระบวนการในเดือนที่ดูอยู่ ปลายแถบคือวันปิดรอบ */
-function PeriodBar({
-  period,
-  monthStart,
-  monthEnd,
-  total,
-}: {
-  period: PeriodRange;
-  monthStart: string;
-  monthEnd: string;
-  total: number;
-}) {
-  const from = period.opensAt < monthStart ? 1 : parse(period.opensAt)[2];
-  const to = period.closesAt > monthEnd ? total : parse(period.closesAt)[2];
-  const closesHere = period.closesAt <= monthEnd;
+/** กำหนดปิดรอบที่ยังไม่ถึง เรียงตามวัน รวมกระบวนการที่ปิดวันเดียวกันไว้บรรทัดเดียว อันที่ใกล้ที่สุดเน้นตัวหนา */
+function CloseList({ periods }: { periods: PeriodRange[] }) {
+  const groups = new Map<string, string[]>();
+  for (const p of periods.filter((p) => p.closesAt >= DEMO_TODAY).sort((a, b) => a.closesAt.localeCompare(b.closesAt))) {
+    groups.set(p.closesAt, [...(groups.get(p.closesAt) ?? []), p.label]);
+  }
+  if (groups.size === 0) return null;
   return (
-    <div className="flex items-center gap-3 text-[12px]">
-      <span className="w-24 shrink-0 font-medium sm:w-40">{period.label}</span>
-      <div className="relative h-2 flex-1 rounded-full bg-muted">
-        <div
-          className="absolute inset-y-0 rounded-full bg-primary/30"
-          style={{ left: `${((from - 1) / total) * 100}%`, width: `${((to - from + 1) / total) * 100}%` }}
-        />
-      </div>
-      <span className={`shrink-0 text-right sm:w-44 ${closesHere ? "font-semibold text-foreground" : "text-muted-foreground"}`}>
-        {closesHere ? `ปิดรอบ ${formatThaiDate(period.closesAt)}` : `ถึง ${formatThaiDate(period.closesAt)}`}
-      </span>
+    <div className="mt-4 rounded-xl border border-border p-3.5">
+      <h3 className="mb-1.5 text-[12.5px] font-semibold text-muted-foreground">กำหนดปิดรอบ</h3>
+      <ul className="space-y-1">
+        {[...groups].map(([date, labels], i) => {
+          const left = daysBetween(DEMO_TODAY, date);
+          return (
+            <li key={date} className={`flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[13px] ${i === 0 ? "font-semibold" : ""}`}>
+              <Flag className="size-3.5 shrink-0" />
+              <span className="w-28 shrink-0">{formatThaiDate(date)}</span>
+              <span className="w-20 shrink-0 text-[12px] font-normal text-muted-foreground">{left <= 0 ? "วันนี้" : `อีก ${left} วัน`}</span>
+              <span className="min-w-0 flex-1">{labels.join(" · ")}</span>
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 }
