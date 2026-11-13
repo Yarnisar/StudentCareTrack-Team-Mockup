@@ -83,9 +83,18 @@ export function SettingsWorkspace({
   const rule = proto.rules.find((r) => r.ruleId === selectedRule) ?? null;
   /** จำนวนผู้ที่เริ่มตอบรอบนี้แล้ว มากกว่า 0 = ล็อกชนิดแบบประเมินและภาคเรียน (UC9 Scenario B ข้อ 4) */
   const started = win ? windowStarted(store, win) : 0;
+  // กฎที่มีอยู่แล้ว: เก็บค่าตอนเปิดแผงไว้เทียบ ถ้าแก้ต้องระบุเหตุผล (UC7 Scenario B ข้อ 7) กฎใหม่ไม่ต้อง
+  const [ruleBase, setRuleBase] = useState<string | null>(null);
+  const [editReason, setEditReason] = useState("");
+  const ruleChanged = !!rule && !rule.cancelled && ruleBase !== null && JSON.stringify(rule) !== ruleBase;
   const closePanel = () => {
+    if (rule && ruleChanged && editReason.trim() !== "") {
+      store.logChange("rule", rule.ruleId, `แก้กฎ "${rule.name}"`, [{ label: "เหตุผล", from: "", to: editReason.trim() }], true);
+    }
     setSelectedWindow(null);
     setSelectedRule(null);
+    setRuleBase(null);
+    setEditReason("");
   };
   /** ข้อมูลไม่ถูกต้องของแผงที่เปิดอยู่ (UC7 Alt-B, UC9 Alt-A) */
   const panelError =
@@ -111,7 +120,9 @@ export function SettingsWorkspace({
               ? "มีรอบนี้ของภาคเรียนและกลุ่มเป้าหมายเดียวกันอยู่แล้ว"
         : rule && !rule.cancelled && rule.name.trim() === ""
           ? "ต้องระบุชื่อพฤติกรรม"
-          : "";
+          : ruleChanged && editReason.trim() === ""
+            ? "ต้องระบุเหตุผลในการแก้ไขกฎก่อนปิดแผง"
+            : "";
   /** ปิดแผง: กฎใหม่ที่ยังไม่ตั้งชื่อและไม่เคยใช้ ถือว่ายกเลิกการเพิ่ม ส่วนข้อมูลผิดอื่นต้องแก้ก่อน */
   const requestClose = () => {
     if (rule && !rule.cancelled && rule.name.trim() === "" && !(ruleUsage[rule.ruleId] ?? 0)) {
@@ -264,6 +275,8 @@ export function SettingsWorkspace({
                           type="button"
                           onClick={() => {
                             setSelectedRule(r.ruleId);
+                            setRuleBase(JSON.stringify(r));
+                            setEditReason("");
                             setCancelling(false);
                             setCancelReason("");
                           }}
@@ -630,6 +643,15 @@ export function SettingsWorkspace({
                   )}
                 </div>
               )}
+              {ruleChanged && (
+                <Field label="เหตุผลในการแก้ไข (จำเป็น)">
+                  <Input
+                    value={editReason}
+                    onChange={(e) => setEditReason(e.target.value)}
+                    placeholder="เช่น ปรับตามมติที่ประชุมฝ่ายปกครอง"
+                  />
+                </Field>
+              )}
               {rule && (
                 <RuleHistory entries={store.changeLog.filter((c) => c.entity === "rule" && c.ref === rule.ruleId)} />
               )}
@@ -699,7 +721,13 @@ function RuleHistory({ entries }: { entries: ChangeLogEntry[] }) {
             </div>
             {e.changes.map((c) => (
               <div key={c.label}>
-                {c.label}: <span className="text-muted-foreground">{c.from}</span> → {c.to}
+                {c.label === "เหตุผล" ? (
+                  <>เหตุผล: {c.to}</>
+                ) : (
+                  <>
+                    {c.label}: <span className="text-muted-foreground">{c.from}</span> → {c.to}
+                  </>
+                )}
               </div>
             ))}
           </li>

@@ -36,7 +36,7 @@ export function useAuditEntries(): AuditEntry[] {
       action: c.entity === "rule" ? "EDIT_RULE" : c.entity === "screening" ? "EDIT_SCREENING" : "EDIT_ASSESSMENT",
       detail:
         c.entity === "rule"
-          ? `${c.summary}: ${c.changes.map((x) => `${x.label} ${x.from} → ${x.to}`).join(", ")}`
+          ? `${c.summary}: ${c.changes.map((x) => (x.label === "เหตุผล" ? `เหตุผล: ${x.to}` : `${x.label} ${x.from} → ${x.to}`)).join(", ")}`
           : c.entity === "screening"
             ? "แก้ผลคัดกรอง 1 คน"
             : "แก้คำตอบแบบประเมิน 1 ราย",
