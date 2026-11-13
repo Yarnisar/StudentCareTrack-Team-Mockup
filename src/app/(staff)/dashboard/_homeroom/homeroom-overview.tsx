@@ -10,12 +10,12 @@
  */
 
 import { useState } from "react";
-import { CalendarDays, ChevronRight, Download, Table2 } from "lucide-react";
+import { CalendarDays, ChevronRight, Table2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { LinkButton } from "@/components/ui/link-button";
 import { NativeSelect } from "@/components/ui/native-select";
-import { downloadCsv } from "@/lib/csv";
+import { ExportButton } from "@/components/shared/export-button";
 import { formatThaiDate } from "@/lib/format";
 import { CURRENT_TEACHER, CURRENT_TERM } from "@/lib/mock-data";
 import { useStore } from "@/lib/store";
@@ -96,21 +96,6 @@ export function HomeroomOverview() {
     setSemester(CURRENT_TERM.semester);
   };
 
-  const exportCsv = () =>
-    downloadCsv(
-      `ภาพรวม-${CURRENT_TEACHER.roomName.replace("/", "-")}-${termId}.csv`,
-      ["กระบวนการ", "สถานะ", "เลขที่", "ชื่อ-สกุล", "รายละเอียด", "ครบกำหนด"],
-      shown.map((i) => [
-        PROCESS_LABEL[i.process],
-        STATUS_LABEL[i.status],
-        i.student.classNo,
-        i.student.fullName,
-        i.detail,
-        i.due ? formatThaiDate(i.due) : "",
-      ]),
-      store.logExport(`ภาพรวมห้อง ${CURRENT_TEACHER.roomName} · ${shown.length} รายการ`)
-    );
-
   return (
     <div className="flex-1 overflow-y-auto p-4 sm:p-8">
       <div className="flex flex-wrap items-end gap-3">
@@ -144,9 +129,23 @@ export function HomeroomOverview() {
         </Filter>
         <span className="flex-1" />
         {view === "table" && (
-          <Button variant="outline" className="h-10" onClick={exportCsv} disabled={shown.length === 0}>
-            <Download className="size-4" /> ส่งออกรายการ ({shown.length})
-          </Button>
+          <ExportButton
+            label="ส่งออกรายการ"
+            count={shown.length}
+            filename={`ภาพรวม-${CURRENT_TEACHER.roomName.replace("/", "-")}-${termId}`}
+            scope={`ภาพรวมห้อง ${CURRENT_TEACHER.roomName} · ${shown.length} รายการ`}
+            header={["กระบวนการ", "สถานะ", "เลขที่", "ชื่อ-สกุล", "รายละเอียด", "ครบกำหนด"]}
+            rows={() =>
+              shown.map((i) => [
+                PROCESS_LABEL[i.process],
+                STATUS_LABEL[i.status],
+                i.student.classNo,
+                i.student.fullName,
+                i.detail,
+                i.due ? formatThaiDate(i.due) : "",
+              ])
+            }
+          />
         )}
       </div>
 

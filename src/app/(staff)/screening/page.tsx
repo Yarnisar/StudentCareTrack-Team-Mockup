@@ -1,6 +1,7 @@
 "use client";
 
-import { colorResults } from "@/lib/screening-view";
+import { colorResults, MENTAL_STATUS_LABEL } from "@/lib/screening-view";
+import { ExportButton } from "@/components/shared/export-button";
 import { PageHeader } from "@/components/layout/page-header";
 import { RiskBadge } from "@/components/shared/risk-badge";
 import { LinkButton } from "@/components/ui/link-button";
@@ -8,7 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { CURRENT_TERM } from "@/lib/mock-data";
 import { draftKey, useStore } from "@/lib/store";
 import { formatThaiDate } from "@/lib/format";
-import { DIMENSION_LABEL } from "@/lib/types";
+import { DIMENSION_LABEL, DIMENSION_ORDER, RISK_LABEL } from "@/lib/types";
 import { StudentId } from "@/components/shared/student-id";
 
 export default function ScreeningListPage() {
@@ -22,6 +23,34 @@ export default function ScreeningListPage() {
       />
 
       <div className="flex-1 overflow-y-auto p-4 sm:p-8">
+        <div className="mb-4 flex justify-end">
+          <ExportButton
+            label="ส่งออกผลคัดกรอง"
+            count={store.students.length}
+            filename={`ผลคัดกรอง-${CURRENT_TERM.termId}`}
+            scope={`ผลคัดกรอง ${CURRENT_TERM.label} · ${store.students.length} คน`}
+            header={["เลขที่", "ชื่อ-สกุล", "วันที่คัดกรองล่าสุด", "สีรวม", ...DIMENSION_ORDER.map((d) => DIMENSION_LABEL[d])]}
+            rows={() =>
+              store.students.map((s) => {
+                const screening = store.latestScreening(s.studentId);
+                const risk = store.overallRiskOf(s.studentId);
+                const mental = store.mentalStatusOf(s.studentId);
+                const byDim = colorResults(screening?.results ?? []);
+                return [
+                  s.classNo,
+                  s.fullName,
+                  screening ? formatThaiDate(screening.screenedAt) : "ยังไม่เคยคัดกรอง",
+                  risk ? RISK_LABEL[risk] : "รอคัดกรอง",
+                  ...DIMENSION_ORDER.map((d) => {
+                    if (d === "mental") return mental ? MENTAL_STATUS_LABEL[mental] : "";
+                    const r = byDim.find((x) => x.dimension === d);
+                    return r ? RISK_LABEL[r.group] : "";
+                  }),
+                ];
+              })
+            }
+          />
+        </div>
         <Card>
           <CardContent className="p-6">
             <h2 className="mb-4 text-[15.5px] font-bold">รายชื่อนักเรียนในห้องที่รับผิดชอบ</h2>

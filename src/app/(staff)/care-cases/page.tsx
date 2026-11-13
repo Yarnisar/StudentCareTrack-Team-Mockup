@@ -14,7 +14,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { useStore } from "@/lib/store";
 import { ruleKind } from "@/lib/behavior-rules";
 import { formatThaiDate } from "@/lib/format";
-import { DEMO_TODAY } from "@/lib/mock-data";
+import { CURRENT_TERM, DEMO_TODAY } from "@/lib/mock-data";
+import { ExportButton } from "@/components/shared/export-button";
 import { daysBetween, shiftDate } from "@/lib/periods";
 import { StudentId } from "@/components/shared/student-id";
 import {
@@ -22,6 +23,7 @@ import {
   CASE_URGENCY_LABEL,
   CareMethod,
   CaseUrgency,
+  caseUrgencyText,
   REFERRAL_STATUS_LABEL,
   SDQ_LEVEL_LABEL,
 } from "@/lib/types";
@@ -92,6 +94,34 @@ function CareCasesContent() {
     <>
       <PageHeader
         title="ติดตามและช่วยเหลือนักเรียน"
+        action={
+          <ExportButton
+            label="ส่งออกรายการกรณี"
+            count={store.careCases.length}
+            filename={`กรณีช่วยเหลือ-${CURRENT_TERM.termId}`}
+            scope={`กรณีช่วยเหลือ ${CURRENT_TERM.label} · ${store.careCases.length} กรณี`}
+            header={["รหัสกรณี", "เลขที่", "ชื่อ-สกุล", "ห้อง", "ที่มา", "สถานะ", "ความเร่งด่วน", "วันเปิด", "วันปิด", "ติดตามแล้ว (ครั้ง)", "นัดติดตามครั้งถัดไป", "เป้าหมาย"]}
+            rows={() =>
+              store.careCases.map((c) => {
+                const s = store.getStudent(c.studentId);
+                return [
+                  c.caseId,
+                  s?.classNo ?? "",
+                  s?.fullName ?? "",
+                  s?.roomName ?? "",
+                  c.triggerSource,
+                  c.status === "active" ? "กำลังดำเนินการ" : "ปิดแล้ว",
+                  caseUrgencyText(c),
+                  formatThaiDate(c.openedAt),
+                  c.closedAt ? formatThaiDate(c.closedAt) : "",
+                  c.followups.length,
+                  c.nextFollowupDate ? formatThaiDate(c.nextFollowupDate) : "",
+                  c.goal,
+                ];
+              })
+            }
+          />
+        }
       />
 
       <div className="flex-1 overflow-y-auto p-4 sm:p-8">

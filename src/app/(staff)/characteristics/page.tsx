@@ -23,6 +23,7 @@ import { CURRENT_TEACHER, CURRENT_TERM, DEMO_TODAY, dcCriteria } from "@/lib/moc
 import { useStore } from "@/lib/store";
 import { DC_LEVEL_LABEL, type DcLevel } from "@/lib/types";
 import { StudentId } from "@/components/shared/student-id";
+import { ExportButton } from "@/components/shared/export-button";
 
 const LEVELS: DcLevel[] = [3, 2, 1, 0];
 
@@ -193,6 +194,25 @@ function RoomOverview({ onOpen }: { onOpen: (studentId: string) => void }) {
           </div>
         </div>
         {!isCurrent && <p className="mt-2 text-[12px] text-muted-foreground">{PREV_TERM.label} · ดูอย่างเดียว</p>}
+        <div className="mt-3 flex justify-end">
+          <ExportButton
+            label="ส่งออกผลคุณลักษณะฯ"
+            count={rows.length}
+            filename={`คุณลักษณะฯ-${CURRENT_TEACHER.roomName.replace("/", "-")}-${termId}`}
+            scope={`ผลคุณลักษณะอันพึงประสงค์ ห้อง ${CURRENT_TEACHER.roomName} · ${isCurrent ? CURRENT_TERM.label : PREV_TERM.label}`}
+            header={["เลขที่", "ชื่อ-สกุล", ...dcCriteria.map((c) => `${c.criteriaId} ${c.shortName}`), "ผลรวม"]}
+            rows={() =>
+              [...rows]
+                .sort((a, b) => a.student.classNo - b.student.classNo)
+                .map(({ student: s, levels, total, draft }) => [
+                  s.classNo,
+                  s.fullName,
+                  ...dcCriteria.map((c) => (levels ? DC_LEVEL_LABEL[levels[c.criteriaId] as DcLevel] : draft ? "ร่าง" : "ยังไม่ส่งผล")),
+                  total === null ? (draft ? "ร่าง" : "ยังไม่ส่งผล") : DC_LEVEL_LABEL[total as DcLevel],
+                ])
+            }
+          />
+        </div>
 
         <div className="mt-3 overflow-x-auto">
           <table className="w-full min-w-[780px] text-[13.5px]">

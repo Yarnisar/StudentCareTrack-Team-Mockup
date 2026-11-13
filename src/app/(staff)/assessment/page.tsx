@@ -8,8 +8,10 @@ import { useStore } from "@/lib/store";
 import { SDQ_LEVEL_LABEL, SDQ_RATER_LABEL, SdqRater } from "@/lib/types";
 import { needsReview, REVIEW_STATE_LABEL } from "@/lib/assessment-review";
 import { StudentId } from "@/components/shared/student-id";
+import { ExportButton } from "@/components/shared/export-button";
 
 const RATERS: SdqRater[] = ["teacher", "student", "parent"];
+const OUTCOME = { normal: "ปกติ", needs_care: "ควรดูแล" } as const;
 
 export default function AssessmentPage() {
   const store = useStore();
@@ -22,6 +24,37 @@ export default function AssessmentPage() {
       />
 
       <div className="flex-1 overflow-y-auto p-4 sm:p-8">
+        <div className="mb-4 flex justify-end">
+          <ExportButton
+            label="ส่งออกผลการประเมิน"
+            count={store.students.length}
+            filename={`ผลการประเมิน-${CURRENT_TERM.termId}`}
+            scope={`ผลการประเมิน ${CURRENT_TERM.label} · ${store.students.length} คน`}
+            header={["เลขที่", "ชื่อ-สกุล", "Red Flag", "9S", "EQ", ...RATERS.map((r) => `SDQ ${SDQ_RATER_LABEL[r]}`)]}
+            rows={() =>
+              store.students.map((s) => {
+                const redFlag = store.redFlags.find((r) => r.studentId === s.studentId);
+                const nineS = store.nineS.find((n) => n.studentId === s.studentId);
+                const eq = store.eqOf(s.studentId);
+                const sdqSet = store.sdqSetOf(s.studentId);
+                return [
+                  s.classNo,
+                  s.fullName,
+                  redFlag ? OUTCOME[redFlag.result] : "ยังไม่ทำ",
+                  nineS ? OUTCOME[nineS.result] : "ยังไม่ทำ",
+                  !eq ? "ยังไม่ได้รับ" : eq.status === "pending" ? "รอทำ" : eq.status === "declined" ? "ไม่ทำ" : "ส่งแล้ว",
+                  ...RATERS.map((rater) => {
+                    const rec = sdqSet.find((x) => x.rater === rater);
+                    if (!rec) return "ยังไม่ได้รับ";
+                    return rec.status === "completed" && rec.level
+                      ? `${rec.totalDifficulties} คะแนน · ${SDQ_LEVEL_LABEL[rec.level]}`
+                      : "รอทำ";
+                  }),
+                ];
+              })
+            }
+          />
+        </div>
         <ReviewQueue />
 
         <Card className="mb-5">

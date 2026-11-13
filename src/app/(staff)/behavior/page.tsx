@@ -11,6 +11,9 @@ import { ScanLine } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
+import { ExportButton } from "@/components/shared/export-button";
+import { recordScoreText } from "@/lib/behavior-rules";
+import { formatThaiDate } from "@/lib/format";
 import { CURRENT_TERM } from "@/lib/mock-data";
 import { useStore } from "@/lib/store";
 import { termOfDate } from "@/lib/terms";
@@ -54,9 +57,34 @@ function BehaviorContent() {
         title="การจัดการความประพฤติ"
         subtitle={CURRENT_TERM.label}
         action={
-          <Button onClick={() => setRecording(true)}>
-            <ScanLine className="size-4" /> บันทึกพฤติกรรม
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <ExportButton
+              label="ส่งออกรายการ"
+              count={records.length}
+              filename={`ความประพฤติ-${CURRENT_TERM.termId}`}
+              scope={`บันทึกความประพฤติ ${CURRENT_TERM.label} · ${records.length} รายการ`}
+              header={["วันที่", "เลขที่", "ชื่อ-สกุล", "ห้อง", "กฎ", "คะแนน", "ผู้บันทึก", "สถานะรายการ"]}
+              rows={() =>
+                records.map((r) => {
+                  const s = store.getStudent(r.studentId);
+                  const rule = store.behaviorRules.find((x) => x.ruleId === r.ruleId);
+                  return [
+                    formatThaiDate(r.occurredAt),
+                    s?.classNo ?? "",
+                    s?.fullName ?? "",
+                    s?.roomName ?? "",
+                    rule?.name ?? "",
+                    rule ? recordScoreText(r, rule) : "",
+                    r.recordedByName,
+                    r.cancelled ? "ยกเลิกแล้ว" : "ใช้งาน",
+                  ];
+                })
+              }
+            />
+            <Button onClick={() => setRecording(true)}>
+              <ScanLine className="size-4" /> บันทึกพฤติกรรม
+            </Button>
+          </div>
         }
       />
 

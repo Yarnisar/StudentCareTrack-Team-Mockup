@@ -12,12 +12,13 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Bell, Check, ChevronLeft, ChevronRight, Download } from "lucide-react";
+import { Bell, Check, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { NativeSelect } from "@/components/ui/native-select";
-import { downloadCsv } from "@/lib/csv";
+import { ExportButton } from "@/components/shared/export-button";
 import { CURRENT_TERM } from "@/lib/mock-data";
+import { RISK_LABEL } from "@/lib/types";
 import { useStore } from "@/lib/store";
 import {
   concernsOf,
@@ -30,7 +31,7 @@ import {
   type Concern,
   type PickStatus,
 } from "../_shared/process-table";
-import { PROCESS_LABEL, STATUS_LABEL, type ProcessKey, type Status } from "../_homeroom/process-status";
+import { PROCESS_LABEL, PROCESS_ORDER, STATUS_LABEL, type ProcessKey, type Status } from "../_homeroom/process-status";
 import { PagerNumbered, usePagination } from "./pagination";
 import {
   adminItems,
@@ -67,13 +68,15 @@ const matches = (item: AdminItem, process: ProcessKey | "all", status: StatusFil
 const n = (v: number) => v.toLocaleString("th-TH");
 
 export function AdminOverview() {
-  const { assessmentWindows: windows, logExport } = useStore();
+  const { assessmentWindows: windows } = useStore();
   const [year, setYear] = useState(CURRENT_TERM.academicYear);
   const [semester, setSemester] = useState(CURRENT_TERM.semester);
   const [level, setLevel] = useState<number | "all">("all");
   const [room, setRoom] = useState<string | "all">("all");
   const [status, setStatus] = useState<StatusFilter>("open");
   const [process, setProcess] = useState<ProcessKey | "all">("all");
+  // กระบวนการที่จะส่งออก แยกจากตัวกรองบนหน้าจอ เพื่อเลือกส่งเฉพาะเรื่องที่ต้องการได้
+  const [exportProcess, setExportProcess] = useState<ProcessKey | "all">("all");
   const [pageSize, setPageSize] = useState(10);
   const [showAllRooms, setShowAllRooms] = useState(false);
   // PROTOTYPE: การเตือนครูเป็นการจำลอง เก็บไว้ในหน้านี้เท่านั้น (room → เรื่องที่เตือน)
@@ -131,32 +134,14 @@ export function AdminOverview() {
   const remind = (list: Room[], topic: string) =>
     setReminded((prev) => ({ ...prev, ...Object.fromEntries(list.map((r) => [r.room, topic])) }));
 
-  const exportCsv = () => {
-    const count = (own: AdminItem[], p: ProcessKey, s: Status) => own.filter((i) => i.process === p && i.status === s).length;
-    const scopeText = selectedRoom ? `สถิติห้อง ${selectedRoom.room}` : level === "all" ? "สถิติรายห้องทั้งโรงเรียน" : `สถิติรายห้อง ม.${level}`;
-    downloadCsv(
-      `ภาพรวม-${selectedRoom ? selectedRoom.room.replace("/", "-") : level === "all" ? "ทั้งโรงเรียน" : `ม${level}`}-${CURRENT_TERM.termId}.csv`,
-      [
-        "ห้อง",
-        "ครูประจำชั้น",
-        "นักเรียน",
-        ...(["screening", "assessment", "home_visit", "care"] as ProcessKey[]).flatMap((p) =>
-          (["done", "pending", "near_due", "overdue"] as Status[]).map((s) => `${PROCESS_LABEL[p]}: ${STATUS_LABEL[s]}`)
-        ),
-        "ความประพฤติ: ถึงเกณฑ์เฝ้าระวัง",
-      ],
-      roomRows.map(({ room: r, own }) => [
-        r.room,
-        r.teacher,
-        r.total,
-        ...(["screening", "assessment", "home_visit", "care"] as ProcessKey[]).flatMap((p) =>
-          (["done", "pending", "near_due", "overdue"] as Status[]).map((s) => count(own, p, s))
-        ),
-        count(own, "behavior", "watch"),
-      ]),
-      logExport(`${scopeText} · ${CURRENT_TERM.label} (ไม่มีชื่อนักเรียน)`)
-    );
-  };
+  const count = (own: AdminItem[], p: ProcessKey, s: Status) => own.filter((i) => i.process === p && i.status === s).length;
+  const scopeText = selectedRoom ? `สรุปห้อง ${selectedRoom.room}` : level === "all" ? "สรุปทั้งโรงเรียน" : `สรุป ม.${level}`;
+
+  const exportProcesses: ProcessKey[] = exportProcess === "all" ? PROCESS_ORDER : [exportProcess];
+  const statusesOf = (p: ProcessKey): Status[] => (p === "behavior" ? ["watch"] : ["done", "pending", "near_due", "overdue"]);
+  // ผลคัดกรองและรายมิติรวมอยู่ในกระบวนการคัดกรอง
+  const withRisk = exportProcess === "all" || exportProcess === "screening";
+  const exportTopic = exportProcess === "all" ? "ทุกกระบวนการ" : PROCESS_LABEL[exportProcess];
 
   return (
     <div className="flex-1 overflow-y-auto p-4 sm:p-8">
@@ -239,9 +224,66 @@ export function AdminOverview() {
             </NativeSelect>
           </Filter>
         <span className="flex-1" />
-        <Button variant="outline" className="h-10" onClick={exportCsv} disabled={noData}>
-          <Download className="size-4" /> ส่งออกสรุปรายห้อง
-        </Button>
+        <Filter label="ส่งออก">
+          <NativeSelect
+            value={exportProcess}
+            onChange={(e) => setExportProcess(e.target.value as ProcessKey | "all")}
+            className="w-44"
+            aria-label="กระบวนการที่จะส่งออก"
+          >
+            <option value="all">ทุกกระบวนการ</option>
+            {PROCESS_ORDER.map((p) => (
+              <option key={p} value={p}>
+                {PROCESS_LABEL[p]}
+              </option>
+            ))}
+          </NativeSelect>
+        </Filter>
+        <ExportButton
+          label="ส่งออกสรุป"
+          disabled={noData}
+          filename={`สรุป${exportProcess === "all" ? "" : `${PROCESS_LABEL[exportProcess]}`}-${selectedRoom ? selectedRoom.room.replace("/", "-") : level === "all" ? "ทั้งโรงเรียน" : `ม${level}`}-${CURRENT_TERM.termId}`}
+          scope={`${scopeText} · ${exportTopic} · ${CURRENT_TERM.label} (ไม่มีชื่อนักเรียน)`}
+          header={[
+            "ห้อง",
+            "ครูประจำชั้น",
+            "นักเรียน",
+            ...exportProcesses.flatMap((p) => statusesOf(p).map((s) => `${PROCESS_LABEL[p]}: ${STATUS_LABEL[s]}`)),
+          ]}
+          summary={() => {
+            const risk = riskCounts(students);
+            const screened = risk.green + risk.amber + risk.red;
+            return [
+              [`สรุป${exportProcess === "all" ? "รวม" : exportTopic}: ${scopeLabel}`, termLabel],
+              ["หัวข้อ", "รายการ", "จำนวน"],
+              ["นักเรียน", "ทั้งหมด", students.length],
+              ...(withRisk
+                ? [
+                    ["ผลคัดกรอง", "คัดกรองแล้ว", screened],
+                    ...(["green", "amber", "red"] as const).map((g) => ["ผลคัดกรอง", RISK_LABEL[g], risk[g]]),
+                    ["ผลคัดกรอง", "ยังไม่คัดกรอง", students.length - screened],
+                    ...dimensionTallies(students).flatMap((d) => [
+                      [`รายมิติ: ${d.label}`, "มีปัญหา", d.red],
+                      [`รายมิติ: ${d.label}`, "เสี่ยง", d.amber],
+                    ]),
+                  ]
+                : []),
+              ...summaries
+                .filter((p) => exportProcesses.includes(p.process))
+                .flatMap((p) => statusesOf(p.process).map((st) => [PROCESS_LABEL[p.process], STATUS_LABEL[st], p.counts[st]])),
+              [],
+              [`สถิติรายห้อง: ${rooms.length} ห้อง`],
+            ];
+          }}
+          rows={() =>
+            roomRows.map(({ room: r, own }) => [
+              r.room,
+              r.teacher,
+              r.total,
+              ...exportProcesses.flatMap((p) => statusesOf(p).map((s) => count(own, p, s))),
+            ])
+          }
+        />
       </div>
 
       {noData ? (

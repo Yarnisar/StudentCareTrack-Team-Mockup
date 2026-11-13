@@ -10,7 +10,8 @@ import { Label } from "@/components/ui/label";
 import { NewAppointmentDialog } from "./new-appointment";
 import { AppointmentStatusPanel, ManageAppointment } from "./status-panel";
 import { draftKey, useStore } from "@/lib/store";
-import { DEMO_TODAY } from "@/lib/mock-data";
+import { CURRENT_TERM, DEMO_TODAY } from "@/lib/mock-data";
+import { ExportButton } from "@/components/shared/export-button";
 import { formatBaht, formatThaiDate, formatThaiTime } from "@/lib/format";
 import { APPOINTMENT_STATUS_LABEL, AppointmentStatus } from "@/lib/types";
 import { formatCaretaker } from "@/lib/home-visit-form";
@@ -53,9 +54,34 @@ export default function HomeVisitsPage() {
       <PageHeader
         title="จัดการการเยี่ยมบ้าน"
         action={
-          <Button onClick={() => setCreating(true)}>
-            <Plus className="size-4" /> สร้างนัดหมาย
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <ExportButton
+              label="ส่งออกรายการเยี่ยมบ้าน"
+              count={store.appointments.length}
+              filename={`เยี่ยมบ้าน-${CURRENT_TERM.termId}`}
+              scope={`รายการเยี่ยมบ้าน ${CURRENT_TERM.label} · ${store.appointments.length} นัด`}
+              header={["เลขที่", "ชื่อ-สกุล", "ห้อง", "วันนัด", "เวลา", "ครูผู้เยี่ยม", "สถานะ", "พบความเสี่ยง (ข้อ)"]}
+              rows={() =>
+                store.appointments.map((a) => {
+                  const s = store.getStudent(a.studentId);
+                  const rec = store.homeVisitRecords.find((r) => r.appointmentId === a.appointmentId);
+                  return [
+                    s?.classNo ?? "",
+                    s?.fullName ?? "",
+                    s?.roomName ?? "",
+                    formatThaiDate(a.proposedDate),
+                    formatThaiTime(a.proposedDate),
+                    a.teacherName,
+                    APPOINTMENT_STATUS_LABEL[a.status],
+                    rec ? rec.riskFindings.length : "",
+                  ];
+                })
+              }
+            />
+            <Button onClick={() => setCreating(true)}>
+              <Plus className="size-4" /> สร้างนัดหมาย
+            </Button>
+          </div>
         }
       />
 

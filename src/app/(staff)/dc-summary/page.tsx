@@ -10,12 +10,12 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Bell, Check, Download } from "lucide-react";
+import { Bell, Check } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { NativeSelect } from "@/components/ui/native-select";
-import { downloadCsv } from "@/lib/csv";
+import { ExportButton } from "@/components/shared/export-button";
 import { formatThaiDate } from "@/lib/format";
 import { CURRENT_TERM, DEMO_TODAY, SCHOOL_NAME, dcCriteria } from "@/lib/mock-data";
 import { useStore } from "@/lib/store";
@@ -39,7 +39,7 @@ const BUCKET: Record<DcBucket, { label: string; bar: string }> = {
 const BUCKET_ORDER: DcBucket[] = [3, 2, 1, 0, "none"];
 
 export default function DcSummaryPage() {
-  const { dcRounds, logExport } = useStore();
+  const { dcRounds } = useStore();
   const [termId, setTermId] = useState<string>(CURRENT_TERM.termId);
   const [level, setLevel] = useState<number | "all">("all");
   const [pageSize, setPageSize] = useState(10);
@@ -77,32 +77,7 @@ export default function DcSummaryPage() {
 
   const remind = (list: string[]) => setReminded((prev) => [...new Set([...prev, ...list])]);
 
-  const exportCsv = () => {
-    const header = [
-      "ห้อง",
-      "ครูประจำชั้น",
-      "นักเรียน",
-      "ส่งผลแล้ว",
-      "ยังไม่ส่งผล",
-      "ผลรวมไม่ผ่าน",
-      ...CRITERIA_IDS.flatMap((id) => ([3, 2, 1, 0] as DcLevel[]).map((lv) => `ข้อ ${id} ${DC_LEVEL_LABEL[lv]}`)),
-    ];
-    const scope = level === "all" ? "ทั้งโรงเรียน" : `ม.${level}`;
-    downloadCsv(
-      `คุณลักษณะฯ-${scope}-${termId}.csv`,
-      header,
-      roomRows.map((r) => [
-        r.room,
-        r.teacher,
-        r.total,
-        r.submitted,
-        r.notSubmitted,
-        r.failed,
-        ...CRITERIA_IDS.flatMap((id) => ([3, 2, 1, 0] as DcLevel[]).map((lv) => r.items[id][lv])),
-      ]),
-      logExport(`สรุปคุณลักษณะอันพึงประสงค์ ${scope} · ${term.label} (ไม่มีชื่อนักเรียน)`)
-    );
-  };
+  const scopeName = level === "all" ? "ทั้งโรงเรียน" : `ม.${level}`;
 
   return (
     <>
@@ -137,9 +112,31 @@ export default function DcSummaryPage() {
             </NativeSelect>
           </Filter>
           <span className="flex-1" />
-          <Button variant="outline" className="h-10" onClick={exportCsv}>
-            <Download className="size-4" /> ส่งออกสถิติ
-          </Button>
+          <ExportButton
+            label="ส่งออกสถิติ"
+            filename={`คุณลักษณะฯ-${scopeName}-${termId}`}
+            scope={`สรุปคุณลักษณะอันพึงประสงค์ ${scopeName} · ${term.label} (ไม่มีชื่อนักเรียน)`}
+            header={[
+              "ห้อง",
+              "ครูประจำชั้น",
+              "นักเรียน",
+              "ส่งผลแล้ว",
+              "ยังไม่ส่งผล",
+              "ผลรวมไม่ผ่าน",
+              ...CRITERIA_IDS.flatMap((id) => ([3, 2, 1, 0] as DcLevel[]).map((lv) => `ข้อ ${id} ${DC_LEVEL_LABEL[lv]}`)),
+            ]}
+            rows={() =>
+              roomRows.map((r) => [
+                r.room,
+                r.teacher,
+                r.total,
+                r.submitted,
+                r.notSubmitted,
+                r.failed,
+                ...CRITERIA_IDS.flatMap((id) => ([3, 2, 1, 0] as DcLevel[]).map((lv) => r.items[id][lv])),
+              ])
+            }
+          />
         </div>
 
         {/* ① สรุปบนสุด */}
