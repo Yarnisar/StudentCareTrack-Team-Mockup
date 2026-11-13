@@ -21,10 +21,46 @@ import { academicYearOfDate } from "@/lib/terms";
 
 type Section = "info" | "behavior" | "notifications";
 
-export function PersonalInfo({ viewer, studentIds }: { viewer: "student" | "parent"; studentIds: string[] }) {
+/** รายการข้อมูลทะเบียนของนักเรียน ใช้ทั้งในแท็บข้อมูลของผู้ปกครองและหน้าโปรไฟล์ของนักเรียน */
+export function RegistryInfo({ studentId }: { studentId: string }) {
+  const student = useStore().getStudent(studentId);
+  if (!student) return null;
+  return (
+    <>
+      <dl className="divide-y divide-border text-[13px]">
+        {[
+          ["เลขประจำตัวนักเรียน", student.studentId],
+          ["ชั้น / ห้อง", `${student.roomName} เลขที่ ${student.classNo}`],
+          ["ผู้ปกครอง", `${student.guardianName} (${student.guardianRelation})`],
+          ["เบอร์ติดต่อ", student.guardianPhone],
+          ["ที่อยู่", student.address],
+        ].map(([k, v]) => (
+          <div key={k} className="flex gap-3 py-2">
+            <dt className="w-32 shrink-0 text-muted-foreground">{k}</dt>
+            <dd className="min-w-0 flex-1">{v}</dd>
+          </div>
+        ))}
+      </dl>
+      <p className="mt-3 text-[11.5px] leading-relaxed text-muted-foreground">
+        ข้อมูลมาจากงานทะเบียนของโรงเรียน หากไม่ถูกต้องแจ้งครูประจำชั้น
+      </p>
+    </>
+  );
+}
+
+export function PersonalInfo({
+  viewer,
+  studentIds,
+  hideInfo = false,
+}: {
+  viewer: "student" | "parent";
+  studentIds: string[];
+  /** นักเรียนดูข้อมูลทะเบียนที่หน้าโปรไฟล์ จึงซ่อนแท็บข้อมูลส่วนบุคคลไม่ให้ซ้ำ */
+  hideInfo?: boolean;
+}) {
   const store = useStore();
   const [studentId, setStudentId] = useState(studentIds[0] ?? "");
-  const [section, setSection] = useState<Section>("info");
+  const [section, setSection] = useState<Section>(hideInfo ? "behavior" : "info");
   const [opened, setOpened] = useState<string | null>(null);
 
   if (studentIds.length === 0)
@@ -57,7 +93,7 @@ export function PersonalInfo({ viewer, studentIds }: { viewer: "student" | "pare
   const unread = notifications.filter((n) => !store.readNotifications.includes(n.id)).length;
 
   const tabs: { key: Section; label: string }[] = [
-    { key: "info", label: "ข้อมูลส่วนบุคคล" },
+    ...(hideInfo ? [] : [{ key: "info" as Section, label: "ข้อมูลส่วนบุคคล" }]),
     { key: "behavior", label: "ความประพฤติ" },
     { key: "notifications", label: unread > 0 ? `แจ้งเตือน (${unread})` : "แจ้งเตือน" },
   ];
@@ -105,23 +141,9 @@ export function PersonalInfo({ viewer, studentIds }: { viewer: "student" | "pare
         <Card>
           <CardContent className="p-5">
             <div className="text-[16px] font-bold">{student.fullName}</div>
-            <dl className="mt-3 divide-y divide-border text-[13px]">
-              {[
-                ["เลขประจำตัวนักเรียน", student.studentId],
-                ["ชั้น / ห้อง", `${student.roomName} เลขที่ ${student.classNo}`],
-                ["ผู้ปกครอง", `${student.guardianName} (${student.guardianRelation})`],
-                ["เบอร์ติดต่อ", student.guardianPhone],
-                ["ที่อยู่", student.address],
-              ].map(([k, v]) => (
-                <div key={k} className="flex gap-3 py-2">
-                  <dt className="w-32 shrink-0 text-muted-foreground">{k}</dt>
-                  <dd className="min-w-0 flex-1">{v}</dd>
-                </div>
-              ))}
-            </dl>
-            <p className="mt-3 text-[11.5px] leading-relaxed text-muted-foreground">
-              ข้อมูลมาจากงานทะเบียนของโรงเรียน หากไม่ถูกต้องแจ้งครูประจำชั้น
-            </p>
+            <div className="mt-3">
+              <RegistryInfo studentId={studentId} />
+            </div>
           </CardContent>
         </Card>
       )}

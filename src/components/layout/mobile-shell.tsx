@@ -6,10 +6,11 @@ import { ChevronLeft, Heart, Home, LayoutGrid, QrCode, User, ClipboardList, User
 import type { ReactNode } from "react";
 
 const STUDENT_TABS = [
-  { href: "/portal/student", label: "ข้อมูลของฉัน", icon: UserRound },
+  { href: "/portal/student", label: "หน้าหลัก", icon: LayoutGrid },
   { href: "/portal/student/card", label: "บัตรของฉัน", icon: QrCode },
   { href: "/portal/student/sdq", label: "แบบประเมิน", icon: ClipboardList },
   { href: "/portal/student/appointment", label: "นัดหมาย", icon: Home },
+  { href: "/portal/student/profile", label: "โปรไฟล์", icon: User },
 ];
 
 const PARENT_TABS = [
@@ -17,6 +18,7 @@ const PARENT_TABS = [
   { href: "/portal/parent/appointment", label: "นัดหมาย", icon: Home },
   { href: "/portal/parent/results", label: "ผลประเมิน", icon: Heart },
   { href: "/portal/parent/child", label: "ข้อมูลบุตร", icon: UserRound },
+  { href: "/portal/parent/profile", label: "โปรไฟล์", icon: User },
 ];
 
 export function MobileShell({
@@ -80,13 +82,6 @@ export function MobileShell({
             </Link>
           );
         })}
-        <Link
-          href="/login"
-          className="flex h-14 flex-1 flex-col items-center justify-center gap-1 text-muted-foreground"
-        >
-          <User className="size-5" />
-          <span className="text-[10.5px]">โปรไฟล์</span>
-        </Link>
       </nav>
     </div>
   );

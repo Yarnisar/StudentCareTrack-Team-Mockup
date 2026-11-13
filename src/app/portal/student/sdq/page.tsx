@@ -74,12 +74,12 @@ export default function StudentSdqPage() {
                 </Button>
               )}
               <LinkButton className={`${canEdit ? "mt-2.5" : "mt-5"} w-full`} href="/portal/student">
-                กลับหน้าข้อมูลของฉัน
+                กลับหน้าหลัก
               </LinkButton>
             </CardContent>
           </Card>
         ) : lockedSdq ? (
-          <WindowLocked window={lockedSdq} contact="ครูประจำชั้น" backHref="/portal/student" backLabel="กลับหน้าข้อมูลของฉัน" />
+          <WindowLocked window={lockedSdq} contact="ครูประจำชั้น" backHref="/portal/student" backLabel="กลับหน้าหลัก" />
         ) : (
           <SdqForm
             studentId={DEMO_STUDENT_ID}

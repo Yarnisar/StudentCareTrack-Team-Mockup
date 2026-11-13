@@ -49,7 +49,7 @@ export default function StudentEqPage() {
       />
     );
   } else if (eq.status === "pending" && locked) {
-    body = <WindowLocked window={locked} contact="ครูประจำชั้น" backHref="/portal/student" backLabel="กลับหน้าข้อมูลของฉัน" />;
+    body = <WindowLocked window={locked} contact="ครูประจำชั้น" backHref="/portal/student" backLabel="กลับหน้าหลัก" />;
   } else if (eq.status === "pending" && !open) {
     body = <Notice title="ยังไม่ถึงช่วงเวลาทำ EQ" text={`เปิดให้ทำ ${formatThaiDate(window_.openDate)} – ${formatThaiDate(window_.closeDate)}`} />;
   } else if (eq.status === "pending" && mode === "confirm_decline") {
