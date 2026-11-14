@@ -2,7 +2,7 @@
 
 /**
  * ภาพรวมของครูประจำชั้น (UC1): แต่ละกระบวนการไปถึงไหน และอะไรใกล้หมดเวลา
- * ① เรื่องที่ด่วนที่สุด → ② การ์ด 4 กระบวนการ กดเพื่อดูรายชื่อ (Subflow B) → ③ รายการ กดเพื่อไปทำต่อ + ผลคัดกรอง
+ * ① เรื่องที่ด่วนที่สุด → นักเรียนที่ต้องดูแล (แยกกลุ่มผลคัดกรอง) → ② การ์ด 4 กระบวนการ กดเพื่อดูรายชื่อ (Subflow B) → ③ รายการ กดเพื่อไปทำต่อ
  * ตัวกรองปีการศึกษา / ภาคเรียน / สถานะ และส่งออกตามตัวกรองปัจจุบัน (Subflow C)
  * สลับเป็นปฏิทินได้ เพื่อดูว่างานไหนต้องเสร็จเมื่อไร (homeroom-calendar.tsx)
  * ใช้ข้อมูลจริงใน store ตัวเลขจึงตรงกับหน้าอื่นและขยับตามงานที่ทำ
@@ -26,8 +26,6 @@ import {
   Filter,
   FocusBox,
   ProcessCards,
-  RiskPanelByDimension,
-  type DimensionRow,
   STATUS_TAG,
   WATCH_ACTIVE_TAG,
 } from "../_shared/process-table";
@@ -41,8 +39,8 @@ import {
 } from "./process-status";
 import { calendarEvents } from "./calendar-events";
 import { HomeroomCalendar } from "./homeroom-calendar";
+import { AtRiskSection } from "./at-risk-section";
 import { StudentId } from "@/components/shared/student-id";
-import { DIMENSION_LABEL, DIMENSION_ORDER } from "@/lib/types";
 
 /** "open" = ทุกอย่างที่ยังไม่เสร็จ (ค่าเริ่มต้น เพราะครูเปิดหน้านี้เพื่อหาว่าต้องทำอะไรต่อ) */
 type StatusFilter = Status | "open" | "all";
@@ -183,6 +181,15 @@ export function HomeroomOverview() {
             />
           </div>
 
+          {/* นักเรียนที่ต้องดูแล: แยกกลุ่มผลคัดกรองและรายชื่อ */}
+          <div className="mt-4">
+            <AtRiskSection
+              watchActive={items.filter((i) => i.watch && !i.watch.pendingWithdrawal).length}
+              watchPending={items.filter((i) => i.watch?.pendingWithdrawal).length}
+              onPickWatch={() => pick("behavior", "watch")}
+            />
+          </div>
+
           {/* ② การ์ดกระบวนการ */}
           <div className="mt-4">
             <ProcessCards
@@ -196,8 +203,8 @@ export function HomeroomOverview() {
             />
           </div>
 
-          {/* ③ รายการ + ผลคัดกรอง */}
-          <div className="mt-4 grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
+          {/* ③ รายการที่ต้องทำ */}
+          <div className="mt-4">
             <Card id="overview-list" className="scroll-mt-4">
               <CardContent className="p-6">
                 <div className="flex flex-wrap items-end gap-3">
@@ -248,19 +255,6 @@ export function HomeroomOverview() {
                 </div>
               </CardContent>
             </Card>
-            <div className="lg:sticky lg:top-4">
-              <RiskPanelByDimension
-                risk={riskOf(store)}
-                screened={dimensionsOf(store).screened}
-                total={store.students.length}
-                dimensions={dimensionsOf(store).rows}
-                behaviorRecorded={summaries.find((r) => r.process === "behavior")?.recorded ?? 0}
-                watchActiveCount={items.filter((i) => i.watch && !i.watch.pendingWithdrawal).length}
-                watchPendingCount={items.filter((i) => i.watch?.pendingWithdrawal).length}
-                watchSelected={process === "behavior"}
-                onPickWatch={() => pick("behavior", "watch")}
-              />
-            </div>
           </div>
         </>
       )}
@@ -374,40 +368,6 @@ function ItemRow({ item, showProcess }: { item: Item; showProcess: boolean }) {
       )}
     </div>
   );
-}
-
-/** ผลคัดกรองรายมิติของห้อง (ไม่รวมสุขภาพจิต) จากผลล่าสุดของนักเรียนที่คัดกรองแล้ว */
-function dimensionsOf(store: ReturnType<typeof useStore>): { screened: number; rows: DimensionRow[] } {
-  const results = store.students
-    .map((s) => ({ student: s, screening: store.latestScreening(s.studentId) }))
-    .filter((x): x is { student: typeof x.student; screening: NonNullable<typeof x.screening> } => !!x.screening);
-  const rows = DIMENSION_ORDER.filter((d) => d !== "mental").map<DimensionRow>((d) => {
-    const groups = results.map(({ student, screening }) => ({
-      student,
-      group: screening.results.find((r) => r.dimension === d)?.group ?? "green",
-    }));
-    const red = groups.filter((g) => g.group === "red");
-    const amber = groups.filter((g) => g.group === "amber");
-    return {
-      key: d,
-      label: DIMENSION_LABEL[d],
-      red: red.length,
-      amber: amber.length,
-      cells: [...red.map(() => "red" as const), ...amber.map(() => "amber" as const), ...groups.filter((g) => g.group === "green").map(() => "green" as const)],
-      students: [
-        ...red.map((g) => ({ id: g.student.studentId, name: g.student.fullName, group: "red" as const })),
-        ...amber.map((g) => ({ id: g.student.studentId, name: g.student.fullName, group: "amber" as const })),
-      ],
-    };
-  });
-  return { screened: results.length, rows };
-}
-
-/** ผลคัดกรองของห้อง (สรุปรายคน) */
-function riskOf(store: ReturnType<typeof useStore>) {
-  const count = (g: "green" | "amber" | "red") =>
-    store.students.filter((s) => store.overallRiskOf(s.studentId) === g).length;
-  return { green: count("green"), amber: count("amber"), red: count("red") };
 }
 
 function ViewButton({
