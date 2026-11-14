@@ -71,7 +71,7 @@ export function calendarEvents(
       date: p.closesAt,
       kind: "close",
       title: `ปิดรอบ ${p.label}`,
-      detail: left > 0 ? `ยังไม่เสร็จ ${left} คน` : "ไม่มีงานค้างในรอบนี้",
+      detail: left > 0 ? `ต้องทำ ${left} คน` : "ทำครบแล้วในรอบนี้",
       attention: left > 0,
     });
   }

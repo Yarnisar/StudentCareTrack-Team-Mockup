@@ -143,7 +143,7 @@ export function processStatus(store: Store, termId: string): { items: Item[]; su
       items.push(
         open("screening", "screening", {
           student,
-          detail: hasDraft ? "มีร่างที่ทำค้างไว้" : "ยังไม่ได้เริ่มคัดกรอง",
+          detail: hasDraft ? "มีร่างที่ยังทำไม่เสร็จ" : "ยังไม่ได้เริ่มคัดกรอง",
           href: `/screening/${id}`,
           action: hasDraft ? "ทำต่อ" : "คัดกรอง",
         })
@@ -235,7 +235,7 @@ export function processStatus(store: Store, termId: string): { items: Item[]; su
       items.push(
         open("home_visit", "home_visit", {
           student,
-          detail: hasDraft ? "มีร่างบันทึกที่ทำค้างไว้" : "ถึงวันนัดแล้ว ยังไม่บันทึกผล",
+          detail: hasDraft ? "มีร่างบันทึกที่ยังทำไม่เสร็จ" : "ถึงวันนัดแล้ว ยังไม่บันทึกผล",
           href: `/home-visits/${appointment.appointmentId}/record`,
           action: hasDraft ? "ทำต่อ" : "บันทึกผล",
         })

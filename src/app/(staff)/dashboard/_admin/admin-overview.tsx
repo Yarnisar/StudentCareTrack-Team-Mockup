@@ -33,6 +33,7 @@ import {
 } from "../_shared/process-table";
 import { PROCESS_LABEL, PROCESS_ORDER, STATUS_LABEL, type ProcessKey, type Status } from "../_homeroom/process-status";
 import { PagerNumbered, usePagination } from "./pagination";
+import { RiskByLevel } from "./risk-by-level";
 import {
   adminItems,
   adminSummaries,
@@ -48,7 +49,7 @@ import {
 type StatusFilter = PickStatus | "all";
 
 const STATUS_FILTER_LABEL: Record<StatusFilter, string> = {
-  open: "งานค้าง",
+  open: "งานที่ต้องทำ",
   overdue: STATUS_LABEL.overdue,
   near_due: STATUS_LABEL.near_due,
   pending: STATUS_LABEL.pending,
@@ -79,6 +80,8 @@ export function AdminOverview() {
   const [exportProcess, setExportProcess] = useState<ProcessKey | "all">("all");
   const [pageSize, setPageSize] = useState(10);
   const [showAllRooms, setShowAllRooms] = useState(false);
+  // เรียงห้องที่ต้องตามก่อนตาม "งานค้าง" (ตามการ์ดที่เลือก) หรือ "กลุ่มมีปัญหา" (ผลคัดกรอง)
+  const [rankBy, setRankBy] = useState<"backlog" | "red">("backlog");
   // PROTOTYPE: การเตือนครูเป็นการจำลอง เก็บไว้ในหน้านี้เท่านั้น (room → เรื่องที่เตือน)
   const [reminded, setReminded] = useState<Record<string, string>>({});
 
@@ -108,6 +111,15 @@ export function AdminOverview() {
   const roomUnit = process === "all" ? "งาน" : process === "care" ? "กรณี" : "คน";
   const topRooms = roomRows.filter((r) => r.selected > 0).slice(0, TOP_ROOMS);
   const roomPager = usePagination(roomRows, pageSize);
+  // เรียงตามจำนวนนักเรียนกลุ่มมีปัญหาของห้อง (เป็นจำนวนเท่านั้น)
+  const redRows = rooms
+    .map((r) => {
+      const own = students.filter((s) => s.room === r.room);
+      return { room: r, red: own.filter((s) => s.risk === "red").length, total: own.length };
+    })
+    .filter((r) => r.red > 0)
+    .sort((a, b) => b.red - a.red || a.room.room.localeCompare(b.room.room, "th"))
+    .slice(0, TOP_ROOMS);
 
   const pick = (p: ProcessKey, s: PickStatus) => {
     const same = p === process && s === status;
@@ -336,7 +348,7 @@ export function AdminOverview() {
                     )}
                     {!selectedRoom && (
                       <button type="button" className={FOCUS_SECONDARY} onClick={() => pick(c.process, c.status)}>
-                        ดูห้องที่ค้าง
+                        ดูห้องที่เกี่ยวข้อง
                       </button>
                     )}
                   </>
@@ -359,19 +371,22 @@ export function AdminOverview() {
 
           {/* ③ ห้องที่ต้องตามก่อน + ผลคัดกรอง */}
           <div className="mt-4 grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
+            <div className="space-y-4">
             {selectedRoom ? (
               <RoomContact
                 room={selectedRoom}
                 open={roomRows[0]?.own.filter((i) => matches(i, "all", "open")).length ?? 0}
                 reminded={reminded[selectedRoom.room]}
-                onRemind={() => remind([selectedRoom], "งานค้างของห้อง")}
+                onRemind={() => remind([selectedRoom], "งานที่ต้องทำของห้อง")}
               />
             ) : (
               <div className="rounded-2xl border border-border bg-card p-5">
                 <div className="flex flex-wrap items-baseline gap-x-2">
                   <h2 className="text-[15px] font-bold">ห้องที่ต้องตามก่อน</h2>
-                  <span className="text-[12.5px] text-muted-foreground">เรียงตาม “{selectionLabel}”</span>
-                  {process !== "all" && (
+                  <span className="text-[12.5px] text-muted-foreground">
+                    เรียงตาม “{rankBy === "red" ? "จำนวนกลุ่มมีปัญหา" : selectionLabel}”
+                  </span>
+                  {rankBy === "backlog" && process !== "all" && (
                     <button
                       type="button"
                       onClick={() => {
@@ -384,14 +399,48 @@ export function AdminOverview() {
                     </button>
                   )}
                 </div>
-                <ul className="mt-3 divide-y divide-border">
-                  {topRooms.map(({ room: r, selected }) => (
+                <div className="mt-3 inline-flex rounded-lg bg-muted p-0.5 text-[12.5px] font-semibold" role="group" aria-label="เรียงห้องตาม">
+                  {(
+                    [
+                      ["backlog", "งานที่ต้องทำ"],
+                      ["red", "กลุ่มมีปัญหา"],
+                    ] as const
+                  ).map(([key, text]) => (
+                    <button
+                      key={key}
+                      type="button"
+                      aria-pressed={rankBy === key}
+                      onClick={() => setRankBy(key)}
+                      className={`rounded-md px-3 py-1 ${rankBy === key ? "bg-card shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                    >
+                      {text}
+                    </button>
+                  ))}
+                </div>
+                <ul className="mt-2 divide-y divide-border">
+                  {rankBy === "red" &&
+                    redRows.map(({ room: r, red, total }) => (
+                      <li key={r.room} className="flex items-center gap-3 py-2.5">
+                        <button type="button" onClick={() => openRoom(r)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
+                          <span className="w-14 shrink-0 text-[15px] font-bold">{r.room}</span>
+                          <span className="min-w-0 flex-1 truncate text-[13px] text-muted-foreground">{r.teacher}</span>
+                          <span className="shrink-0 text-[13px]">
+                            มีปัญหา <b className="text-[17px] tabular-nums">{n(red)}</b> จาก {n(total)} คน
+                          </span>
+                        </button>
+                        <RemindButton sent={reminded[r.room] !== undefined} onClick={() => remind([r], "นักเรียนกลุ่มมีปัญหา")} />
+                      </li>
+                    ))}
+                  {rankBy === "red" && redRows.length === 0 && (
+                    <li className="py-6 text-center text-[13px] text-muted-foreground">ไม่มีห้องที่มีนักเรียนกลุ่มมีปัญหา</li>
+                  )}
+                  {rankBy === "backlog" && topRooms.map(({ room: r, selected }) => (
                     <li key={r.room} className="flex items-center gap-3 py-2.5">
                       <button type="button" onClick={() => openRoom(r)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
                         <span className="w-14 shrink-0 text-[15px] font-bold">{r.room}</span>
                         <span className="min-w-0 flex-1 truncate text-[13px] text-muted-foreground">{r.teacher}</span>
                         <span className="shrink-0 text-[13px]">
-                          {status === "done" ? "ทำแล้ว" : status === "watch" ? "เฝ้าระวัง" : "ค้าง"}{" "}
+                          {status === "done" ? "ทำแล้ว" : status === "watch" ? "เฝ้าระวัง" : "ต้องทำ"}{" "}
                           {/* เฝ้าระวังที่ถึงเกณฑ์ใช้สีแดงตามกฎความประพฤติ */}
                           <b className={`text-[17px] tabular-nums ${status === "watch" ? "text-risk-red" : ""}`}>{n(selected)}</b> {roomUnit}
                         </span>
@@ -402,8 +451,8 @@ export function AdminOverview() {
                       />
                     </li>
                   ))}
-                  {topRooms.length === 0 && (
-                    <li className="py-6 text-center text-[13px] text-muted-foreground">ไม่มีห้องที่ค้างงานนี้</li>
+                  {rankBy === "backlog" && topRooms.length === 0 && (
+                    <li className="py-6 text-center text-[13px] text-muted-foreground">ทุกห้องทำงานนี้เสร็จแล้ว</li>
                   )}
                 </ul>
                 <button
@@ -417,6 +466,18 @@ export function AdminOverview() {
                 </button>
               </div>
             )}
+            {!selectedRoom && (
+              <RiskByLevel
+                students={allStudents}
+                level={level}
+                onPick={(l) => {
+                  setLevel(l);
+                  setRoom("all");
+                  roomPager.reset();
+                }}
+              />
+            )}
+            </div>
             <RiskPanel
               risk={riskCounts(students)}
               total={students.length}
@@ -537,10 +598,10 @@ function RoomContact({
         <div className="min-w-0 flex-1">
           <div className="text-[17px] font-bold">{room.teacher}</div>
           <div className="text-[13px] text-muted-foreground">
-            ครูประจำชั้น {room.room} · งานค้าง {n(open)} รายการ
+            ครูประจำชั้น {room.room} · ต้องทำ {n(open)} รายการ
           </div>
         </div>
-        <RemindButton sent={reminded !== undefined} onClick={onRemind} label="เตือนครูเรื่องงานค้าง" />
+        <RemindButton sent={reminded !== undefined} onClick={onRemind} label="เตือนครูเรื่องงานที่ต้องทำ" />
       </div>
       {reminded && <p className="mt-2 text-[12px] text-muted-foreground">ส่งเตือนเรื่อง “{reminded}” แล้ววันนี้</p>}
     </div>

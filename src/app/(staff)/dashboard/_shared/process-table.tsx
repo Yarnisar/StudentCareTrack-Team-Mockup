@@ -90,7 +90,7 @@ export function concernsOf(summaries: ProcessSummary[], audience: "admin" | "tea
         ...base,
         status: "overdue",
         count: row.counts.overdue,
-        headline: care ? `${label} เลยวันนัด` : `${label}ยังไม่เสร็จ`,
+        headline: care ? `${label} เลยวันนัด` : `${label}เลยกำหนด`,
         note: care
           ? "กรณีที่เลยวันนัดติดตามครั้งถัดไปแล้ว"
           : info.locked
@@ -99,7 +99,7 @@ export function concernsOf(summaries: ProcessSummary[], audience: "admin" | "tea
               : `ปิดรับแล้วเมื่อ ${date} ส่งเพิ่มไม่ได้ ติดต่อแอดมินเพื่อขอขยายช่วงเวลา`
             : info.closed
               ? `ปิดรอบแล้วเมื่อ ${date} แต่ยังรับส่งช้าได้`
-              : "เลยวันครบกำหนดแล้วยังไม่เสร็จ",
+              : "เลยวันครบกำหนดแล้ว",
         rank: info.locked ? 0 : 1,
       });
     } else if (row.counts.near_due > 0) {
@@ -249,7 +249,7 @@ export function ProcessCards({
             ? row.counts.overdue > 0
               ? "เลยวันนัด"
               : "กรณีเปิดอยู่"
-            : "ค้าง";
+            : "ต้องทำ";
         const nearest = p === nearestId;
         return (
           <button
