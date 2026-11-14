@@ -76,7 +76,7 @@ export function NewAppointmentDialog({
 
         <div className="flex-1 space-y-4 overflow-y-auto p-5">
           <div>
-            <div className="mb-1.5 text-[12.5px] text-muted-foreground">นักเรียน (เฉพาะคนที่ยังไม่มีนัดค้างอยู่)</div>
+            <div className="mb-1.5 text-[12.5px] text-muted-foreground">นักเรียน (เฉพาะคนที่ยังไม่มีนัดที่ดำเนินอยู่)</div>
             <div className="flex flex-wrap gap-1.5">
               {candidates.map((s) => (
                 <button key={s.studentId} type="button" aria-pressed={studentId === s.studentId} onClick={() => setStudentId(s.studentId)} className={chip(studentId === s.studentId)}>

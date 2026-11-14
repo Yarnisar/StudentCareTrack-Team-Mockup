@@ -169,7 +169,7 @@ export function ManageAppointment({ appointmentId, onDone }: { appointmentId: st
             ))}
           </div>
           {error && <p className="mt-2 text-[12.5px] text-destructive">{error}</p>}
-          <p className="mt-2 text-[12px] text-muted-foreground">ระบบล้างการยืนยันเดิมและคำขอเปลี่ยนวันที่ค้างอยู่ แล้วแจ้งนักเรียนและผู้ปกครองทางอีเมลให้ยืนยันนัดใหม่</p>
+          <p className="mt-2 text-[12px] text-muted-foreground">ระบบล้างการยืนยันเดิมและคำขอเปลี่ยนวันที่ยังไม่ได้ตอบ แล้วแจ้งนักเรียนและผู้ปกครองทางอีเมลให้ยืนยันนัดใหม่</p>
           <div className="mt-3 flex gap-2">
             <Button
               size="sm"
