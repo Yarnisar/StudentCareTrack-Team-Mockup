@@ -1,0 +1,16 @@
+# รันเดโม: docker compose up --build
+# แล้วเปิด http://localhost:3000 (เปลี่ยนพอร์ตได้ด้วย APP_PORT เช่น APP_PORT=3100 docker compose up)
+services:
+  web:
+    build: .
+    image: student-care-track:demo
+    container_name: student-care-track
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:3000/login"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s

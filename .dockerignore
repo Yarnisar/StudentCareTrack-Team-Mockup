@@ -1,0 +1,16 @@
+node_modules
+.next
+.git
+.gitignore
+.claude
+.vscode
+*.md
+!README.md
+docs
+npm-debug.log*
+tsconfig.tsbuildinfo
+package-lock.json.bak
+Dockerfile
+compose.yaml
+.dockerignore
+.env*
