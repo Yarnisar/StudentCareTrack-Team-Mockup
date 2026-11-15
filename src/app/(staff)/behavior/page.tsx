@@ -1,63 +1,101 @@
 "use client";
 
 /**
- * หน้าการจัดการความประพฤติ
- *
- * PROTOTYPE: หน้านี้กำลังโฮสต์แบบร่าง 3 แบบของการจัดวางรายการบันทึก
- * เพื่อตอบคำถามว่า "จัดวางอย่างไรให้ชื่อพฤติกรรมและรายละเอียดเหตุการณ์ไม่ถูกตัด"
- * สลับด้วย ?variant=A|B|C จากแถบลอยด้านล่าง (แสดงเฉพาะตอน dev)
- * เมื่อเลือกแบบได้แล้ว ให้ยุบเหลือแบบเดียวและลบโฟลเดอร์ _prototype/ ทิ้ง
+ * หน้าการจัดการความประพฤติ: รายการบันทึกตามขอบเขตสิทธิ์
+ * (ครูประจำชั้นเห็นทุกรายการของห้องตน ห้องที่สอนเห็นเฉพาะรายการที่ตนบันทึก)
+ * ปุ่ม "บันทึกพฤติกรรม" เปิดตัวบันทึกตัวเดียว ใช้ได้ทั้งที่โต๊ะและครูเวรหน้าประตู (behavior-recorder.tsx)
  */
 
-import { Suspense, useMemo } from "react";
+import { Suspense, useMemo, useState } from "react";
+import { ScanLine } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { PageHeader } from "@/components/layout/page-header";
-import { PrototypeSwitcher } from "@/components/prototype/prototype-switcher";
+import { Button } from "@/components/ui/button";
+import { ExportButton } from "@/components/shared/export-button";
+import { recordScoreText } from "@/lib/behavior-rules";
+import { formatThaiDate } from "@/lib/format";
 import { CURRENT_TERM } from "@/lib/mock-data";
 import { useStore } from "@/lib/store";
-import { useBehaviorForm } from "./_prototype/shared";
-import { VariantA, VARIANT_A_NAME } from "./_prototype/variant-a";
-import { VariantB, VARIANT_B_NAME } from "./_prototype/variant-b";
-import { VariantC, VARIANT_C_NAME } from "./_prototype/variant-c";
-
-const VARIANTS = [
-  { key: "A", name: VARIANT_A_NAME },
-  { key: "B", name: VARIANT_B_NAME },
-  { key: "C", name: VARIANT_C_NAME },
-];
+import { termOfDate } from "@/lib/terms";
+import { BehaviorRecorder } from "./behavior-recorder";
+import { RecordsTable } from "./records-table";
 
 export default function BehaviorPage() {
   return (
     <Suspense fallback={null}>
-      <BehaviorContent />
+      <BehaviorKeyed />
     </Suspense>
   );
 }
 
+/** ค้นหาจากหน้าเดิมแล้ว ?record= เปลี่ยน: สร้างหน้าใหม่เพื่อเปิดตัวบันทึกของนักเรียนคนใหม่ */
+function BehaviorKeyed() {
+  const params = useSearchParams();
+  return <BehaviorContent key={params.get("record") ?? ""} />;
+}
+
 function BehaviorContent() {
   const params = useSearchParams();
-  const variant = params.get("variant") ?? "A";
-
   const store = useStore();
-  const form = useBehaviorForm();
+  // มาจากช่องค้นหา (?record=รหัส): เปิดตัวบันทึกพร้อมเลือกนักเรียนไว้แล้ว
+  const [recording, setRecording] = useState<string | true | null>(() => params.get("record"));
 
+  const { behaviorRecords, behaviorVisible } = store;
   const records = useMemo(
-    () => [...store.behaviorRecords].sort((a, b) => b.occurredAt.localeCompare(a.occurredAt)),
-    [store.behaviorRecords]
+    // ครูประจำชั้นเห็นทุกรายการของห้องตน ห้องที่สอนเห็นเฉพาะรายการที่ตนบันทึก (ตารางขอบเขตสิทธิ์)
+    // หน้านี้แสดงภาคเรียนปัจจุบัน ประวัติภาคก่อนดูในหน้าข้อมูลนักเรียน
+    () =>
+      behaviorRecords
+        .filter((r) => behaviorVisible(r) && termOfDate(r.occurredAt).termId === CURRENT_TERM.termId)
+        .sort((a, b) => b.occurredAt.localeCompare(a.occurredAt)),
+    [behaviorRecords, behaviorVisible]
   );
 
   return (
     <>
       <PageHeader
         title="การจัดการความประพฤติ"
-        subtitle={`บันทึกและติดตามพฤติกรรมนักเรียน · ${CURRENT_TERM.label}`}
+        subtitle={CURRENT_TERM.label}
+        action={
+          <div className="flex flex-wrap gap-2">
+            <ExportButton
+              label="ส่งออกรายการ"
+              count={records.length}
+              filename={`ความประพฤติ-${CURRENT_TERM.termId}`}
+              scope={`บันทึกความประพฤติ ${CURRENT_TERM.label} · ${records.length} รายการ`}
+              header={["วันที่", "เลขที่", "ชื่อ-สกุล", "ห้อง", "กฎ", "คะแนน", "ผู้บันทึก", "สถานะรายการ"]}
+              rows={() =>
+                records.map((r) => {
+                  const s = store.getStudent(r.studentId);
+                  const rule = store.behaviorRules.find((x) => x.ruleId === r.ruleId);
+                  return [
+                    formatThaiDate(r.occurredAt),
+                    s?.classNo ?? "",
+                    s?.fullName ?? "",
+                    s?.roomName ?? "",
+                    rule?.name ?? "",
+                    rule ? recordScoreText(r, rule) : "",
+                    r.recordedByName,
+                    r.cancelled ? "ยกเลิกแล้ว" : "ใช้งาน",
+                  ];
+                })
+              }
+            />
+            <Button onClick={() => setRecording(true)}>
+              <ScanLine className="size-4" /> บันทึกพฤติกรรม
+            </Button>
+          </div>
+        }
       />
 
-      {variant === "A" && <VariantA records={records} form={form} />}
-      {variant === "B" && <VariantB records={records} form={form} />}
-      {variant === "C" && <VariantC records={records} form={form} />}
-
-      <PrototypeSwitcher variants={VARIANTS} />
+      <RecordsTable records={records} />
+      {recording && (
+        <BehaviorRecorder
+          key={String(recording)}
+          studentId={typeof recording === "string" ? recording : undefined}
+          onClose={() => setRecording(null)}
+        />
+      )}
     </>
   );
 }

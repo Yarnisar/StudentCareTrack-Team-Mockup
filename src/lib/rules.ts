@@ -50,9 +50,12 @@ export const SCREENING_ITEMS: ScreeningItem[] = [
   // สุขภาพจิต
   { id: "mt1", dimension: "mental", label: "แยกตัวจากเพื่อนหรือครู", severity: "risk" },
   { id: "mt2", dimension: "mental", label: "อารมณ์แปรปรวน หงุดหงิดง่ายผิดปกติ", severity: "risk" },
-  { id: "mt3", dimension: "mental", label: "ผลแบบประเมิน 9S ระบุว่าควรดูแล", severity: "risk" },
-  { id: "mt4", dimension: "mental", label: "ผลแบบคัดกรอง Red Flag ระบุว่าควรดูแล", severity: "problem" },
+  { id: "mt3", dimension: "mental", label: "ผลแบบประเมิน 9S ระบุว่าควรดูแล", severity: "risk", derivedFrom: "nine_s" },
+  { id: "mt4", dimension: "mental", label: "ผลแบบคัดกรอง Red Flag ระบุว่าควรดูแล", severity: "problem", derivedFrom: "red_flag" },
 ];
+
+/** รายการคัดกรองที่ผูกกับผลแบบประเมินแต่ละแบบ */
+export const DERIVED_ITEM_ID = { red_flag: "mt4", nine_s: "mt3" } as const;
 
 /**
  * เกณฑ์จัดกลุ่มรายมิติ
@@ -217,16 +220,3 @@ export function scoreSdq(answers: Record<number, 0 | 1 | 2>) {
   return { scaleScores, totalDifficulties, level };
 }
 
-/* ------------------------------------------------------------------ */
-/* 5. เกณฑ์การมาสาย                                                    */
-/* ------------------------------------------------------------------ */
-
-/** เวลาเข้าเรียน 07:30 น. */
-export const SCHOOL_START_MINUTES = 7 * 60 + 30;
-
-/** จำนวนครั้งที่มาสายต่อเดือนที่ระบบจะแจ้งเตือนครูประจำชั้น */
-export const LATE_ALERT_THRESHOLD = 5;
-
-export function isLateArrival(date: Date): boolean {
-  return date.getHours() * 60 + date.getMinutes() > SCHOOL_START_MINUTES;
-}

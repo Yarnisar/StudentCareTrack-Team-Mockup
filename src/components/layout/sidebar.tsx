@@ -9,34 +9,90 @@ import {
   FileText,
   Flag,
   HeartPulse,
+  IdCard,
   Home,
   LayoutGrid,
-  QrCode,
+  LogOut,
   Settings,
   Star,
   Users,
+  type LucideIcon,
 } from "lucide-react";
-import { CURRENT_TEACHER, SCHOOL_NAME } from "@/lib/mock-data";
+import { SCHOOL_NAME } from "@/lib/mock-data";
+import { canAccess, ROLE_INFO } from "@/lib/roles";
+import { useStore } from "@/lib/store";
+import { useOnline } from "@/lib/use-online";
 
-const NAV = [
-  { href: "/dashboard", label: "ภาพรวม", icon: LayoutGrid },
-  { href: "/students", label: "ข้อมูลนักเรียน", icon: Users },
-  { href: "/screening", label: "การคัดกรอง", icon: ClipboardCheck },
-  { href: "/assessment", label: "การประเมิน", icon: HeartPulse },
-  { href: "/behavior", label: "ความประพฤติ", icon: AlertTriangle },
-  { href: "/home-visits", label: "เยี่ยมบ้าน", icon: Home },
-  { href: "/characteristics", label: "คุณลักษณะฯ", icon: Star },
-  { href: "/documents", label: "เอกสาร ปพ.", icon: FileText },
-  { href: "/checkin", label: "บัตร / QR", icon: QrCode },
-  { href: "/care-cases", label: "ติดตามช่วยเหลือ", icon: Flag },
+interface NavItem {
+  href: string;
+  label: string;
+  icon: LucideIcon;
+}
+
+/**
+ * เมนูจัดเป็นหมวด กลุ่ม "การดูแลช่วยเหลือ" เรียงตามขั้นตอนในรายงาน 2.1.1
+ * (รู้จักนักเรียนจากการเยี่ยมบ้าน → คัดกรอง → ประเมิน → ช่วยเหลือและติดตาม)
+ * หมวดที่บทบาทนี้เข้าไม่ได้เลยจะไม่แสดงหัวหมวด
+ */
+const NAV: { title?: string; items: NavItem[] }[] = [
+  {
+    items: [
+      { href: "/dashboard", label: "ภาพรวม", icon: LayoutGrid },
+      { href: "/students", label: "ข้อมูลนักเรียน", icon: Users },
+    ],
+  },
+  {
+    title: "การดูแลช่วยเหลือ",
+    items: [
+      { href: "/home-visits", label: "เยี่ยมบ้าน", icon: Home },
+      { href: "/screening", label: "การคัดกรอง", icon: ClipboardCheck },
+      { href: "/assessment", label: "การประเมิน", icon: HeartPulse },
+      { href: "/care-cases", label: "ติดตามช่วยเหลือ", icon: Flag },
+    ],
+  },
+  {
+    title: "พฤติกรรมและคุณลักษณะ",
+    items: [
+      { href: "/behavior", label: "ความประพฤติ", icon: AlertTriangle },
+      { href: "/characteristics", label: "คุณลักษณะอันพึงประสงค์", icon: Star },
+      { href: "/dc-summary", label: "สรุปคุณลักษณะฯ", icon: Star },
+    ],
+  },
+  {
+    title: "เอกสาร",
+    items: [
+      { href: "/documents", label: "เอกสาร ปพ.", icon: FileText },
+      { href: "/cards", label: "บัตรนักเรียน", icon: IdCard },
+    ],
+  },
+  {
+    title: "ระบบ",
+    items: [{ href: "/settings", label: "ตั้งค่าระบบ", icon: Settings }],
+  },
 ];
 
-export function Sidebar() {
+/**
+ * จอใหญ่แสดงค้างไว้ด้านซ้าย จอแคบ StaffShell เปิดเป็นลิ้นชักทับหน้า
+ * onNavigate ใช้ปิดลิ้นชักเมื่อกดเมนู
+ */
+export function Sidebar({ className, onNavigate }: { className?: string; onNavigate?: () => void }) {
   const pathname = usePathname();
+  const { role } = useStore();
+  const info = ROLE_INFO[role];
+  const online = useOnline();
+  // เมนูที่ตรงกับ URL ยาวที่สุดเป็นเมนูที่เลือกอยู่ (กันเมนูแม่ถูกเลือกซ้อนเมื่อมีเมนูลูกที่ path ขึ้นต้นเหมือนกัน)
+  const activeHref = NAV.flatMap((g) => g.items)
+    .map((item) => item.href)
+    .filter((href) => pathname === href || pathname.startsWith(`${href}/`))
+    .sort((a, b) => b.length - a.length)[0];
+  // แสดงเฉพาะเมนูที่บทบาทนี้เข้าได้
+  const groups = NAV.map((g) => ({ ...g, items: g.items.filter((item) => canAccess(role, item.href)) })).filter(
+    (g) => g.items.length > 0
+  );
 
   return (
-    <aside className="flex w-[264px] shrink-0 flex-col border-r border-border bg-card">
-      <div className="flex items-center gap-2.5 border-b border-border px-5 py-5">
+    <aside className={cn("flex w-[264px] shrink-0 flex-col border-r border-border bg-card", className)}>
+      <div className="flex items-center gap-2.5 px-5 pt-5 pb-4">
         <div className="flex size-9 items-center justify-center rounded-[10px] bg-primary text-sm font-bold text-primary-foreground">
           SC
         </div>
@@ -46,40 +102,70 @@ export function Sidebar() {
         </div>
       </div>
 
-      <nav className="flex-1 overflow-y-auto py-3">
-        {NAV.map(({ href, label, icon: Icon }) => {
-          const active = pathname === href || pathname.startsWith(`${href}/`);
-          return (
-            <Link
-              key={href}
-              href={href}
+      <div className="border-b border-border px-3 pb-4">
+        <div className="flex items-center gap-2.5 rounded-[10px] bg-surface p-2.5">
+          <div className="relative shrink-0">
+            <div className="flex size-10 items-center justify-center rounded-full bg-muted text-sm font-bold text-muted-foreground">
+              {info.user.name.replace(/^(ครู|ด\.ญ\.|ด\.ช\.|นางสาว|นาง|นาย)\s*/, "").charAt(0)}
+            </div>
+            <span
               className={cn(
-                "mr-2 flex items-center gap-3 rounded-r-lg border-l-[3px] px-3.5 py-2.5 text-[14.5px] transition-colors",
-                active
-                  ? "border-primary bg-accent font-semibold text-primary"
-                  : "border-transparent font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
+                "absolute right-0 bottom-0 size-3 rounded-full ring-2 ring-surface",
+                online ? "bg-emerald-500" : "bg-muted-foreground/50"
               )}
-            >
-              <Icon className="size-[19px]" />
-              <span>{label}</span>
-            </Link>
-          );
-        })}
+              title={online ? "ออนไลน์" : "ออฟไลน์"}
+            />
+            <span className="sr-only">{online ? "ออนไลน์" : "ออฟไลน์"}</span>
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-[13.5px] font-semibold">{info.user.name}</div>
+            <div className="mt-1 flex items-center gap-1.5">
+              <span className="shrink-0 rounded-md bg-accent px-1.5 py-0.5 text-[11px] font-semibold text-accent-foreground">
+                {info.label}
+              </span>
+              <span className="truncate text-[11.5px] text-muted-foreground">{info.user.scope}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <nav className="flex-1 overflow-y-auto py-2">
+        {groups.map((group, i) => (
+          <div key={group.title ?? i} className={i > 0 ? "mt-3" : undefined}>
+            {group.title && (
+              <div className="px-5 pt-1 pb-1.5 text-[11.5px] font-semibold text-muted-foreground">{group.title}</div>
+            )}
+            {group.items.map(({ href, label, icon: Icon }) => {
+              const active = href === activeHref;
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  onClick={onNavigate}
+                  aria-current={active ? "page" : undefined}
+                  className={cn(
+                    "mr-2 flex items-center gap-3 rounded-r-lg border-l-[3px] px-3.5 py-2 text-[14.5px] transition-colors",
+                    active
+                      ? "border-primary bg-accent font-semibold text-primary"
+                      : "border-transparent font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
+                  )}
+                >
+                  <Icon className="size-[19px] shrink-0" />
+                  <span>{label}</span>
+                </Link>
+              );
+            })}
+          </div>
+        ))}
       </nav>
 
-      <div className="border-t border-border p-3">
-        <div className="flex items-center gap-2.5 rounded-[10px] bg-surface p-2.5">
-          <div className="flex size-9 items-center justify-center rounded-full bg-muted text-xs font-bold text-muted-foreground">
-            ค.
-          </div>
-          <div className="flex-1">
-            <div className="text-[13.5px] font-semibold">{CURRENT_TEACHER.name}</div>
-            <div className="text-[11.5px] text-muted-foreground">{CURRENT_TEACHER.role}</div>
-          </div>
-          <Link href="/settings" aria-label="ตั้งค่าระบบ">
-            <Settings className="size-[17px] text-muted-foreground hover:text-foreground" />
-          </Link>
-        </div>
+      <div className="border-t border-border p-2">
+        <Link
+          href="/login"
+          className="flex items-center gap-3 rounded-lg px-3.5 py-2.5 text-[14px] font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
+        >
+          <LogOut className="size-[18px]" /> ออกจากระบบ
+        </Link>
       </div>
     </aside>
   );

@@ -50,28 +50,6 @@ export function windowEnabledConfirm(
   };
 }
 
-export function windowLockConfirm(w: AssessmentWindow) {
-  const turningOff = w.lockAfterClose;
-  return turningOff
-    ? {
-        title: `อนุญาตให้กรอกย้อนหลังใน "${w.label}" ?`,
-        description:
-          "ครูจะบันทึกผลย้อนหลังได้แม้เลยวันปิดรับไปแล้ว ข้อมูลรอบนี้จะเทียบกับรอบอื่นได้ยากขึ้นเพราะเก็บคนละช่วงเวลา",
-        confirmLabel: "อนุญาตกรอกย้อนหลัง",
-        doneLabel: `"${w.label}" กรอกย้อนหลังได้แล้ว`,
-        danger: false,
-      }
-    : {
-        title: `ล็อก "${w.label}" หลังปิดรอบ ?`,
-        description: `เมื่อเลย ${formatThaiDate(
-          w.closeDate
-        )} ระบบจะไม่รับข้อมูลเพิ่มอีก ครูที่ยังทำไม่เสร็จต้องขอให้แอดมินเปิดรอบใหม่`,
-        confirmLabel: "ล็อกหลังปิดรอบ",
-        doneLabel: `"${w.label}" จะถูกล็อกหลังปิดรอบ`,
-        danger: true,
-      };
-}
-
 export function ruleActiveConfirm(rule: BehaviorRule, usedCount: number) {
   const turningOff = rule.isActive;
   const name = rule.name || "กฎที่ยังไม่ตั้งชื่อ";
@@ -88,9 +66,12 @@ export function ruleActiveConfirm(rule: BehaviorRule, usedCount: number) {
       }
     : {
         title: `เปิดใช้งานกฎ "${name}" ?`,
-        description: `กฎนี้จะกลับไปอยู่ในตัวเลือกของครู โดยมีผลต่อคะแนน ${
-          rule.scoreDelta > 0 ? `+${rule.scoreDelta}` : rule.scoreDelta
-        } ต่อการบันทึกหนึ่งครั้ง`,
+        description:
+          rule.severity === "refer"
+            ? "กฎนี้จะกลับไปอยู่ในตัวเลือกของครู เป็นกฎส่งต่อที่ไม่มีคะแนน บันทึกแล้วแจ้งครูที่ปรึกษาให้พิจารณาเปิดกรณี"
+            : `กฎนี้จะกลับไปอยู่ในตัวเลือกของครู โดยมีผลต่อคะแนน ${
+                rule.scoreDelta > 0 ? `+${rule.scoreDelta}` : rule.scoreDelta
+              } ต่อการบันทึกหนึ่งครั้ง`,
         confirmLabel: "เปิดใช้งาน",
         doneLabel: `เปิดใช้งานกฎ "${name}" แล้ว`,
         danger: false,

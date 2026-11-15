@@ -1,5 +1,7 @@
 /** ชนิดข้อมูลหลักของระบบ อ้างอิงตาม ER Diagram ในบทที่ 3 */
 
+import type { VisitForm } from "./home-visit-form";
+
 export type UserRole =
   | "admin_school"
   | "teacher_general"
@@ -54,7 +56,33 @@ export interface Student {
   address: string;
   /** อ้างอิงจากงานทะเบียนนักเรียนของโรงเรียน — ระบบนี้อ่านอย่างเดียว */
   sourceSystem: "team_b_registry";
+  /** มีรูปถ่ายในระบบทะเบียนหรือไม่ ใช้ตรวจก่อนทำบัตร (UC14 ข้อ 6) ไม่ระบุ = มี */
+  hasPhoto?: boolean;
 }
+
+/**
+ * บัตรนักเรียน (UC14) code คือข้อมูลใน QR ที่ครูสแกนตอนบันทึกพฤติกรรม (UC8)
+ * บัตรทดแทนยกเลิกบัตรเดิมทันที บัตรที่ยกเลิกหรือหมดอายุสแกนไม่ได้ (UC8 Alt-A)
+ */
+export interface StudentCard {
+  cardId: string;
+  code: string;
+  studentId: string;
+  type: "new" | "replacement";
+  reason?: string;
+  issuedAt: string;
+  expiresAt: string;
+  status: "active" | "cancelled";
+  /** สถานะบัตรจริง (สถานการณ์ B) */
+  physical: "none" | "printed" | "handed";
+  physicalAt?: string;
+}
+
+export const CARD_PHYSICAL_LABEL: Record<StudentCard["physical"], string> = {
+  none: "ยังไม่พิมพ์",
+  printed: "พิมพ์แล้ว",
+  handed: "มอบให้นักเรียนแล้ว",
+};
 
 /** รายการตรวจสอบของแต่ละมิติ: ติ๊ก = พบรายการนั้น */
 export interface ScreeningItem {
@@ -63,6 +91,8 @@ export interface ScreeningItem {
   label: string;
   /** ระดับที่รายการนี้บ่งชี้เมื่อถูกติ๊ก */
   severity: "risk" | "problem";
+  /** รายการที่ระบบกรอกให้จากผลแบบประเมิน ครูติ๊กเองไม่ได้ */
+  derivedFrom?: "red_flag" | "nine_s";
 }
 
 export interface ScreeningResult {
@@ -136,10 +166,21 @@ export const SDQ_SCALE_LABEL: Record<SdqScale, string> = {
 
 export type SdqLevel = "normal" | "risk" | "problem";
 
+/** คำทางการ ใช้เฉพาะฝั่งครูและผู้ดูแลระบบ */
 export const SDQ_LEVEL_LABEL: Record<SdqLevel, string> = {
   normal: "ปกติ",
   risk: "เสี่ยง",
   problem: "มีปัญหา",
+};
+
+/**
+ * คำที่แสดงใน portal ผู้ปกครอง — ไม่แสดงคะแนนดิบและไม่แยกระดับเสี่ยง/มีปัญหา
+ * การคัดกรองเป็นสัญญาณให้ติดตาม ไม่ใช่การตัดสินนักเรียน (รายงาน 2.1.1, 2.1.3)
+ */
+export const SDQ_PORTAL_LABEL: Record<SdqLevel, string> = {
+  normal: "อยู่ในเกณฑ์ปกติ",
+  risk: "ครูจะติดตามดูแลเพิ่มเติม",
+  problem: "ครูจะติดตามดูแลเพิ่มเติม",
 };
 
 export interface SdqAssessment {
@@ -155,6 +196,8 @@ export interface SdqAssessment {
   level: SdqLevel | null;
   status: "pending" | "completed";
   assessedAt: string | null;
+  /** เวลาที่ส่งครั้งก่อน ๆ เมื่อแก้คำตอบที่ส่งแล้ว (UC10 ข้อ 13) */
+  editHistory?: string[];
 }
 
 export interface EqAssessment {
@@ -166,12 +209,19 @@ export interface EqAssessment {
   assessedAt: string;
 }
 
+/** บทบาทที่บันทึกกฎได้ (UC7 Scenario B ข้อ 9) */
+export type RuleRecorder = "teacher" | "discipline_head" | "executive";
+
 export interface BehaviorRule {
   ruleId: string;
   name: string;
-  severity: "minor" | "moderate" | "severe" | "positive";
+  /** ชนิดและระดับการดำเนินการ ดู lib/behavior-rules.ts (refer = ส่งต่อ ไม่มีคะแนน) */
+  severity: "minor" | "moderate" | "severe" | "positive" | "refer";
   scoreDelta: number;
   isActive: boolean;
+  recordableBy: RuleRecorder[];
+  /** ยกเลิกกฎพร้อมเหตุผล: รายการเดิมไม่นับคะแนนแต่ยังอยู่ในประวัติ (UC7 Scenario C) */
+  cancelled?: { reason: string; at: string };
 }
 
 export interface BehaviorRecord {
@@ -181,21 +231,37 @@ export interface BehaviorRecord {
   description: string;
   occurredAt: string;
   recordedByName: string;
-  source: "manual" | "qr_checkin";
-}
-
-export interface CheckinLog {
-  logId: string;
-  studentId: string;
-  scannedAt: string;
-  isLate: boolean;
-  scannedByName: string;
+  /** card_scan = เลือกนักเรียนจากการสแกนบัตร (UC8 ข้อ 2) */
+  source: "manual" | "card_scan";
+  /** รูปหลักฐาน (data URL ที่ย่อแล้ว) — PROTOTYPE: Project 2 เก็บไฟล์บน server แล้วเก็บแค่ลิงก์ */
+  evidence?: string[];
+  /** เวลาที่บันทึกจริง ใช้นับระยะเวลาแก้ไข (ไม่มี = ใช้วันที่เกิดเหตุ) */
+  recordedAt?: string;
+  /**
+   * คะแนนที่ใช้ ณ ตอนบันทึก (UC8 ข้อ 14: คิดตามกฎที่มีผลในวันนั้น) ผู้ดูแลระบบแก้ค่ากฎภายหลังจึงไม่เปลี่ยนคะแนนเดิม
+   * ไม่มี = ใช้ค่าปัจจุบันของกฎ (ข้อมูลเก่าก่อนมีการเก็บค่านี้)
+   */
+  scoreDelta?: number;
+  /** เหตุผลเมื่อบันทึกย้อนหลัง (UC8 ข้อ 8) */
+  backdateReason?: string;
+  /** ยกเลิกแล้ว: ไม่นับคะแนนแต่ยังเก็บประวัติ (UC8 สถานการณ์ B ข้อ 9) */
+  cancelled?: { at: string; by: string; reason: string };
+  /** ประวัติการแก้ไขโดยผู้บันทึก */
+  editHistory?: { at: string; by: string; changes: string[] }[];
 }
 
 export type AppointmentStatus =
   | "pending"
   | "confirmed"
   | "reschedule_requested"
+  /** ครูบันทึกผลแล้ว รอนักเรียนหรือผู้ปกครองยืนยันว่าได้เยี่ยมจริง (UC4 Scenario E) */
+  | "awaiting_visit_confirmation"
+  /** มีผู้ยืนยันแล้ว ระบบปิดงานเมื่อครบกำหนด ระหว่างนั้นอีกฝ่ายยังแจ้งว่าไม่ได้เยี่ยมได้ (ข้อเสนอแก้ Scenario E ข้อ 6) */
+  | "visit_confirmed"
+  /** นักเรียนหรือผู้ปกครองแจ้งว่าไม่ได้เยี่ยมจริง ครูต้องตรวจสอบและนัดใหม่ (Alt-E) */
+  | "visit_disputed"
+  /** ครบระยะเวลาโดยไม่มีผู้ตอบ ระบบปิดงานเอง (Alt-F) */
+  | "completed_no_response"
   | "completed"
   | "cancelled";
 
@@ -203,6 +269,10 @@ export const APPOINTMENT_STATUS_LABEL: Record<AppointmentStatus, string> = {
   pending: "รอการยืนยัน",
   confirmed: "ยืนยันแล้ว",
   reschedule_requested: "ขอเปลี่ยนวันเวลา",
+  awaiting_visit_confirmation: "รอยืนยันว่าได้เยี่ยมจริง",
+  visit_confirmed: "ยืนยันแล้ว รอครบกำหนด",
+  visit_disputed: "แจ้งว่าไม่ได้เยี่ยมจริง",
+  completed_no_response: "ยืนยันโดยไม่มีผู้ตอบกลับ",
   completed: "เสร็จสิ้น",
   cancelled: "ยกเลิก",
 };
@@ -223,7 +293,21 @@ export interface HomeVisitAppointment {
   status: AppointmentStatus;
   guardianNote?: string;
   guardianPhone?: string;
+  /** ผู้ดูแลเมื่อผู้ปกครองไม่อยู่บ้าน: ความสัมพันธ์ (เลือกจากรายการ) และชื่อ (ไม่บังคับ) */
+  caretakerRelation?: string;
   caretakerName?: string;
+  /** ช่วงเวลาที่สะดวกที่นักเรียนหรือผู้ปกครองให้ไว้ (UC4 Scenario C) */
+  convenientTime?: string;
+  /** ผู้ยืนยันนัด: ชื่อผู้ใช้ หรือ "ระบบ" เมื่อถึงวันนัดโดยไม่มีผู้ยืนยัน (Scenario D, Alt-D) */
+  confirmedBy?: string;
+  /** คำขอเปลี่ยนวันที่รอครูพิจารณา วันนัดเดิมยังมีผลระหว่างรอ (Alt-C) */
+  reschedule?: { date: string; reason: string; by: string };
+  /** วันสุดท้ายที่ยืนยันว่าได้เยี่ยมจริงได้ (Scenario E ข้อ 5) */
+  visitConfirmDeadline?: string;
+  /** ผู้ยืนยันว่าได้เยี่ยมจริง หรือผู้แจ้งว่าไม่ได้เยี่ยม */
+  visitRespondedBy?: string;
+  /** ครูยกเลิกนัดพร้อมเหตุผล (Scenario F) */
+  cancelReason?: string;
 }
 
 export interface HomeVisitRecord {
@@ -235,19 +319,42 @@ export interface HomeVisitRecord {
   informantName: string;
   informantRelation: string;
   photoLabels: string[];
+  /** รูปตามลำดับของ photoLabels (ต้นแบบ: data URL · Project 2: ลิงก์ไฟล์บน server) */
+  photos?: string[];
+  /** เหตุผลกรณีใช้ภาพนักเรียนคู่ป้ายโรงเรียนแทนรูปบ้าน */
+  photoReason?: string;
   signedBy: string;
   signedAt: string;
+  /** คำตอบทั้งแบบฟอร์ม (ข้อมูลตัวอย่างเดิมไม่มี) */
+  form?: VisitForm;
+  /** ประวัติการแก้ไขผลที่ส่งแล้ว: ผู้แก้ไข วันเวลา และหัวข้อที่เปลี่ยน (UC5 สถานการณ์ B ข้อ 10) */
+  editHistory?: { by: string; at: string; changes: string[] }[];
 }
 
-/** 4 ประเภทการช่วยเหลือ ตามแนวทาง HERO OBEC CARE */
-export type SupportType = "promote" | "prevent" | "refer_internal" | "refer_external";
+/** ช่องข้อมูลทะเบียนที่ครูแจ้งว่าไม่ตรงได้ระหว่างเยี่ยมบ้าน (UC5 Alt-D) */
+export type RegistryField = "guardianName" | "guardianRelation" | "guardianPhone" | "address";
 
-export const SUPPORT_TYPE_LABEL: Record<SupportType, string> = {
-  promote: "ส่งเสริมพัฒนา",
-  prevent: "ป้องกันแก้ไข",
-  refer_internal: "ส่งต่อภายใน",
-  refer_external: "ส่งต่อภายนอก",
+export const REGISTRY_FIELD_LABEL: Record<RegistryField, string> = {
+  guardianName: "ชื่อผู้ปกครอง",
+  guardianRelation: "ความสัมพันธ์กับนักเรียน",
+  guardianPhone: "เบอร์โทรศัพท์",
+  address: "ที่อยู่",
 };
+
+/**
+ * คำขอแก้ข้อมูลทะเบียนที่ส่งไปฝ่ายทะเบียน (Team B) ระบบนี้ไม่แก้ข้อมูลต้นทางเอง
+ * ส่งไม่ได้ -> เก็บไว้ให้ผู้ดูแลระบบส่งออกไปให้ฝ่ายทะเบียน (UC5 Alt-D ข้อ 2–3)
+ */
+export interface RegistryCorrection {
+  id: string;
+  studentId: string;
+  field: RegistryField;
+  from: string;
+  to: string;
+  by: string;
+  at: string;
+  status: "sent" | "queued";
+}
 
 /** 5 วิธีการดูแล */
 export type CareMethod =
@@ -271,7 +378,17 @@ export interface CareFollowup {
   result: string;
   followupDate: string;
   recordedByName: string;
+  /** วันติดตามครั้งถัดไปที่กำหนดตอนบันทึกครั้งนี้ (UC11 ข้อ 14) */
+  nextFollowupDate?: string;
 }
+
+/** ระดับความเร่งด่วนของ case 2 ระดับ ตรง Data Dictionary ตาราง SupportCase (urgency: normal, urgent) */
+export type CaseUrgency = "normal" | "urgent";
+
+export const CASE_URGENCY_LABEL: Record<CaseUrgency, string> = {
+  normal: "ปกติ",
+  urgent: "เร่งด่วน",
+};
 
 export interface CareCase {
   caseId: string;
@@ -280,11 +397,39 @@ export interface CareCase {
   status: "active" | "closed";
   openedAt: string;
   closedAt: string | null;
-  supportType: SupportType;
   careMethods: CareMethod[];
   goal: string;
   targetDate: string;
+  urgency: CaseUrgency;
+  /** วันติดตามครั้งถัดไป ("" = ยังไม่กำหนด) ใช้คำนวณใกล้ครบกำหนด / เกินกำหนดในหน้าภาพรวม */
+  nextFollowupDate: string;
   followups: CareFollowup[];
+  /** ผลสรุปเมื่อปิด case (UC11 Scenario C) */
+  closingSummary?: string;
+  /** เอกสารส่งต่อที่ครูส่งให้ผู้ดูแลระบบเก็บรักษา (UC11 Scenario D) */
+  referral?: Referral;
+}
+
+/** case ที่ระบบเปิดให้จากผลคัดกรองแต่ครูยังไม่วางแผน ความเร่งด่วนยังไม่มีผล (UC11 ข้อ 5) */
+export function caseUrgencyText(c: Pick<CareCase, "goal" | "urgency">): string {
+  return c.goal === "" ? "ยังไม่วางแผน" : CASE_URGENCY_LABEL[c.urgency];
+}
+
+export type ReferralStatus = "awaiting_admin" | "stored" | "forwarded";
+
+export const REFERRAL_STATUS_LABEL: Record<ReferralStatus, string> = {
+  awaiting_admin: "รอผู้ดูแลระบบรับเก็บรักษา",
+  stored: "รับเก็บรักษาแล้ว",
+  forwarded: "ส่งต่อแล้ว",
+};
+
+/** ผู้ดูแลระบบเห็นเฉพาะเลขเอกสาร ผู้ส่ง วันที่ และสถานะ ไม่เห็นชื่อนักเรียนหรือเนื้อหา (ตาราง 3.4) */
+export interface Referral {
+  referralId: string;
+  preparedAt: string;
+  sentByName: string;
+  status: ReferralStatus;
+  statusAt: string;
 }
 
 /** คุณลักษณะอันพึงประสงค์ 8 ประการ ตามหลักสูตรแกนกลางฯ 2551 */
@@ -303,6 +448,23 @@ export const DC_LEVEL_LABEL: Record<DcLevel, string> = {
   2: "ดี",
   3: "ดีเยี่ยม",
 };
+
+/**
+ * ผลประเมินคุณลักษณะอันพึงประสงค์ 8 ข้อโดยครูที่ปรึกษา (UC13)
+ * ประเมินซ้ำเก็บเป็นรอบใหม่ แยกจากผลเดิม (ข้อ 9)
+ */
+export interface DcAssessment {
+  id: string;
+  studentId: string;
+  /** ภาคเรียนของผลประเมิน (round นับแยกตามภาคเรียน) */
+  termId: string;
+  round: number;
+  levels: Record<number, DcLevel | null>;
+  note: string;
+  status: "draft" | "submitted";
+  assessedAt: string;
+  assessedBy: string;
+}
 
 export interface DcSummary {
   studentId: string;
@@ -323,4 +485,56 @@ export interface EducationDocument {
   target: string;
   generatedByName: string;
   generatedAt: string;
+  /** ฉบับที่ ออกใหม่แล้วเก็บฉบับเดิมไว้ (UC15 Scenario A ข้อ 10) */
+  version?: number;
+}
+
+/** ครูขอจัดทำ ปพ.7 แล้วผู้ดูแลระบบจัดทำและส่งกลับ (UC15 Scenario B) */
+export interface DocumentRequest {
+  requestId: string;
+  docType: "ปพ.7";
+  studentId: string;
+  requestedByName: string;
+  requestedAt: string;
+  status: "pending" | "done";
+  docId?: string;
+}
+
+/**
+ * บันทึกการเปิดดูข้อมูลส่วนบุคคลที่ซ่อนไว้ (ข้อ 2.1.10)
+ * PROTOTYPE: เก็บในหน่วยความจำ · Project 2 ต้องเขียนที่ backend ให้แก้หรือลบไม่ได้
+ */
+/**
+ * ประวัติการแก้ไข (ผู้แก้ไข วันเวลา รายละเอียดที่เปลี่ยน) ของกฎความประพฤติ (UC7) ผลคัดกรอง (UC6) และคำตอบแบบประเมิน (UC10)
+ * ผลเยี่ยมบ้าน (UC5) และบันทึกพฤติกรรม (UC8) เก็บประวัติไว้ในรายการนั้นเอง (editHistory)
+ * ผู้ดูแลระบบเห็นเฉพาะกฎ ส่วนผลคัดกรองและคำตอบแสดงเป็นจำนวนโดยไม่มีชื่อนักเรียนหรือรายละเอียด (3.4.1)
+ */
+export interface ChangeLogEntry {
+  id: string;
+  at: string;
+  by: string;
+  entity: "rule" | "screening" | "assessment";
+  /** rule = ruleId · screening / assessment = studentId */
+  ref: string;
+  summary: string;
+  changes: { label: string; from: string; to: string }[];
+}
+
+/** ประวัติการส่งออกรายงาน (UC1 Scenario B ข้อ 5, UC2 Scenario B ข้อ 4) ผู้ดูแลระบบเห็นผู้ส่งออก ขอบเขต เวลา ไม่เห็นชื่อนักเรียน */
+export interface ExportLogEntry {
+  logId: string;
+  at: string;
+  actorName: string;
+  actorRole: string;
+  /** ขอบเขตข้อมูลที่ส่งออก เช่น "ภาพรวมห้อง ม.3/1" หรือ "ข้อมูลนักเรียนรายบุคคล 1 คน" */
+  scope: string;
+}
+
+export interface AccessLog {
+  logId: string;
+  studentId: string;
+  field: "citizen_id";
+  actorName: string;
+  actorRole: string;
+  at: string;
 }

@@ -1,10 +1,10 @@
-import { Sidebar } from "@/components/layout/sidebar";
+import { RoleGate } from "@/components/layout/role-gate";
+import { StaffShell } from "@/components/layout/staff-shell";
 
 export default function StaffLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex h-screen overflow-hidden bg-surface">
-      <Sidebar />
-      <div className="flex flex-1 flex-col overflow-hidden">{children}</div>
-    </div>
+    <StaffShell>
+      <RoleGate>{children}</RoleGate>
+    </StaffShell>
   );
 }

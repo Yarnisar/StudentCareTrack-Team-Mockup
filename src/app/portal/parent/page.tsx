@@ -1,13 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronRight, ClipboardList, Home } from "lucide-react";
+import { Bell, ChevronRight, ClipboardList, Home } from "lucide-react";
 import { MobileShell } from "@/components/layout/mobile-shell";
 import { Card, CardContent } from "@/components/ui/card";
 import { useStore } from "@/lib/store";
-import { dcSummaries } from "@/lib/store";
 import { formatThaiDate, formatThaiTime } from "@/lib/format";
-import { SDQ_LEVEL_LABEL } from "@/lib/types";
+import { CURRENT_TERM, dcCriteria } from "@/lib/mock-data";
+import { academicYearOfDate } from "@/lib/terms";
+import { dcSummaryForParent } from "@/lib/portal";
+import { buildNotifications } from "@/lib/portal-notifications";
+import { SDQ_PORTAL_LABEL } from "@/lib/types";
 
 const DEMO_STUDENT_ID = "30125";
 
@@ -15,24 +18,29 @@ export default function ParentHomePage() {
   const store = useStore();
   const student = store.getStudent(DEMO_STUDENT_ID);
   const appointment = store.appointments.find(
-    (a) => a.studentId === DEMO_STUDENT_ID && a.status !== "completed"
+    (a) =>
+      a.studentId === DEMO_STUDENT_ID &&
+      ["pending", "confirmed", "reschedule_requested", "awaiting_visit_confirmation"].includes(a.status)
   );
-  const parentSdq = store
-    .sdqOf(DEMO_STUDENT_ID)
-    .find((s) => s.rater === "parent" && s.round === 1);
-  const teacherSdq = store
-    .sdqOf(DEMO_STUDENT_ID)
-    .find((s) => s.rater === "teacher" && s.round === 1);
-  const dc = dcSummaries.find((d) => d.studentId === DEMO_STUDENT_ID);
-  const dcLevels: number[] = dc
-    ? Object.values(dc.levels).flatMap((l) => (l == null ? [] : [l as number]))
-    : [];
-  const dcLabel =
-    dcLevels.length === 0
-      ? "รอประเมิน"
-      : dcLevels.reduce((a, b) => a + b, 0) / dcLevels.length >= 2.5
-        ? "ระดับดีเยี่ยม"
-        : "ระดับดี";
+  const parentSdq = store.sdqSetOf(DEMO_STUDENT_ID).find((s) => s.rater === "parent");
+  // เปิดผลหลังครูที่ปรึกษาตรวจแล้วเท่านั้น และแสดงผล ณ เวลาที่ตรวจ (UC10 สถานการณ์ B ข้อ 7)
+  const sdqSummary = store.sdqReview(DEMO_STUDENT_ID).review?.released.sdq ?? null;
+  const dc = dcSummaryForParent(
+    store.dcResultOf(DEMO_STUDENT_ID),
+    dcCriteria.length
+  );
+
+  const unread = buildNotifications({
+    viewer: "parent",
+    behaviors: store.behaviorOf(DEMO_STUDENT_ID).filter((b) => academicYearOfDate(b.occurredAt) === CURRENT_TERM.academicYear),
+    rules: store.behaviorRules,
+    watchLevel: store.behaviorWatchLevelOf(DEMO_STUDENT_ID),
+    appointments: store.appointments.filter((a) => a.studentId === DEMO_STUDENT_ID),
+    sdq: store.sdqOf(DEMO_STUDENT_ID),
+    withdrawals: store.watchDecisions.filter((d) => d.studentId === DEMO_STUDENT_ID && d.withdraw),
+    windows: store.assessmentWindows,
+    room: student?.roomName,
+  }).filter((n) => !store.readNotifications.includes(n.id)).length;
 
   if (!student) return null;
 
@@ -58,6 +66,17 @@ export default function ParentHomePage() {
           </CardContent>
         </Card>
 
+        {unread > 0 && (
+          <ActionCard
+            href="/portal/parent/child"
+            tone="info"
+            icon={<Bell className="size-5 text-primary" />}
+            title={`แจ้งเตือนใหม่ ${unread} รายการ`}
+            description="บันทึกพฤติกรรม นัดหมาย และแบบประเมินของบุตรหลาน"
+            cta="ดูการแจ้งเตือน"
+          />
+        )}
+
         <h2 className="pt-1 text-sm font-bold">สิ่งที่ต้องดำเนินการ</h2>
 
         {appointment && appointment.status === "pending" && (
@@ -68,6 +87,17 @@ export default function ParentHomePage() {
             title="นัดหมายเยี่ยมบ้าน รอการยืนยัน"
             description={`${appointment.teacherName} ขอนัดเยี่ยมบ้านวันที่ ${formatThaiDate(appointment.proposedDate)} เวลา ${formatThaiTime(appointment.proposedDate)}`}
             cta="ดูรายละเอียดและยืนยัน"
+          />
+        )}
+
+        {appointment && appointment.status === "awaiting_visit_confirmation" && (
+          <ActionCard
+            href="/portal/parent/appointment"
+            tone="warn"
+            icon={<Home className="size-5 text-risk-amber" />}
+            title="ยืนยันว่าครูได้เยี่ยมบ้านจริง"
+            description={`ครูบันทึกผลการเยี่ยมบ้านแล้ว กรุณายืนยันภายใน ${formatThaiDate(appointment.visitConfirmDeadline ?? "")}`}
+            cta="ยืนยันการเยี่ยมบ้าน"
           />
         )}
 
@@ -106,28 +136,26 @@ export default function ParentHomePage() {
               </div>
               <div className="flex gap-2.5">
                 <div className="flex-1 rounded-xl bg-surface p-3">
-                  <div className="text-[11.5px] text-muted-foreground">SDQ (ครูประเมิน)</div>
-                  <div className="mt-1.5">
-                    {teacherSdq?.level ? (
-                      <span
-                        className={
-                          teacherSdq.level === "normal"
-                            ? "rounded-full bg-risk-green-bg px-2.5 py-1 text-[11.5px] font-semibold text-risk-green"
-                            : "rounded-full bg-risk-amber-bg px-2.5 py-1 text-[11.5px] font-semibold text-risk-amber"
-                        }
-                      >
-                        {SDQ_LEVEL_LABEL[teacherSdq.level]}
-                      </span>
+                  <div className="text-[11.5px] text-muted-foreground">SDQ</div>
+                  <div className="mt-1.5 text-[12.5px] font-semibold">
+                    {sdqSummary ? (
+                      SDQ_PORTAL_LABEL[sdqSummary]
                     ) : (
-                      <span className="text-[12.5px] text-muted-foreground">รอผล</span>
+                      <span className="text-muted-foreground">รอครูตรวจผล</span>
                     )}
                   </div>
                 </div>
                 <div className="flex-1 rounded-xl bg-surface p-3">
                   <div className="text-[11.5px] text-muted-foreground">คุณลักษณะฯ</div>
                   <div className="mt-1.5">
-                    <span className="rounded-full bg-risk-green-bg px-2.5 py-1 text-[11.5px] font-semibold text-risk-green">
-                      {dcLabel}
+                    <span
+                      className={
+                        dc.allPassed
+                          ? "rounded-full bg-risk-green-bg px-2.5 py-1 text-[11.5px] font-semibold text-risk-green"
+                          : "rounded-full bg-muted px-2.5 py-1 text-[11.5px] font-semibold text-muted-foreground"
+                      }
+                    >
+                      {dc.label}
                     </span>
                   </div>
                 </div>
@@ -163,7 +191,7 @@ function ActionCard({
   const styles =
     tone === "warn"
       ? "border-amber-200 bg-risk-amber-bg"
-      : "border-blue-200 bg-accent";
+      : "border-violet-200 bg-accent";
   const ctaColor = tone === "warn" ? "text-risk-amber" : "text-primary";
 
   return (

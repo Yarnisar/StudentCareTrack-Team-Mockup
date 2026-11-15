@@ -47,6 +47,11 @@ export function initialOf(fullName: string): string {
   return stripped.charAt(0) || "?";
 }
 
+/** ซ่อนเลขบัตรประชาชนทุกหลัก คงรูปแบบและตัวขีดไว้ (ข้อ 2.1.10) เช่น 1-1037-00123-45-6 → x-xxxx-xxxxx-xx-x */
+export function maskCitizenId(value: string): string {
+  return value.replace(/\d/g, "x");
+}
+
 export function formatBaht(value: number): string {
   return value.toLocaleString("th-TH");
 }

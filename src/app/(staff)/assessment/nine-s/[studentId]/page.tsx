@@ -1,10 +1,14 @@
 "use client";
 
-import { use, useMemo, useState } from "react";
+import { use, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle2 } from "lucide-react";
+import { WindowLocked } from "@/components/shared/window-locked";
+import { lockedWindowFor } from "@/lib/periods";
 import { PageHeader } from "@/components/layout/page-header";
 import { StepIndicator } from "@/components/assessment/step-indicator";
+import { AutosaveStatus } from "@/components/assessment/autosave-status";
+import { useDraft } from "@/components/assessment/use-draft";
 import {
   MissingNote,
   MissingSummary,
@@ -18,7 +22,7 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { CURRENT_TERM } from "@/lib/mock-data";
 import { evaluateNineS, NINE_S_QUESTIONS, SDQ_CHOICES } from "@/lib/rules";
-import { useStore } from "@/lib/store";
+import { draftKey, useStore } from "@/lib/store";
 import { NINE_S_CLUSTER_LABEL, NineSCluster } from "@/lib/types";
 
 export default function NineSPage({ params }: { params: Promise<{ studentId: string }> }) {
@@ -26,8 +30,10 @@ export default function NineSPage({ params }: { params: Promise<{ studentId: str
   const router = useRouter();
   const store = useStore();
   const student = store.getStudent(studentId);
+  const key = draftKey("nine_s", studentId);
 
-  const [answers, setAnswers] = useState<Record<string, 0 | 1 | 2>>({});
+  const draft = useDraft<Record<string, 0 | 1 | 2>>(key, () => ({}));
+  const answers = draft.value;
   const missing = useMissingAnswers();
   const answeredCount = Object.keys(answers).length;
 
@@ -40,8 +46,23 @@ export default function NineSPage({ params }: { params: Promise<{ studentId: str
 
   if (!student) return <p className="p-8 text-sm text-muted-foreground">ไม่พบข้อมูลนักเรียน</p>;
 
+  // ปิดรับแล้ว (UC9)
+  const locked = lockedWindowFor(store.assessmentWindows, "nine_s");
+  if (locked) {
+    return (
+      <>
+        <PageHeader title="แบบประเมิน 9S" subtitle={CURRENT_TERM.label} />
+        <div className="flex-1 overflow-y-auto p-4 sm:p-8">
+          <div className="mx-auto max-w-3xl">
+            <WindowLocked window={locked} backHref={`/students/${studentId}`} backLabel="กลับไปหน้านักเรียน" />
+          </div>
+        </div>
+      </>
+    );
+  }
+
   const answer = (id: string, value: 0 | 1 | 2) => {
-    setAnswers((prev) => ({ ...prev, [id]: value }));
+    draft.update((prev) => ({ ...prev, [id]: value }));
     missing.resolve(id);
   };
 
@@ -64,10 +85,10 @@ export default function NineSPage({ params }: { params: Promise<{ studentId: str
     <>
       <PageHeader
         title="แบบประเมิน 9S"
-        subtitle={`ขั้นที่ 2 — ทำต่อเมื่อผล Red Flag เป็นปกติ · ${CURRENT_TERM.label}`}
+        subtitle={CURRENT_TERM.label}
       />
 
-      <div className="flex-1 overflow-y-auto p-8">
+      <div className="flex-1 overflow-y-auto p-4 sm:p-8">
         <div className="mx-auto max-w-3xl">
           <StepIndicator current={2} />
 
@@ -112,7 +133,7 @@ export default function NineSPage({ params }: { params: Promise<{ studentId: str
               </div>
               <p className="mt-3 text-[11.5px] text-muted-foreground">
                 เกณฑ์: คะแนนรวมในกลุ่มใดตั้งแต่ 3 คะแนนขึ้นไป ถือว่าควรดูแล
-                และระบบจะเปิดแบบประเมิน SDQ ให้โดยอัตโนมัติ
+                และระบบจะเปิดแบบประเมิน SDQ และกรณีติดตามช่วยเหลือให้โดยอัตโนมัติ
               </p>
             </CardContent>
           </Card>
@@ -169,13 +190,14 @@ export default function NineSPage({ params }: { params: Promise<{ studentId: str
           </Card>
 
           <div className="mt-6 flex flex-wrap items-center justify-end gap-3 pb-4">
-            {unanswered.length > 0 && (
-              <span className="mr-auto text-[13px] text-risk-red">
-                ยังไม่ได้ตอบ {unanswered.length} ข้อ
-              </span>
-            )}
+            <div className="mr-auto flex flex-col gap-0.5">
+              <AutosaveStatus restored={draft.restored} savedAt={draft.savedAt} />
+              {unanswered.length > 0 && (
+                <span className="text-[13px] text-destructive">ยังไม่ได้ตอบ {unanswered.length} ข้อ</span>
+              )}
+            </div>
             <Button variant="outline" onClick={() => router.push(`/students/${studentId}`)}>
-              บันทึกร่าง
+              ออกและทำต่อภายหลัง
             </Button>
             <Button onClick={handleSubmit}>ประมวลผล 9S</Button>
           </div>

@@ -28,13 +28,26 @@ npm run dev
 > หมายเหตุ: npm รุ่นใหม่บล็อก install script ของ shadcn CLI
 > หากต้องการเพิ่ม component ให้ใช้ `bunx shadcn@latest add <component>`
 
+### รันด้วย Docker (สำหรับสาธิต)
+
+```bash
+docker compose up --build
+```
+
+เปิด http://localhost:3000 — ถ้าพอร์ต 3000 ถูกใช้อยู่ให้เปลี่ยนด้วย `APP_PORT=3100 docker compose up --build`
+(ใน PowerShell: `$env:APP_PORT=3100; docker compose up --build`)
+
+- ต้องมีอินเทอร์เน็ตตอน build เพราะฟอนต์ Sarabun ดึงจาก Google Fonts
+- ข้อมูลเป็นข้อมูลตัวอย่างฝั่งเบราว์เซอร์ รีเฟรชหน้าแล้วข้อมูลและบทบาทจะรีเซ็ต
+- หยุดด้วย `docker compose down`
+
 ## โครงสร้างโปรเจกต์
 
 ```
 src/
 ├── app/
 │   ├── login/                      หน้าเข้าสู่ระบบ + เลือกบทบาท
-│   ├── (staff)/                    ฝั่งครูและแอดมิน (sidebar layout)
+│   ├── (staff)/                    ฝั่งครูและผู้ดูแลระบบ (sidebar layout)
 │   │   ├── dashboard/              ภาพรวมการดูแลช่วยเหลือ
 │   │   ├── students/[studentId]/   ข้อมูลนักเรียนรายบุคคล
 │   │   ├── screening/[studentId]/  คัดกรอง 6 มิติ (คำนวณกลุ่มเสี่ยงแบบเรียลไทม์)

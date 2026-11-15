@@ -1,20 +1,27 @@
 import Link from "next/link";
-import { LinkButton } from "@/components/ui/link-button";
+import { RoleLink } from "@/components/prototype/role-link";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SCHOOL_NAME } from "@/lib/mock-data";
-
-const ROLES = [
-  { label: "แอดมินโรงเรียน", href: "/dashboard" },
-  { label: "ครูทั่วไป", href: "/behavior" },
-  { label: "ครูประจำชั้น", href: "/dashboard", primary: true },
-  { label: "นักเรียน", href: "/portal/student/card" },
-  { label: "ผู้ปกครอง", href: "/portal/parent" },
-];
+import { ROLE_ORDER } from "@/lib/roles";
 
 export default function LoginPage() {
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen flex-col lg:flex-row">
+      {/* จอแคบ: แถบม่วงสั้น ๆ บอกว่าเป็นระบบอะไร แล้วแผ่นฟอร์มซ้อนขึ้นมา */}
+      <header className="relative overflow-hidden bg-primary px-6 pt-10 pb-16 lg:hidden">
+        <div className="absolute -top-16 -right-12 size-52 rounded-full bg-white/10" />
+        <div className="absolute -bottom-20 -left-10 size-48 rounded-full bg-white/[0.07]" />
+        <div className="relative flex items-center gap-3">
+          <div className="flex size-11 items-center justify-center rounded-xl bg-white/20 text-[17px] font-bold text-white">SC</div>
+          <span className="text-[19px] font-bold text-white">Student Care Track</span>
+        </div>
+        <h2 className="relative mt-5 text-[21px] leading-snug font-bold text-white">
+          ระบบคัดกรอง ประเมิน และติดตามการดูแลช่วยเหลือนักเรียน
+        </h2>
+        <p className="relative mt-1.5 text-[13px] text-violet-100">{SCHOOL_NAME}</p>
+      </header>
+
       <div className="relative hidden w-[46%] flex-col justify-between overflow-hidden bg-primary p-12 lg:flex">
         <div className="absolute -top-20 -right-20 size-80 rounded-full bg-white/10" />
         <div className="absolute -bottom-28 -left-16 size-96 rounded-full bg-white/[0.07]" />
@@ -28,25 +35,23 @@ export default function LoginPage() {
 
         <div className="relative">
           <h2 className="max-w-md text-[34px] leading-snug font-bold text-white">
-            ระบบดูแลช่วยเหลือนักเรียน
-            <br />
-            แบบครบวงจร
+            ระบบคัดกรอง ประเมิน และติดตามการดูแลช่วยเหลือนักเรียนภายในสถานศึกษา
           </h2>
-          <p className="mt-4 max-w-md text-[15.5px] leading-relaxed text-blue-100">
-            คัดกรอง ประเมิน บันทึกความประพฤติ เยี่ยมบ้าน และติดตามช่วยเหลือนักเรียนในที่เดียว
-            สำหรับครูประจำชั้นและบุคลากรโรงเรียน
+          <p className="mt-4 max-w-md text-[15.5px] leading-relaxed text-violet-100">
+            คัดกรองและประเมินนักเรียน บันทึกความประพฤติ เยี่ยมบ้าน และติดตามการช่วยเหลือต่อเนื่องทุกภาคเรียน
+            สำหรับครู นักเรียน และผู้ปกครอง
           </p>
         </div>
 
-        <p className="relative text-xs text-blue-200">
+        <p className="relative text-xs text-violet-200">
           © 2569 {SCHOOL_NAME} — งานกิจการนักเรียนและสนับสนุนผู้เรียน
         </p>
       </div>
 
-      <div className="flex flex-1 items-center justify-center bg-card px-6">
-        <div className="w-full max-w-sm">
+      <div className="relative -mt-7 flex flex-1 items-start justify-center rounded-t-[28px] bg-card px-6 shadow-[0_-8px_24px_rgba(15,23,42,0.08)] lg:mt-0 lg:items-center lg:rounded-none lg:shadow-none">
+        <div className="w-full max-w-md py-8 lg:py-10">
           <h1 className="text-2xl font-bold">เข้าสู่ระบบ</h1>
-          <p className="mt-1.5 mb-8 text-sm text-muted-foreground">
+          <p className="mt-1.5 mb-6 text-sm text-muted-foreground">
             กรอกข้อมูลบัญชีของโรงเรียนเพื่อเข้าใช้งาน
           </p>
 
@@ -70,23 +75,20 @@ export default function LoginPage() {
                 ลืมรหัสผ่าน?
               </Link>
             </div>
-            <LinkButton className="w-full" size="lg" href="/dashboard">
+            {/* ต้นแบบ: ยังไม่ตรวจรหัสผ่าน เข้าในบทบาทครูประจำชั้น */}
+            <RoleLink role="homeroom" className="w-full" size="lg">
               เข้าสู่ระบบ
-            </LinkButton>
+            </RoleLink>
           </form>
 
-          <div className="my-7 flex items-center gap-3">
-            <span className="h-px flex-1 bg-border" />
-            <span className="text-xs text-muted-foreground">เลือกบทบาทเพื่อดูต้นแบบ</span>
-            <span className="h-px flex-1 bg-border" />
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            {ROLES.map((role) => (
-              <LinkButton key={role.label} size="sm" variant={role.primary ? "default" : "outline"} href={role.href}>
-                {role.label}
-              </LinkButton>
-            ))}
+          {/* ต้นแบบ: ปุ่มเข้าแต่ละบทบาท (สลับบทบาทด้วยการออกจากระบบแล้วเลือกใหม่) */}
+          <div className="mt-8 border-t border-border pt-6">
+            <div className="flex flex-wrap justify-center gap-2">
+              {/* ซ่อนปุ่มครูผู้สอนไว้ก่อนในเดโม (บทบาทและสิทธิ์ใน roles.ts ยังอยู่ครบ) ลบ filter นี้เพื่อเปิดกลับ */}
+              {ROLE_ORDER.filter((role) => role !== "subject").map((role) => (
+                <RoleLink key={role} role={role} variant="outline" className="h-9 rounded-full px-4 text-[13px] font-medium" />
+              ))}
+            </div>
           </div>
         </div>
       </div>

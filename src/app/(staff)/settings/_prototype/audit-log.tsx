@@ -12,26 +12,49 @@ export interface AuditEntry {
   by: string;
 }
 
+/**
+ * ประวัติที่ผู้ดูแลระบบเห็นบอกแค่ว่ามีการทำอะไร โดยใคร เมื่อไร ไม่ระบุชื่อนักเรียนหรือรายละเอียดเหตุการณ์ (3.4.1)
+ */
 export function useAuditEntries(): AuditEntry[] {
   const store = useStore();
   return [
-    ...store.checkins.slice(0, 4).map((c) => ({
-      at: c.scannedAt,
-      action: "CHECKIN",
-      detail: `สแกน QR เช็คอินนักเรียน ${store.getStudent(c.studentId)?.fullName ?? c.studentId}`,
-      by: c.scannedByName,
-    })),
     ...store.behaviorRecords.slice(0, 4).map((b) => ({
       at: b.occurredAt,
       action: "CREATE_BEHAVIOR",
-      detail: `บันทึกความประพฤติ: ${b.description}`,
+      detail: "บันทึกความประพฤติ 1 รายการ",
       by: b.recordedByName,
     })),
     ...store.screenings.slice(0, 3).map((s) => ({
       at: s.screenedAt,
       action: "CREATE_SCREENING",
-      detail: `คัดกรองนักเรียน ${store.getStudent(s.studentId)?.fullName ?? s.studentId}`,
+      detail: "บันทึกผลคัดกรอง 1 คน",
       by: s.screenedBy,
+    })),
+    // ประวัติการแก้ไข: กฎแสดงรายละเอียด ส่วนผลคัดกรองและคำตอบแบบประเมินบอกแค่ว่ามีการแก้ ไม่ระบุนักเรียนหรือผล (3.4.1)
+    ...store.changeLog.map((c) => ({
+      at: c.at,
+      action: c.entity === "rule" ? "EDIT_RULE" : c.entity === "screening" ? "EDIT_SCREENING" : "EDIT_ASSESSMENT",
+      detail:
+        c.entity === "rule"
+          ? `${c.summary}: ${c.changes.map((x) => (x.label === "เหตุผล" ? `เหตุผล: ${x.to}` : `${x.label} ${x.from} → ${x.to}`)).join(", ")}`
+          : c.entity === "screening"
+            ? "แก้ผลคัดกรอง 1 คน"
+            : "แก้คำตอบแบบประเมิน 1 ราย",
+      by: c.by,
+    })),
+    // ประวัติการส่งออกรายงาน ไม่ระบุชื่อนักเรียน
+    ...store.exportLog.map((l) => ({
+      at: l.at,
+      action: "EXPORT_REPORT",
+      detail: `ส่งออกรายงาน · ${l.scope}`,
+      by: l.actorName,
+    })),
+    // บันทึกการส่งแจ้งเตือน (อีเมลและผู้รับตามระดับที่ผู้ดูแลระบบกำหนด) ไม่ระบุชื่อนักเรียน
+    ...store.notificationLog.map((l) => ({
+      at: l.at,
+      action: "SEND_NOTIFICATION",
+      detail: `${l.channel} → ${l.to}: ${l.text}`,
+      by: "ระบบ",
     })),
   ].sort((a, b) => b.at.localeCompare(a.at));
 }
@@ -47,7 +70,7 @@ export function AuditLogList({ entries }: { entries: AuditEntry[] }) {
           <span className="w-36 shrink-0 rounded-md bg-surface px-2 py-1 text-[11.5px] font-semibold text-muted-foreground">
             {entry.action}
           </span>
-          <span className="min-w-0 flex-1 truncate text-[13px]">{entry.detail}</span>
+          <span className="min-w-0 flex-1 text-[13px]">{entry.detail}</span>
           <span className="w-40 shrink-0 text-right text-[12px] text-muted-foreground">
             {entry.by}
           </span>
