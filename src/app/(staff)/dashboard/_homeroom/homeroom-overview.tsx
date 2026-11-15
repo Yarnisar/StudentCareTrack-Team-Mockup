@@ -326,7 +326,7 @@ function ItemRow({ item, showProcess }: { item: Item; showProcess: boolean }) {
         <span className="text-right text-[12px] text-muted-foreground">
           ปิดรับแล้ว
           <br />
-          ติดต่อแอดมินเพื่อขยายเวลา
+          ติดต่อผู้ดูแลระบบเพื่อขยายเวลา
         </span>
       ) : (
         item.status !== "done" && <span className="text-[12px] text-muted-foreground">รอผู้อื่นดำเนินการ</span>

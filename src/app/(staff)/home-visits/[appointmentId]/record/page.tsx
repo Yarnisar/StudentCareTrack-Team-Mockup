@@ -97,6 +97,7 @@ import {
   photoReasonText,
   photoSlots,
   SCHOOL_SIGN_PHOTO,
+  sampleVisitForm,
   possibleUnemployed,
   POVERTY_LINE,
   RELATIONSHIP_LEVELS,
@@ -413,6 +414,18 @@ export default function HomeVisitRecordPage({
                     : "ครูกรอกข้อมูลที่สอบถามในวันลงพื้นที่"}
                 </p>
               </div>
+              {/* PROTOTYPE ONLY: เติมคำตอบตัวอย่างให้ครบ เพื่อสาธิตโดยไม่ต้องกรอก 27 ข้อสด */}
+              {!existing && pending.length > 0 && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => draft.update((prev) => sampleVisitForm(prev))}
+                  title="ต้นแบบเท่านั้น: เติมคำตอบตัวอย่างให้ครบทุกข้อ แล้วครูตรวจทานและแก้ได้ก่อนบันทึก"
+                >
+                  กรอกคำตอบตัวอย่าง (ต้นแบบ)
+                </Button>
+              )}
             </div>
 
             <div className="mt-3 flex flex-wrap gap-2">
@@ -1640,7 +1653,7 @@ function VisitSaved({
 /**
  * ข้อมูลพื้นฐานไม่ตรงทะเบียน (UC5 Alt-D)
  * แก้เฉพาะการเยี่ยมครั้งนี้ ระบบไม่แก้ข้อมูลต้นทาง เลือกส่งคำขอแก้ไปฝ่ายทะเบียนได้
- * ส่งไม่ได้ (ออฟไลน์) เก็บไว้ให้แอดมินส่งออกไปให้ฝ่ายทะเบียน
+ * ส่งไม่ได้ (ออฟไลน์) เก็บไว้ให้ผู้ดูแลระบบส่งออกไปให้ฝ่ายทะเบียน
  */
 function RegistryMismatch({
   student,
@@ -1669,7 +1682,7 @@ function RegistryMismatch({
             return (
               <li key={f} className="rounded-md bg-surface px-3 py-1.5">
                 <b>{REGISTRY_FIELD_LABEL[f]}</b>: {original(f)} → {v} · ใช้เฉพาะการเยี่ยมครั้งนี้
-                {req && (req.status === "sent" ? " · ส่งคำขอแก้ไปฝ่ายทะเบียนแล้ว" : " · ส่งคำขอไม่สำเร็จ เก็บไว้ให้แอดมินส่งต่อ")}
+                {req && (req.status === "sent" ? " · ส่งคำขอแก้ไปฝ่ายทะเบียนแล้ว" : " · ส่งคำขอไม่สำเร็จ เก็บไว้ให้ผู้ดูแลระบบส่งต่อ")}
               </li>
             );
           })}

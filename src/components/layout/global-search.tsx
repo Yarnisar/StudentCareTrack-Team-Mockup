@@ -5,7 +5,7 @@
  * - รหัส ชื่อ หรือห้อง-เลขที่ ("3/1-12") · รหัสครบแล้วกด Enter ไปทันที · เครื่องอ่านบัตรพิมพ์รหัสบัตรแทนได้
  * - ค้นเฉพาะนักเรียนในขอบเขตสิทธิ์ตามการมอบหมาย รหัสที่อยู่นอกขอบเขตบอกเหตุผล
  * - ปลายทาง: ห้องที่เป็นครูประจำชั้น → หน้าข้อมูลนักเรียน, ห้องที่สอน → บันทึกพฤติกรรม,
- *   แอดมิน → งานจัดทำบัตร (แอดมินไม่เข้าหน้าข้อมูลรายคน 3.4.1)
+ *   ผู้ดูแลระบบ → งานจัดทำบัตร (ผู้ดูแลระบบไม่เข้าหน้าข้อมูลรายคน 3.4.1)
  */
 
 import { useState } from "react";
@@ -61,7 +61,7 @@ function SearchBox({ autoFocus, onDone }: { autoFocus?: boolean; onDone?: () => 
   const [active, setActive] = useState(0);
 
   const isAdmin = store.role === "admin";
-  // แอดมินค้นในรายชื่อเดียวกับหน้าบัตร ครูค้นตามห้องที่ได้รับมอบหมาย
+  // ผู้ดูแลระบบค้นในรายชื่อเดียวกับหน้าบัตร ครูค้นตามห้องที่ได้รับมอบหมาย
   const pool = isAdmin ? store.students : store.recordableStudents;
   const q = query.trim();
   const result = searchStudents(q, pool, store.studentCards, DEMO_TODAY);

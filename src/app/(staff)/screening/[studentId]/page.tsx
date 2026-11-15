@@ -118,7 +118,7 @@ export default function ScreeningFormPage({
     );
   }
 
-  // ปิดรับแล้ว (UC9): ส่งเพิ่มไม่ได้จนกว่าแอดมินจะขยายช่วงเวลา
+  // ปิดรับแล้ว (UC9): ส่งเพิ่มไม่ได้จนกว่าผู้ดูแลระบบจะขยายช่วงเวลา
   const locked = lockedWindowFor(store.assessmentWindows, "screening");
   if (locked) {
     return (

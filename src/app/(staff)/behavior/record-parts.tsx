@@ -4,7 +4,7 @@
 
 import { useStore } from "@/lib/store";
 
-/** หากฎจากชุดเดียวกับหน้าตั้งค่า กฎที่แอดมินเพิ่มใหม่จึงแสดงชื่อได้ */
+/** หากฎจากชุดเดียวกับหน้าตั้งค่า กฎที่ผู้ดูแลระบบเพิ่มใหม่จึงแสดงชื่อได้ */
 export function useRuleOf() {
   const { behaviorRules } = useStore();
   return (ruleId: string) => behaviorRules.find((r) => r.ruleId === ruleId);

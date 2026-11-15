@@ -166,7 +166,7 @@ export const SDQ_SCALE_LABEL: Record<SdqScale, string> = {
 
 export type SdqLevel = "normal" | "risk" | "problem";
 
-/** คำทางการ ใช้เฉพาะฝั่งครูและแอดมิน */
+/** คำทางการ ใช้เฉพาะฝั่งครูและผู้ดูแลระบบ */
 export const SDQ_LEVEL_LABEL: Record<SdqLevel, string> = {
   normal: "ปกติ",
   risk: "เสี่ยง",
@@ -238,7 +238,7 @@ export interface BehaviorRecord {
   /** เวลาที่บันทึกจริง ใช้นับระยะเวลาแก้ไข (ไม่มี = ใช้วันที่เกิดเหตุ) */
   recordedAt?: string;
   /**
-   * คะแนนที่ใช้ ณ ตอนบันทึก (UC8 ข้อ 14: คิดตามกฎที่มีผลในวันนั้น) แอดมินแก้ค่ากฎภายหลังจึงไม่เปลี่ยนคะแนนเดิม
+   * คะแนนที่ใช้ ณ ตอนบันทึก (UC8 ข้อ 14: คิดตามกฎที่มีผลในวันนั้น) ผู้ดูแลระบบแก้ค่ากฎภายหลังจึงไม่เปลี่ยนคะแนนเดิม
    * ไม่มี = ใช้ค่าปัจจุบันของกฎ (ข้อมูลเก่าก่อนมีการเก็บค่านี้)
    */
   scoreDelta?: number;
@@ -343,7 +343,7 @@ export const REGISTRY_FIELD_LABEL: Record<RegistryField, string> = {
 
 /**
  * คำขอแก้ข้อมูลทะเบียนที่ส่งไปฝ่ายทะเบียน (Team B) ระบบนี้ไม่แก้ข้อมูลต้นทางเอง
- * ส่งไม่ได้ -> เก็บไว้ให้แอดมินส่งออกไปให้ฝ่ายทะเบียน (UC5 Alt-D ข้อ 2–3)
+ * ส่งไม่ได้ -> เก็บไว้ให้ผู้ดูแลระบบส่งออกไปให้ฝ่ายทะเบียน (UC5 Alt-D ข้อ 2–3)
  */
 export interface RegistryCorrection {
   id: string;
@@ -406,7 +406,7 @@ export interface CareCase {
   followups: CareFollowup[];
   /** ผลสรุปเมื่อปิด case (UC11 Scenario C) */
   closingSummary?: string;
-  /** เอกสารส่งต่อที่ครูส่งให้แอดมินเก็บรักษา (UC11 Scenario D) */
+  /** เอกสารส่งต่อที่ครูส่งให้ผู้ดูแลระบบเก็บรักษา (UC11 Scenario D) */
   referral?: Referral;
 }
 
@@ -418,12 +418,12 @@ export function caseUrgencyText(c: Pick<CareCase, "goal" | "urgency">): string {
 export type ReferralStatus = "awaiting_admin" | "stored" | "forwarded";
 
 export const REFERRAL_STATUS_LABEL: Record<ReferralStatus, string> = {
-  awaiting_admin: "รอแอดมินรับเก็บรักษา",
+  awaiting_admin: "รอผู้ดูแลระบบรับเก็บรักษา",
   stored: "รับเก็บรักษาแล้ว",
   forwarded: "ส่งต่อแล้ว",
 };
 
-/** แอดมินเห็นเฉพาะเลขเอกสาร ผู้ส่ง วันที่ และสถานะ ไม่เห็นชื่อนักเรียนหรือเนื้อหา (ตาราง 3.4) */
+/** ผู้ดูแลระบบเห็นเฉพาะเลขเอกสาร ผู้ส่ง วันที่ และสถานะ ไม่เห็นชื่อนักเรียนหรือเนื้อหา (ตาราง 3.4) */
 export interface Referral {
   referralId: string;
   preparedAt: string;
@@ -489,7 +489,7 @@ export interface EducationDocument {
   version?: number;
 }
 
-/** ครูขอจัดทำ ปพ.7 แล้วแอดมินจัดทำและส่งกลับ (UC15 Scenario B) */
+/** ครูขอจัดทำ ปพ.7 แล้วผู้ดูแลระบบจัดทำและส่งกลับ (UC15 Scenario B) */
 export interface DocumentRequest {
   requestId: string;
   docType: "ปพ.7";
@@ -507,7 +507,7 @@ export interface DocumentRequest {
 /**
  * ประวัติการแก้ไข (ผู้แก้ไข วันเวลา รายละเอียดที่เปลี่ยน) ของกฎความประพฤติ (UC7) ผลคัดกรอง (UC6) และคำตอบแบบประเมิน (UC10)
  * ผลเยี่ยมบ้าน (UC5) และบันทึกพฤติกรรม (UC8) เก็บประวัติไว้ในรายการนั้นเอง (editHistory)
- * แอดมินเห็นเฉพาะกฎ ส่วนผลคัดกรองและคำตอบแสดงเป็นจำนวนโดยไม่มีชื่อนักเรียนหรือรายละเอียด (3.4.1)
+ * ผู้ดูแลระบบเห็นเฉพาะกฎ ส่วนผลคัดกรองและคำตอบแสดงเป็นจำนวนโดยไม่มีชื่อนักเรียนหรือรายละเอียด (3.4.1)
  */
 export interface ChangeLogEntry {
   id: string;
@@ -520,7 +520,7 @@ export interface ChangeLogEntry {
   changes: { label: string; from: string; to: string }[];
 }
 
-/** ประวัติการส่งออกรายงาน (UC1 Scenario B ข้อ 5, UC2 Scenario B ข้อ 4) แอดมินเห็นผู้ส่งออก ขอบเขต เวลา ไม่เห็นชื่อนักเรียน */
+/** ประวัติการส่งออกรายงาน (UC1 Scenario B ข้อ 5, UC2 Scenario B ข้อ 4) ผู้ดูแลระบบเห็นผู้ส่งออก ขอบเขต เวลา ไม่เห็นชื่อนักเรียน */
 export interface ExportLogEntry {
   logId: string;
   at: string;

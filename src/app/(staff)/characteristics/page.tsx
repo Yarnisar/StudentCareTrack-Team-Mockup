@@ -6,7 +6,7 @@
  * - แสดงประวัติความประพฤติเป็นหลักฐานประกอบ ไม่แปลงคะแนนความประพฤติเป็นผลโดยอัตโนมัติ (ข้อ 3, 2.1.6)
  * - ให้ระดับแต่ละข้อด้วยปุ่ม บันทึกร่างหรือส่งผล ระบบตรวจว่าครบ 8 ข้อ (ข้อ 4–8, Alt-A, Alt-B)
  * - ผลไม่ผ่าน: แจ้งให้พิจารณาเปิดหรือเชื่อม case ไม่เปิดเอง / ประเมินซ้ำแล้วผ่าน: ให้ทบทวน case เดิม (ข้อ 10–11)
- * - เกณฑ์รายข้อ วิธีสรุปผลรวม และวันปิดส่งผลมาจากรอบที่แอดมินเปิดใช้ (UC12) ไม่มีรอบเปิดหรือพ้นวันปิดส่งผลแล้วส่งผลไม่ได้ (Pre-condition 2–3)
+ * - เกณฑ์รายข้อ วิธีสรุปผลรวม และวันปิดส่งผลมาจากรอบที่ผู้ดูแลระบบเปิดใช้ (UC12) ไม่มีรอบเปิดหรือพ้นวันปิดส่งผลแล้วส่งผลไม่ได้ (Pre-condition 2–3)
  * - แท็บ "ภาพรวมห้อง": ตารางนักเรียน × 8 ข้อพร้อมผลรวม เรียงคนที่ไม่ผ่านขึ้นก่อน เลือกดูภาคเรียนย้อนหลังได้ กดแถวเพื่อไปประเมินคนนั้น
  */
 
@@ -41,7 +41,7 @@ const LEVEL_DOT: Record<DcLevel, string> = {
 };
 const DOT = "inline-flex size-6 items-center justify-center rounded-full align-middle text-[12px] font-bold";
 
-/** ผลรวมตามวิธีที่แอดมินกำหนดในรอบประเมิน (UC12) */
+/** ผลรวมตามวิธีที่ผู้ดูแลระบบกำหนดในรอบประเมิน (UC12) */
 function overall(levels: Record<number, DcLevel | null>, method: DcSummaryMethod = "min"): DcLevel | null {
   return summarizeDc(dcCriteria.map((c) => levels[c.criteriaId]), method);
 }
@@ -61,7 +61,7 @@ export default function CharacteristicsPage() {
         <p className="mb-4 rounded-xl border border-border bg-card px-4 py-3 text-[13px]">
           {round
             ? `รอบ${round.termLabel} · ส่งผลได้ถึง ${formatThaiDate(round.deadline)} · สรุปผลรวมโดย${DC_SUMMARY_METHOD_LABEL[round.method]}`
-            : "แอดมินยังไม่เปิดรอบประเมินของภาคเรียนนี้ จึงยังประเมินไม่ได้"}
+            : "ผู้ดูแลระบบยังไม่เปิดรอบประเมินของภาคเรียนนี้ จึงยังประเมินไม่ได้"}
         </p>
         <div className="mb-4 flex gap-1.5" role="group" aria-label="มุมมอง">
           {(

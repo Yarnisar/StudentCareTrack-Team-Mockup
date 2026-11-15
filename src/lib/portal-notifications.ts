@@ -28,7 +28,7 @@ export function buildNotifications(input: {
   eq?: EqAssessment;
   /** ครูที่ปรึกษายืนยันถอนสถานะเฝ้าระวังแล้ว (UC8 สถานการณ์ C ข้อ 5) */
   withdrawals?: { at: string }[];
-  /** รอบประเมินที่แอดมินตั้ง และห้องของนักเรียน ใช้แจ้งเปิดรอบ/ใกล้ปิดรอบ (UC9 ข้อ 14, Alt-B) */
+  /** รอบประเมินที่ผู้ดูแลระบบตั้ง และห้องของนักเรียน ใช้แจ้งเปิดรอบ/ใกล้ปิดรอบ (UC9 ข้อ 14, Alt-B) */
   windows?: AssessmentWindow[];
   room?: string;
 }): PortalNotification[] {

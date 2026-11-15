@@ -4,7 +4,7 @@
  * ครูประจำชั้นนัดหมายเยี่ยมบ้าน (UC4 Scenario B)
  * - เลือกนักเรียนในห้องที่ยังไม่มีนัดที่ค้างอยู่ (ข้อ 2)
  * - แสดงข้อมูลติดต่อและเวลาที่สะดวกที่ผู้ปกครองให้ไว้ (ข้อ 5)
- * - เลือกวันภายในช่วงเวลาเยี่ยมบ้านที่แอดมินกำหนด และเลือกเวลาจากปุ่ม (ข้อ 6)
+ * - เลือกวันภายในช่วงเวลาเยี่ยมบ้านที่ผู้ดูแลระบบกำหนด และเลือกเวลาจากปุ่ม (ข้อ 6)
  * - ตรวจข้อมูลก่อนบันทึก (ข้อ 8, Alt-B) แล้วแจ้งผู้เกี่ยวข้อง (ข้อ 10)
  * PROTOTYPE: การแจ้งทางอีเมลเป็นข้อความยืนยันเท่านั้น ยังไม่ส่งจริง ช่วงเวลาที่สะดวกเป็นปุ่มตัวอย่าง
  */
@@ -36,7 +36,14 @@ export function NewAppointmentDialog({
   const busy = new Set(
     store.appointments.filter((a) => OPEN_STATUSES.includes(a.status)).map((a) => a.studentId)
   );
-  const candidates = store.students.filter((s) => !busy.has(s.studentId));
+  // เรียงตามเลขที่ให้หาง่าย
+  const candidates = store.students
+    .filter((s) => !busy.has(s.studentId))
+    .sort((a, b) => Number(a.classNo) - Number(b.classNo));
+
+  const [query, setQuery] = useState("");
+  const q = query.trim();
+  const shown = q ? candidates.filter((s) => s.fullName.includes(q) || String(s.classNo) === q) : candidates;
 
   const [studentId, setStudentId] = useState("");
   const [date, setDate] = useState("");
@@ -45,7 +52,7 @@ export function NewAppointmentDialog({
   const lastInfo = store.appointments.find((a) => a.studentId === studentId && a.guardianPhone);
 
   const errors: string[] = [];
-  if (!window_) errors.push("แอดมินยังไม่ได้เปิดช่วงเวลาเยี่ยมบ้าน");
+  if (!window_) errors.push("ผู้ดูแลระบบยังไม่ได้เปิดช่วงเวลาเยี่ยมบ้าน");
   if (date && (date < minDate || (maxDate && date > maxDate)))
     errors.push(`วันนัดต้องอยู่ระหว่าง ${formatThaiDate(minDate)} ถึง ${formatThaiDate(maxDate)}`);
   const canSave = !!student && !!date && !!time && errors.length === 0;
@@ -77,13 +84,24 @@ export function NewAppointmentDialog({
         <div className="flex-1 space-y-4 overflow-y-auto p-5">
           <div>
             <div className="mb-1.5 text-[12.5px] text-muted-foreground">นักเรียน (เฉพาะคนที่ยังไม่มีนัดที่ดำเนินอยู่)</div>
-            <div className="flex flex-wrap gap-1.5">
-              {candidates.map((s) => (
+            {candidates.length > 0 && (
+              <Input
+                type="search"
+                aria-label="ค้นหานักเรียน"
+                placeholder="ค้นหาด้วยชื่อหรือเลขที่ เช่น ปาริ หรือ 22"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                className="mb-2"
+              />
+            )}
+            <div className="flex max-h-48 flex-wrap gap-1.5 overflow-y-auto">
+              {shown.map((s) => (
                 <button key={s.studentId} type="button" aria-pressed={studentId === s.studentId} onClick={() => setStudentId(s.studentId)} className={chip(studentId === s.studentId)}>
                   {s.fullName} <span className="font-normal text-muted-foreground">เลขที่ {s.classNo}</span>
                 </button>
               ))}
               {candidates.length === 0 && <p className="text-[13px] text-muted-foreground">นักเรียนทุกคนมีนัดหมายแล้ว</p>}
+              {candidates.length > 0 && shown.length === 0 && <p className="text-[13px] text-muted-foreground">ไม่พบนักเรียนที่ตรงกับ “{q}”</p>}
             </div>
           </div>
 

@@ -935,17 +935,8 @@ export const behaviorRecords: BehaviorRecord[] = [
 
 export const appointments: HomeVisitAppointment[] = [
   ...genAppointments,
-  {
-    appointmentId: "HV-001",
-    studentId: "30125",
-    teacherName: CURRENT_TEACHER.name,
-    proposedDate: "2570-02-18T15:30:00",
-    status: "confirmed",
-    guardianPhone: "08x-xxx-4471",
-    caretakerRelation: "ยาย",
-    caretakerName: "นางบุญมา เพรี่ยงพร้อม",
-    guardianNote: "อยากขอคำแนะนำเรื่องทุนการศึกษา และการดูแลเรื่องการใช้โทรศัพท์ของลูก",
-  },
+  // พิชสินีย์ (30125) ไม่มีนัดค้างอยู่โดยตั้งใจ เพื่อให้สร้างนัดใหม่สดในเดโมได้
+  // (ประวัติกรณี CASE-2570-014 ระบุว่าครูจะนัดเยี่ยมบ้านวันที่ 18 ก.พ.)
   {
     appointmentId: "HV-002",
     studentId: "30131",
@@ -1011,10 +1002,10 @@ export const careCases: CareCase[] = [
     followups: [
       {
         followupId: "FU-003",
-        actionTaken: "เยี่ยมบ้านนักเรียน",
+        actionTaken: "โทรพูดคุยกับผู้ปกครองและประสานทุนการศึกษา",
         result:
-          "พบว่ารายได้ครัวเรือนต่ำกว่าเกณฑ์ และนักเรียนใช้เวลากับเกมมาก ผู้ปกครองขอความช่วยเหลือด้านทุนการศึกษา",
-        followupDate: "2570-02-18",
+          "ผู้ปกครองแจ้งว่ารายได้ครัวเรือนไม่แน่นอน และขอความช่วยเหลือด้านทุนการศึกษา ครูแจ้งฝ่ายกิจการนักเรียนแล้ว และนัดเยี่ยมบ้านวันที่ 18 ก.พ. เพื่อประเมินความจำเป็น",
+        followupDate: "2570-02-14",
         recordedByName: CURRENT_TEACHER.name,
         nextFollowupDate: "2570-02-25",
       },
@@ -1095,8 +1086,8 @@ export const subjectSubmissions: SubjectSubmission[] = [
 export const educationDocuments: EducationDocument[] = [
   { docId: "DOC-001", docType: "ปพ.6", target: "ด.ญ. ชลิดา พากเพียร", generatedByName: CURRENT_TEACHER.name, generatedAt: "2570-02-16" },
   { docId: "DOC-002", docType: "ปพ.4", target: "ด.ญ. ปาริชาติ ใฝ่ดี", generatedByName: CURRENT_TEACHER.name, generatedAt: "2570-02-14" },
-  { docId: "DOC-003", docType: "ปพ.7", target: "ด.ช. ธนากร รักเรียน", generatedByName: "แอดมินโรงเรียน", generatedAt: "2570-02-10" },
-  { docId: "DOC-004", docType: "ปพ.5", target: "รายวิชาคณิตศาสตร์", generatedByName: "แอดมินโรงเรียน", generatedAt: "2570-02-02" },
+  { docId: "DOC-003", docType: "ปพ.7", target: "ด.ช. ธนากร รักเรียน", generatedByName: "ผู้ดูแลระบบ", generatedAt: "2570-02-10" },
+  { docId: "DOC-004", docType: "ปพ.5", target: "รายวิชาคณิตศาสตร์", generatedByName: "ผู้ดูแลระบบ", generatedAt: "2570-02-02" },
 ];
 
 

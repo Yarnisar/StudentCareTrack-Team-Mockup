@@ -4,9 +4,9 @@
  * จัดทำเอกสารประเมินผลทางการศึกษา ปพ.3–7 (UC15)
  * - สถานการณ์ A: เลือกประเภทและนักเรียน ระบบตรวจความครบถ้วนรายคน แยกคนที่ข้อมูลไม่ครบไว้ทำภายหลัง
  *   ดูตัวอย่างแล้วยืนยัน ระบบสร้างไฟล์และเก็บฉบับเดิมไว้ ผลที่ได้เป็นร่างเอกสาร การลงนามอยู่นอกระบบ (ข้อ 12)
- * - สถานการณ์ B: ครูขอ ปพ.7 แอดมินจัดทำแล้วส่งกลับ
+ * - สถานการณ์ B: ครูขอ ปพ.7 ผู้ดูแลระบบจัดทำแล้วส่งกลับ
  * - สถานการณ์ C: ประวัติการจัดทำ กรองตามประเภทได้
- * - UC11 Scenario D: แอดมินจัดการสถานะเอกสารส่งต่อ เห็นเฉพาะเลขเอกสาร ผู้ส่ง วันที่ ไม่เห็นชื่อนักเรียนหรือเนื้อหา
+ * - UC11 Scenario D: ผู้ดูแลระบบจัดการสถานะเอกสารส่งต่อ เห็นเฉพาะเลขเอกสาร ผู้ส่ง วันที่ ไม่เห็นชื่อนักเรียนหรือเนื้อหา
  * PROTOTYPE: ยังไม่สร้าง PDF จริง ยังไม่มีการตั้งค่ารูปแบบเอกสาร (สถานการณ์ D) และผลการเรียนจาก Team A ถือว่าปิดภาคแล้ว
  */
 
@@ -15,6 +15,7 @@ import { Check, Download, FileText, Info, X } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { downloadCsv } from "@/lib/csv";
 import { formatThaiDate } from "@/lib/format";
 import { CURRENT_TERM, subjectSubmissions } from "@/lib/mock-data";
@@ -56,7 +57,7 @@ const DOCS: DocSpec[] = [
     code: "ปพ.6",
     name: "แบบรายงานผลการพัฒนาคุณภาพผู้เรียนรายบุคคล",
     purpose: "รายงานผลการเรียนและพัฒนาการของนักเรียนรายบุคคลให้ผู้ปกครองทราบ",
-    // ไม่ใช้ผลคัดกรองและผล SDQ เพราะเป็นข้อมูลอ่อนไหวที่แอดมินไม่เห็น (3.4.1)
+    // ไม่ใช้ผลคัดกรองและผล SDQ เพราะเป็นข้อมูลอ่อนไหวที่ผู้ดูแลระบบไม่เห็น (3.4.1)
     dataSources: ["ผลการเรียนจากระบบวิชาการ (Team A)", "ผลประเมินคุณลักษณะอันพึงประสงค์ในระบบนี้", "ข้อมูลพื้นฐานนักเรียนจากงานทะเบียน"],
     makers: ["admin", "homeroom"],
     per: "student",
@@ -74,7 +75,7 @@ const DOCS: DocSpec[] = [
   {
     code: "ปพ.7",
     name: "ใบรับรองผลการศึกษา",
-    purpose: "รับรองสถานภาพหรือผลการเรียนชั่วคราวตามที่ร้องขอ ครูส่งคำขอแล้วแอดมินจัดทำ",
+    purpose: "รับรองสถานภาพหรือผลการเรียนชั่วคราวตามที่ร้องขอ ครูส่งคำขอแล้วผู้ดูแลระบบจัดทำ",
     dataSources: ["ทะเบียนนักเรียนจากงานทะเบียน", "ผลการเรียนปัจจุบันจากระบบวิชาการ"],
     makers: ["admin"],
     per: "student",
@@ -204,6 +205,7 @@ function Generator({ doc }: { doc: DocSpec }) {
   const [picked, setPicked] = useState<string[]>([]);
   const [preview, setPreview] = useState(false);
   const [done, setDone] = useState("");
+  const [query, setQuery] = useState("");
 
   const targets =
     doc.per === "subject"
@@ -212,6 +214,15 @@ function Generator({ doc }: { doc: DocSpec }) {
   const ready = targets.filter((t) => t.missing.length === 0);
   const notReady = targets.filter((t) => t.missing.length > 0);
   const chosen = ready.filter((t) => picked.includes(t.id));
+  // ค้นหาด้วยชื่อ รหัส หรือเลขที่ (label มีครบทั้งสามอย่าง) / รายวิชาค้นจากชื่อวิชา
+  const q = query.trim();
+  // ตัวเลขล้วน = เลขที่ตรงตัว (22 ไม่ตรงกับ 12) หรือเป็นส่วนของรหัสนักเรียนที่ขึ้นต้น label
+  const matches = (label: string) =>
+    q === "" ||
+    (/^\d+$/.test(q) ? label.endsWith(`เลขที่ ${q}`) || (label.split(" ")[0] ?? "").includes(q) : label.includes(q));
+  const shownReady = ready.filter((t) => matches(t.label));
+  const shownNotReady = notReady.filter((t) => matches(t.label));
+  const allShownPicked = shownReady.length > 0 && shownReady.every((t) => picked.includes(t.id));
 
   const toggle = (id: string) => setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
 
@@ -253,18 +264,35 @@ function Generator({ doc }: { doc: DocSpec }) {
             <h3 className="flex-1 text-[15px] font-bold">
               เลือก{doc.per === "subject" ? "รายวิชา" : "นักเรียน"} · พร้อมจัดทำ {ready.length} จาก {targets.length}
             </h3>
-            {ready.length > 0 && (
+            {shownReady.length > 0 && (
               <button
                 type="button"
-                onClick={() => setPicked(picked.length === ready.length ? [] : ready.map((t) => t.id))}
+                onClick={() =>
+                  setPicked((p) =>
+                    allShownPicked
+                      ? p.filter((id) => !shownReady.some((t) => t.id === id))
+                      : [...new Set([...p, ...shownReady.map((t) => t.id)])]
+                  )
+                }
                 className="text-[12.5px] font-semibold text-primary"
               >
-                {picked.length === ready.length ? "ล้างที่เลือก" : "เลือกทั้งหมดที่พร้อม"}
+                {allShownPicked ? "ล้างที่เลือก" : q === "" ? "เลือกทั้งหมดที่พร้อม" : "เลือกทั้งหมดที่พบ"}
               </button>
             )}
           </div>
-          <div className="flex flex-wrap gap-1.5">
-            {ready.map((t) => (
+          <Input
+            type="search"
+            aria-label={doc.per === "subject" ? "ค้นหารายวิชา" : "ค้นหานักเรียน"}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={doc.per === "subject" ? "ค้นหารายวิชา" : "ค้นหาด้วยชื่อ รหัส หรือเลขที่ เช่น ปาริ หรือ 22"}
+            className="mb-2.5"
+          />
+          <div className="flex max-h-56 flex-wrap gap-1.5 overflow-y-auto">
+            {q !== "" && shownReady.length === 0 && shownNotReady.length === 0 && (
+              <p className="text-[12.5px] text-muted-foreground">ไม่พบรายการที่ตรงกับ “{q}”</p>
+            )}
+            {shownReady.map((t) => (
               <button
                 key={t.id}
                 type="button"
@@ -277,11 +305,13 @@ function Generator({ doc }: { doc: DocSpec }) {
             ))}
           </div>
 
-          {notReady.length > 0 && (
+          {shownNotReady.length > 0 && (
             <div className="mt-4 rounded-lg border border-dashed border-border p-3">
-              <div className="text-[12.5px] font-semibold">ข้อมูลไม่ครบ แยกไว้จัดทำภายหลัง · {notReady.length}</div>
-              <ul className="mt-1 space-y-0.5 text-[12px] text-muted-foreground">
-                {notReady.map((t) => (
+              <div className="text-[12.5px] font-semibold">
+                ข้อมูลไม่ครบ แยกไว้จัดทำภายหลัง · {q === "" ? notReady.length : `${shownNotReady.length} จาก ${notReady.length}`}
+              </div>
+              <ul className="mt-1 max-h-56 space-y-0.5 overflow-y-auto text-[12px] text-muted-foreground">
+                {shownNotReady.map((t) => (
                   <li key={t.id}>
                     {t.label}: {t.missing.join(", ")}
                   </li>
@@ -344,14 +374,30 @@ function Generator({ doc }: { doc: DocSpec }) {
 function RequestPp7() {
   const store = useStore();
   const [studentId, setStudentId] = useState("");
+  const [query, setQuery] = useState("");
   const mine = store.documentRequests;
+  const q = query.trim();
+  const candidates = [...store.students]
+    .sort((a, b) => Number(a.classNo) - Number(b.classNo))
+    .filter((s) => q === "" || s.fullName.includes(q) || s.studentId.includes(q) || String(s.classNo) === q);
   return (
     <Card>
       <CardContent className="p-5">
         <h2 className="text-[15.5px] font-bold">ขอจัดทำ ปพ.7 (ใบรับรองผลการศึกษา)</h2>
-        <p className="mb-2 text-[12px] text-muted-foreground">เลือกนักเรียนแล้วส่งคำขอ แอดมินจัดทำและส่งกลับ</p>
-        <div className="flex flex-wrap gap-1.5">
-          {store.students.map((s) => (
+        <p className="mb-2 text-[12px] text-muted-foreground">เลือกนักเรียนแล้วส่งคำขอ ผู้ดูแลระบบจัดทำและส่งกลับ</p>
+        <Input
+          type="search"
+          aria-label="ค้นหานักเรียนที่ขอ ปพ.7"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="ค้นหาด้วยชื่อ รหัส หรือเลขที่ เช่น ปาริ หรือ 22"
+          className="mb-2.5"
+        />
+        <div className="flex max-h-56 flex-wrap gap-1.5 overflow-y-auto">
+          {q !== "" && candidates.length === 0 && (
+            <p className="text-[12.5px] text-muted-foreground">ไม่พบนักเรียนที่ตรงกับ “{q}”</p>
+          )}
+          {candidates.map((s) => (
             <button
               key={s.studentId}
               type="button"
@@ -383,7 +429,7 @@ function RequestPp7() {
                   <StudentId id={r.studentId} />
                   {store.getStudent(r.studentId)?.fullName}
                 </span>
-                <span className="text-muted-foreground">{r.status === "done" ? "แอดมินส่งกลับแล้ว" : "รอแอดมินจัดทำ"}</span>
+                <span className="text-muted-foreground">{r.status === "done" ? "ผู้ดูแลระบบส่งกลับแล้ว" : "รอผู้ดูแลระบบจัดทำ"}</span>
               </div>
             ))}
           </div>
@@ -393,7 +439,7 @@ function RequestPp7() {
   );
 }
 
-/** สถานการณ์ B (ฝั่งแอดมิน): คำขอ ปพ.7 ที่รอจัดทำ */
+/** สถานการณ์ B (ฝั่งผู้ดูแลระบบ): คำขอ ปพ.7 ที่รอจัดทำ */
 function RequestQueue() {
   const store = useStore();
   const pending = store.documentRequests.filter((r) => r.status === "pending");
@@ -425,7 +471,7 @@ function RequestQueue() {
   );
 }
 
-/** UC11 Scenario D: แอดมินเก็บรักษาเอกสารส่งต่อ โดยไม่เห็นชื่อนักเรียนหรือเนื้อหา */
+/** UC11 Scenario D: ผู้ดูแลระบบเก็บรักษาเอกสารส่งต่อ โดยไม่เห็นชื่อนักเรียนหรือเนื้อหา */
 function ReferralQueue() {
   const store = useStore();
   const items = store.careCases.filter((c) => c.referral);
@@ -464,8 +510,8 @@ function ReferralQueue() {
 }
 
 /**
- * คำขอแก้ข้อมูลทะเบียนที่ส่งไปฝ่ายทะเบียนไม่สำเร็จ แอดมินส่งออกเป็นไฟล์ให้ฝ่ายทะเบียน (UC5 Alt-D ข้อ 3)
- * เป็นข้อมูลทะเบียน ไม่ใช่ผลเยี่ยมบ้าน แอดมินจึงเห็นได้
+ * คำขอแก้ข้อมูลทะเบียนที่ส่งไปฝ่ายทะเบียนไม่สำเร็จ ผู้ดูแลระบบส่งออกเป็นไฟล์ให้ฝ่ายทะเบียน (UC5 Alt-D ข้อ 3)
+ * เป็นข้อมูลทะเบียน ไม่ใช่ผลเยี่ยมบ้าน ผู้ดูแลระบบจึงเห็นได้
  */
 function RegistryQueue() {
   const store = useStore();

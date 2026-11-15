@@ -102,7 +102,7 @@ export default function ReviewPage({ params }: { params: Promise<{ studentId: st
                   ) : sdq.state === "closed_incomplete" ? (
                     <Callout>
                       ปิดรอบแล้ว ยังไม่ได้รับคำตอบจาก{sdq.missing.map((r) => SDQ_RATER_LABEL[r].replace("ประเมินตนเอง", "").replace("ประเมิน", "")).join(" และ ")}{" "}
-                      ระบบจึงไม่คำนวณผลรวม ใช้ข้อมูลที่มีประกอบการดูแลได้ หรือแจ้งแอดมินให้เปิดรอบใหม่ในหน้าตั้งค่า
+                      ระบบจึงไม่คำนวณผลรวม ใช้ข้อมูลที่มีประกอบการดูแลได้ หรือแจ้งผู้ดูแลระบบให้เปิดรอบใหม่ในหน้าตั้งค่า
                     </Callout>
                   ) : sdq.state === "waiting" ? (
                     <Callout>

@@ -112,7 +112,7 @@ function RoundView({ round, onNewRound }: { round: DcRound; onNewRound: () => vo
 
 function RoundForm({ termId, termLabel, saved }: { termId: string; termLabel: string; saved: DcRound | undefined }) {
   const store = useStore();
-  // รอบใหม่ตั้งต้นจากเกณฑ์ของรอบล่าสุด แอดมินจึงไม่ต้องพิมพ์ใหม่ทั้งหมด
+  // รอบใหม่ตั้งต้นจากเกณฑ์ของรอบล่าสุด ผู้ดูแลระบบจึงไม่ต้องพิมพ์ใหม่ทั้งหมด
   const base = saved ?? store.dcRounds[0];
   const [criteria, setCriteria] = useState<Record<number, string>>(base?.criteria ?? DEFAULT_DC_CRITERIA);
   const [method, setMethod] = useState<DcSummaryMethod>(base?.method ?? "min");

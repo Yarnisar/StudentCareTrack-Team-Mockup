@@ -39,7 +39,7 @@ export default function ParentResultsPage() {
         title="แบบประเมิน SDQ"
         subtitle="ฉบับผู้ปกครองประเมิน"
         role="parent"
-        back="/portal/parent/results"
+        onBack={() => setTakingSdq(false)}
       >
         <div className="p-5">
           <SdqForm

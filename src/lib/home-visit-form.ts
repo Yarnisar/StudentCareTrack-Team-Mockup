@@ -715,3 +715,67 @@ export function visitRiskFindings(form: VisitForm): string[] {
 
 /** เกณฑ์รายได้เฉลี่ยต่อคนต่อเดือนของการคัดกรองนักเรียนยากจน */
 export const POVERTY_LINE = 3000;
+
+/** รูปแทนสำหรับคำตอบตัวอย่าง (ภาพสีเทามีข้อความ) — ใช้แทนรูปถ่ายจริงตอนสาธิต */
+const SAMPLE_PHOTO =
+  "data:image/svg+xml," +
+  encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="640" height="420"><rect width="640" height="420" fill="#e5e7eb"/><text x="320" y="215" font-size="28" text-anchor="middle" fill="#6b7280" font-family="sans-serif">ภาพตัวอย่าง (ต้นแบบ)</text></svg>`
+  );
+
+/**
+ * PROTOTYPE ONLY — เติมคำตอบตัวอย่างให้ครบทุกข้อบังคับ สำหรับสาธิตโดยไม่ต้องกรอก 27 ข้อสด
+ * เรื่องเข้ากับกรณีตัวอย่าง (ครอบครัวรายได้ต่ำ อยู่กับมารดาและยาย ขอทุนการศึกษา เล่นเกมเกิน 1 ชั่วโมง)
+ * คงค่าที่ระบบกรอกให้แล้ว (สมาชิกตามทะเบียน ผู้ดูแลที่ผู้ปกครองเลือก ผู้ให้ข้อมูล) ครูตรวจทานและแก้ก่อนบันทึกได้
+ */
+export function sampleVisitForm(form: VisitForm): VisitForm {
+  const [student, guardian] = form.members;
+  const members: HouseholdMemberRow[] = [
+    { ...(student ?? emptyMember("m1")), relation: "นักเรียน", age: 15 },
+    {
+      ...(guardian ?? emptyMember("m2")),
+      relation: guardian?.relation || "มารดา",
+      age: 38,
+      income: { wage: 5000, agriculture: 0, business: 0, welfare: 0, other: 0 },
+    },
+    {
+      ...emptyMember("m3"),
+      relation: "ยาย",
+      age: 62,
+      income: { wage: 0, agriculture: 0, business: 0, welfare: 800, other: 0 },
+    },
+  ];
+  return {
+    ...form,
+    occupation: form.occupation || "รับจ้างทั่วไป",
+    education: form.education || "มัธยมศึกษาตอนต้น",
+    members,
+    housingType: form.housingType || "rent",
+    vehicles: Object.fromEntries(VEHICLE_OPTIONS.map((v) => [v.id, form.vehicles[v.id] ?? false])),
+    farmland: form.farmland || "no_land",
+    hoursTogether: form.hoursTogether || "3",
+    relations: { ...form.relations, "มารดา": "สนิทสนม", "ปู่ / ย่า / ตา / ยาย": "สนิทสนม" },
+    caretakerWhenAway: form.caretakerWhenAway || "relative",
+    supportRequests: ["economic"],
+    welfareReceived: ["elderly_allowance"],
+    guardianConcern: form.guardianConcern || "ห่วงเรื่องค่าใช้จ่ายในการเรียน และการใช้โทรศัพท์ของลูก",
+    gaming: ["over_1h"],
+    devices: ["social_1h"],
+    duties: ["housework"],
+    hobbies: ["games"],
+    travelKm: form.travelKm || "4",
+    travelHours: form.travelHours || "0",
+    travelMinutes: form.travelMinutes || "20",
+    travelMode: form.travelMode || "bus",
+    internet: form.internet || "can_access",
+    informant: form.informant || "มารดา",
+    canPhotoHome: "no",
+    photoType: SCHOOL_SIGN_PHOTO,
+    photoReason: "guardian_declined",
+    photos: [SAMPLE_PHOTO],
+    // หมวดที่ไม่พบอะไร ถือว่าตรวจแล้ว
+    noneFound: ["housingConditions", "healthRisks", "welfareRisks", "substances", "violence", "sexual"],
+    needsConfirm: [],
+    confirmed: [],
+  };
+}

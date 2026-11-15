@@ -23,7 +23,7 @@ export default function HomeVisitsPage() {
   const [selected, setSelected] = useState(store.appointments[0]?.appointmentId ?? "");
   const detailRef = useRef<HTMLDivElement>(null);
   const [creating, setCreating] = useState(false);
-  // แก้ผลที่ส่งแล้วได้ถึงวันปิดแก้ไขที่แอดมินกำหนด (UC5 สถานการณ์ B, Alt-E)
+  // แก้ผลที่ส่งแล้วได้ถึงวันปิดแก้ไขที่ผู้ดูแลระบบกำหนด (UC5 สถานการณ์ B, Alt-E)
   const editCloseDate = store.assessmentWindows.find((w) => w.kind === "home_visit")?.editCloseDate;
   const editOpen = !editCloseDate || DEMO_TODAY <= editCloseDate;
   const [notice, setNotice] = useState("");

@@ -152,7 +152,7 @@ function CareCasesContent() {
                           {s && <StudentId id={s.studentId} />}
                           <span className="truncate text-[13.5px] font-semibold">{s?.fullName}</span>
                         </span>
-                        {risk && <RiskBadge group={risk} short />}
+                        {risk && <RiskBadge group={risk} short className="shrink-0 whitespace-nowrap" />}
                       </div>
                       <div className="mt-1 text-[11.5px] text-muted-foreground">
                         {c.caseId} · {c.status === "active" ? "กำลังดำเนินการ" : "ปิดแล้ว"} ·
@@ -357,7 +357,7 @@ function CareCasesContent() {
               {activeCase.referral && (
                 <p className="rounded-lg bg-surface px-4 py-3 text-[13px]">
                   <FileText className="mr-1.5 inline size-4" />
-                  เอกสารส่งต่อ {activeCase.referral.referralId} ส่งให้แอดมินเมื่อ {formatThaiDate(activeCase.referral.preparedAt)} ·{" "}
+                  เอกสารส่งต่อ {activeCase.referral.referralId} ส่งให้ผู้ดูแลระบบเมื่อ {formatThaiDate(activeCase.referral.preparedAt)} ·{" "}
                   <b>{REFERRAL_STATUS_LABEL[activeCase.referral.status]}</b>
                   {activeCase.status === "active" && " · กรณียังเปิดอยู่ ติดตามต่อได้"}
                 </p>
@@ -389,7 +389,7 @@ const CLOSE_SUMMARIES = ["บรรลุเป้าหมาย พฤติ�
 
 /**
  * ปุ่มท้าย case: เตรียมส่งต่อ (Scenario D) และปิด case พร้อมผลสรุป (Scenario C)
- * เตรียมส่งต่อ: ระบบรวบรวมข้อมูลเป็นเอกสารให้ครูตรวจ แล้วส่งให้แอดมินเก็บรักษา การแจ้งแอดมินไม่ระบุชื่อนักเรียน
+ * เตรียมส่งต่อ: ระบบรวบรวมข้อมูลเป็นเอกสารให้ครูตรวจ แล้วส่งให้ผู้ดูแลระบบเก็บรักษา การแจ้งผู้ดูแลระบบไม่ระบุชื่อนักเรียน
  */
 function CaseActions({ caseId, hasReferral }: { caseId: string; hasReferral: boolean }) {
   const store = useStore();
@@ -422,7 +422,7 @@ function CaseActions({ caseId, hasReferral }: { caseId: string; hasReferral: boo
       {mode === "referral" && (
         <Card>
           <CardContent className="p-6">
-            <h3 className="text-[15.5px] font-bold">ตรวจเอกสารส่งต่อก่อนส่งให้แอดมินเก็บรักษา</h3>
+            <h3 className="text-[15.5px] font-bold">ตรวจเอกสารส่งต่อก่อนส่งให้ผู้ดูแลระบบเก็บรักษา</h3>
             <p className="mt-0.5 mb-3 text-[12px] text-muted-foreground">
               ระบบรวบรวมจากข้อมูลในกรณีนี้ ครูนำไปดำเนินการส่งต่อภายนอกเอง ระบบไม่ส่งข้อมูลออกให้หน่วยงานภายนอกโดยตรง
             </p>
@@ -441,7 +441,7 @@ function CaseActions({ caseId, hasReferral }: { caseId: string; hasReferral: boo
               ))}
             </dl>
             <p className="mt-3 text-[12px] text-muted-foreground">
-              แอดมินจะเห็นเฉพาะเลขเอกสาร ผู้ส่ง วันที่ และสถานะ ไม่เห็นชื่อนักเรียนหรือเนื้อหา
+              ผู้ดูแลระบบจะเห็นเฉพาะเลขเอกสาร ผู้ส่ง วันที่ และสถานะ ไม่เห็นชื่อนักเรียนหรือเนื้อหา
             </p>
             <div className="mt-4 flex flex-wrap justify-end gap-2">
               <Button variant="outline" onClick={() => setMode("none")}>
@@ -453,7 +453,7 @@ function CaseActions({ caseId, hasReferral }: { caseId: string; hasReferral: boo
                   setMode("none");
                 }}
               >
-                ตรวจแล้ว ส่งให้แอดมินเก็บรักษา
+                ตรวจแล้ว ส่งให้ผู้ดูแลระบบเก็บรักษา
               </Button>
             </div>
           </CardContent>
@@ -491,7 +491,12 @@ function CaseActions({ caseId, hasReferral }: { caseId: string; hasReferral: boo
                 className="mt-2"
               />
             )}
-            <div className="mt-4 flex flex-wrap justify-end gap-2">
+            <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
+              {finalSummary === "" && (
+                <p className="mr-auto text-[12.5px] text-muted-foreground">
+                  {summary === "อื่น ๆ" ? "พิมพ์ผลสรุปก่อนจึงจะยืนยันปิดกรณีได้" : "เลือกผลสรุปก่อนจึงจะยืนยันปิดกรณีได้"}
+                </p>
+              )}
               <Button variant="outline" onClick={() => setMode("none")}>
                 ยกเลิก
               </Button>

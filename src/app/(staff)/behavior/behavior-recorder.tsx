@@ -102,7 +102,7 @@ export function BehaviorRecorder({ onClose, studentId }: { onClose: () => void; 
     if (locked) setEntries([]);
     setPicking(true);
   };
-  // บันทึกย้อนหลังได้ไม่เกินที่แอดมินกำหนด และต้องระบุเหตุผล (ข้อ 6, 8, Alt-B)
+  // บันทึกย้อนหลังได้ไม่เกินที่ผู้ดูแลระบบกำหนด และต้องระบุเหตุผล (ข้อ 6, 8, Alt-B)
   const minDate = shiftDate(DEMO_TODAY, -store.behaviorScoreConfig.backdateDays);
   const backdated = occurredOn < DEMO_TODAY;
   const dateError =

@@ -26,6 +26,7 @@ export function MobileShell({
   subtitle,
   role,
   back,
+  onBack,
   brand = false,
   children,
 }: {
@@ -33,6 +34,8 @@ export function MobileShell({
   subtitle?: string;
   role: "student" | "parent";
   back?: string;
+  /** ใช้แทน back เมื่อ "หน้าย่อย" เป็นแค่ state ในหน้าเดิม (ลิงก์ไปที่ URL เดิมจะไม่ทำอะไร) */
+  onBack?: () => void;
   brand?: boolean;
   children: ReactNode;
 }) {
@@ -48,7 +51,11 @@ export function MobileShell({
         </header>
       ) : (
         <header className="flex items-center gap-2.5 border-b border-border bg-card px-5 py-4">
-          {back && (
+          {onBack ? (
+            <button type="button" onClick={onBack} aria-label="ย้อนกลับ">
+              <ChevronLeft className="size-5" />
+            </button>
+          ) : back && (
             <Link href={back} aria-label="ย้อนกลับ">
               <ChevronLeft className="size-5" />
             </Link>

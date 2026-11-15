@@ -113,7 +113,7 @@ interface StoreValue {
   ) => void;
   /** บันทึกการส่งออกและคืนข้อมูลผู้ส่งออก/เวลา ไว้ใส่ในไฟล์ */
   logExport: (scope: string) => [string, string][];
-  /** ช่วงเวลาดำเนินงานที่แอดมินตั้งในหน้าตั้งค่า (UC4 Scenario A, UC9) */
+  /** ช่วงเวลาดำเนินงานที่ผู้ดูแลระบบตั้งในหน้าตั้งค่า (UC4 Scenario A, UC9) */
   assessmentWindows: AssessmentWindow[];
   setAssessmentWindows: React.Dispatch<React.SetStateAction<AssessmentWindow[]>>;
   /** กฎความประพฤติชุดเดียว หน้าตั้งค่าแก้ ตัวบันทึกและการคิดคะแนนอ่านจากที่นี่ (UC7, UC8) */
@@ -149,7 +149,7 @@ interface StoreValue {
   recallScheduledRules: () => void;
   /** PROTOTYPE: จำลองว่าถึงวันเริ่มใช้ของฉบับที่รออยู่ (Alt-D) */
   activateScheduledRules: () => void;
-  /** คะแนนเริ่มต้น เพดาน คะแนนต่ำสุด และเกณฑ์เฝ้าระวังหลายระดับ ที่แอดมินตั้ง (UC7 Scenario D) */
+  /** คะแนนเริ่มต้น เพดาน คะแนนต่ำสุด และเกณฑ์เฝ้าระวังหลายระดับ ที่ผู้ดูแลระบบตั้ง (UC7 Scenario D) */
   behaviorScoreConfig: BehaviorScoreConfig;
   setBehaviorScoreConfig: (config: BehaviorScoreConfig) => void;
 
@@ -195,7 +195,7 @@ interface StoreValue {
   withdrawalWait: (studentId: string) => { since: string; dueOn: string; overdue: boolean } | null;
   /** การแจ้งเตือนของผู้ใช้ปัจจุบัน (กระดิ่งที่หัวหน้า) ใหม่สุดก่อน */
   staffNotifications: StaffNotification[];
-  /** บันทึกการส่งที่ไม่มีกล่องรับในต้นแบบ (อีเมล / ผู้รับตามระดับ) แสดงในประวัติการใช้งานของแอดมิน ไม่มีชื่อนักเรียน */
+  /** บันทึกการส่งที่ไม่มีกล่องรับในต้นแบบ (อีเมล / ผู้รับตามระดับ) แสดงในประวัติการใช้งานของผู้ดูแลระบบ ไม่มีชื่อนักเรียน */
   notificationLog: NotificationLogEntry[];
   caseOf: (studentId: string) => CareCase | undefined;
 
@@ -324,9 +324,9 @@ interface StoreValue {
   setCaseUrgency: (caseId: string, urgency: CaseUrgency) => void;
   /** ปิด case พร้อมผลสรุป (UC11 Scenario C) */
   closeCase: (caseId: string, summary: string) => void;
-  /** ครูตรวจเอกสารส่งต่อแล้วส่งให้แอดมินเก็บรักษา case ยังเปิดอยู่ (UC11 Scenario D) */
+  /** ครูตรวจเอกสารส่งต่อแล้วส่งให้ผู้ดูแลระบบเก็บรักษา case ยังเปิดอยู่ (UC11 Scenario D) */
   sendReferral: (caseId: string) => void;
-  /** แอดมินเปลี่ยนสถานะเอกสารส่งต่อ โดยไม่เปิดอ่านเนื้อหา (Scenario D ข้อ 6) */
+  /** ผู้ดูแลระบบเปลี่ยนสถานะเอกสารส่งต่อ โดยไม่เปิดอ่านเนื้อหา (Scenario D ข้อ 6) */
   setReferralStatus: (caseId: string, status: ReferralStatus) => void;
   /** id การแจ้งเตือนที่ผู้ใช้เปิดอ่านแล้ว (UC3 ข้อ 6) */
   readNotifications: string[];
@@ -660,7 +660,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       }
     };
 
-    // ----- การแจ้งเตือนของครูและแอดมิน (UC8 Alt-D, Alt-F, Alt-G)
+    // ----- การแจ้งเตือนของครูและผู้ดูแลระบบ (UC8 Alt-D, Alt-F, Alt-G)
     function addStaffEvent(n: Omit<StaffNotification, "id">) {
       setStaffEvents((prev) => [{ ...n, id: nextId("NT") }, ...prev]);
     }
@@ -672,7 +672,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const r = (Object.keys(TEACHER_ASSIGNMENTS) as Role[]).find((k) => TEACHER_ASSIGNMENTS[k]?.homeroomRoom === room);
       return r ? ROLE_INFO[r].user.name : undefined;
     };
-    /** เข้าหรือขึ้นระดับเฝ้าระวัง: แจ้งครูที่ปรึกษา ครูที่บันทึก นักเรียน ผู้ปกครอง (ในระบบและอีเมล) และผู้ที่แอดมินกำหนดไว้ของระดับนั้น */
+    /** เข้าหรือขึ้นระดับเฝ้าระวัง: แจ้งครูที่ปรึกษา ครูที่บันทึก นักเรียน ผู้ปกครอง (ในระบบและอีเมล) และผู้ที่ผู้ดูแลระบบกำหนดไว้ของระดับนั้น */
     const notifyWatchRaised = (studentId: string, before: number, after: number, recorder: string, score: number) => {
       if (after <= before) return;
       const st = getStudent(studentId);
@@ -702,7 +702,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       return { since, dueOn, overdue: DEMO_TODAY > dueOn };
     };
 
-    /** เหตุการณ์ตามเวลา: รอยืนยันถอนสถานะ และเลยกำหนด (เตือนครูที่ปรึกษาซ้ำ + แจ้งแอดมินโดยไม่ระบุชื่อ) */
+    /** เหตุการณ์ตามเวลา: รอยืนยันถอนสถานะ และเลยกำหนด (เตือนครูที่ปรึกษาซ้ำ + แจ้งผู้ดูแลระบบโดยไม่ระบุชื่อ) */
     const derivedStaffEvents = (): StaffNotification[] => {
       const out: StaffNotification[] = [];
       const overdueByRoom: Record<string, number> = {};
@@ -732,7 +732,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           overdueByRoom[st.roomName] = (overdueByRoom[st.roomName] ?? 0) + 1;
         }
       }
-      // UC11 Alt-B: ใกล้ถึง/เลยวันติดตามของ case ที่เปิดอยู่ (แอดมินได้รับเฉพาะจำนวน ไม่ระบุชื่อนักเรียน)
+      // UC11 Alt-B: ใกล้ถึง/เลยวันติดตามของ case ที่เปิดอยู่ (ผู้ดูแลระบบได้รับเฉพาะจำนวน ไม่ระบุชื่อนักเรียน)
       const followupOverdueByRoom: Record<string, number> = {};
       for (const c of careCases) {
         if (c.status !== "active" || !c.nextFollowupDate) continue;
@@ -771,7 +771,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           at: `${DEMO_TODAY}T08:00:00`,
           to: { role: "admin" },
         });
-      // UC11 Scenario D: ครูส่งเอกสารส่งต่อ → แจ้งแอดมินให้เก็บรักษา (เห็นเลขเอกสารและผู้ส่ง ไม่เห็นชื่อนักเรียน)
+      // UC11 Scenario D: ครูส่งเอกสารส่งต่อ → แจ้งผู้ดูแลระบบให้เก็บรักษา (เห็นเลขเอกสารและผู้ส่ง ไม่เห็นชื่อนักเรียน)
       for (const c of careCases)
         if (c.referral && c.referral.status === "awaiting_admin")
           out.push({

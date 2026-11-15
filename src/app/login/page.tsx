@@ -84,7 +84,8 @@ export default function LoginPage() {
           {/* ต้นแบบ: ปุ่มเข้าแต่ละบทบาท (สลับบทบาทด้วยการออกจากระบบแล้วเลือกใหม่) */}
           <div className="mt-8 border-t border-border pt-6">
             <div className="flex flex-wrap justify-center gap-2">
-              {ROLE_ORDER.map((role) => (
+              {/* ซ่อนปุ่มครูผู้สอนไว้ก่อนในเดโม (บทบาทและสิทธิ์ใน roles.ts ยังอยู่ครบ) ลบ filter นี้เพื่อเปิดกลับ */}
+              {ROLE_ORDER.filter((role) => role !== "subject").map((role) => (
                 <RoleLink key={role} role={role} variant="outline" className="h-9 rounded-full px-4 text-[13px] font-medium" />
               ))}
             </div>
