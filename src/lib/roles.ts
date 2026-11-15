@@ -23,12 +23,12 @@ export const ROLE_INFO: Record<
   admin: {
     label: "แอดมินโรงเรียน",
     home: "/dashboard",
-    user: { name: "ครูวิชัย ระบบดี", title: "แอดมินโรงเรียน", scope: "ทั้งโรงเรียน" },
+    user: { name: "ครูตุ้ยดุ่ย เจียมรันย์", title: "แอดมินโรงเรียน", scope: "ทั้งโรงเรียน" },
   },
   homeroom: {
     label: "ครูประจำชั้น",
     home: "/dashboard",
-    user: { name: "ครูสมหญิง ใจดี", title: "ครูประจำชั้น ม.3/1", scope: "ม.3/1" },
+    user: { name: "ครูมาลีฮัน จันทะสะรวย", title: "ครูประจำชั้น ม.3/1", scope: "ม.3/1" },
   },
   subject: {
     label: "ครูผู้สอน",
@@ -39,12 +39,12 @@ export const ROLE_INFO: Record<
     label: "นักเรียน",
     home: "/portal/student",
     // ตรงกับนักเรียนตัวอย่างของ portal (studentId 30125 ใน mock-data)
-    user: { name: "ด.ญ. แพรวา สายใจ", title: "นักเรียน ม.3/1", scope: "ม.3/1" },
+    user: { name: "ด.ญ. พิชสินีย์ เพรี่ยงพร้อม", title: "นักเรียน ม.3/1", scope: "ม.3/1" },
   },
   parent: {
     label: "ผู้ปกครอง",
     home: "/portal/parent",
-    user: { name: "นางสาวรัตนา สายใจ", title: "ผู้ปกครอง (มารดา)", scope: "มารดา" },
+    user: { name: "นางสาวภัคคินีย์ เพรี่ยงพร้อม", title: "ผู้ปกครอง (มารดา)", scope: "มารดา" },
   },
 };
 

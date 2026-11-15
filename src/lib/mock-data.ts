@@ -52,21 +52,21 @@ export const TERMS = [
 ];
 
 export const CURRENT_TEACHER = {
-  name: "ครูสมหญิง ใจดี",
+  name: "ครูมาลีฮัน จันทะสะรวย",
   role: "ครูประจำชั้น ม.3/1",
   roomName: "ม.3/1",
 };
 
 export const SCHOOL_NAME = "โรงเรียนตัวอย่างวิทยา";
 
-export const students: Student[] = [
+const baseStudents: Student[] = [
   {
     studentId: "30125",
-    fullName: "ด.ญ. แพรวา สายใจ",
+    fullName: "ด.ญ. พิชสินีย์ เพรี่ยงพร้อม",
     citizenId: "1-1037-00481-27-1",
     roomName: "ม.3/1",
     classNo: 12,
-    guardianName: "นางสาวรัตนา สายใจ",
+    guardianName: "นางสาวภัคคินีย์ เพรี่ยงพร้อม",
     guardianRelation: "มารดา",
     guardianPhone: "08x-xxx-4471",
     address: "45/2 ต.บางพลี อ.เมือง จ.สมุทรปราการ",
@@ -160,6 +160,179 @@ export const students: Student[] = [
 ];
 
 /**
+ * นักเรียน ม.3/1 ที่เพิ่มให้ครบ 35 คนตาม Persona ครูประจำชั้น (สร้างแบบกำหนดผลล่วงหน้า ไม่สุ่มใหม่ทุกครั้ง)
+ * ผลคัดกรองรวมทั้งห้อง: มีปัญหา 3 · เสี่ยง 8 · ปกติ 16 · ยังไม่คัดกรอง 8 คน
+ * คนที่คัดกรองแล้วทำ Red Flag และ 9S ผลปกติครบ จึงไม่เปิด SDQ
+ */
+const BASE_IDS = new Set(baseStudents.map((s) => s.studentId));
+const BASE_NOS = new Set(baseStudents.map((s) => s.classNo));
+const GEN_COUNT = 35 - baseStudents.length;
+const GEN_IDS = Array.from({ length: 99 }, (_, i) => String(30101 + i))
+  .filter((id) => !BASE_IDS.has(id))
+  .filter((_, i) => i % 3 === 0)
+  .slice(0, GEN_COUNT);
+const GEN_NOS = Array.from({ length: 35 }, (_, i) => i + 1).filter((n) => !BASE_NOS.has(n));
+const GEN_MALE = ["ณัฐพล", "ธีรภัทร", "กฤษณะ", "พีรพัฒน์", "วรากร", "ศุภชัย", "อภิวัฒน์", "สรวิชญ์", "ภัทรพล", "เจษฎา", "ธนวัฒน์", "นภัสกร", "พงศธร", "ปรเมศวร์"];
+const GEN_FEMALE = ["กัญญาณัฐ", "ชนิกานต์", "ณิชา", "ธัญญาลักษณ์", "นภัสวรรณ", "ปวีณา", "พิมพ์ลดา", "รุ่งนภา", "สิริกาญจน์", "อรปรียา", "ฐิติมา", "วรัญญา", "เบญญาภา", "ศศิประภา"];
+const GEN_LAST = [
+  "ศรีสวัสดิ์", "แก้วมณี", "บุญมี", "ทองดี", "สุขสมบูรณ์", "วงศ์ใหญ่", "ชัยมงคล", "พูลสวัสดิ์", "เรืองศรี",
+  "จันทร์เพ็ญ", "ดวงสุวรรณ", "มีสุข", "ศักดิ์สิทธิ์", "อินทร์แก้ว", "สุวรรณรัตน์", "คำแสน", "นามวงศ์", "โพธิ์ทอง",
+  "เหลืองอ่อน", "ทิพย์รัตน์", "กล้าหาญ", "เพชรสุวรรณ", "ลือชา", "สมบัติทอง", "พรหมมา", "ใสสะอาด", "ภู่ทอง",
+];
+const GEN_MOTHER = ["สมใจ", "วันเพ็ญ", "ประไพ", "ลำดวน", "สุกัญญา", "จันทนา", "มาลี", "รัชนี", "นิภา", "บังอร"];
+const GEN_FATHER = ["สมบัติ", "ประสิทธิ์", "วิทยา", "สุเทพ", "ชัยวัฒน์", "บุญเลิศ", "อนุสรณ์", "มนัส"];
+const GEN_TAMBON = ["บางพลี", "บางแก้ว", "บางพลีใหญ่", "บางโฉลง", "ราชาเทวะ", "หนองปรือ"];
+
+const genStudents: Student[] = GEN_IDS.map((studentId, i) => {
+  const female = i % 2 === 1;
+  const first = female ? GEN_FEMALE[(i - 1) / 2] : GEN_MALE[i / 2];
+  const last = GEN_LAST[i];
+  const mother = i % 3 !== 2;
+  return {
+    studentId,
+    fullName: `${female ? "ด.ญ." : "ด.ช."} ${first} ${last}`,
+    citizenId: `1-1037-00${600 + i}-${String((i * 7) % 90 + 10)}-${i % 10}`,
+    roomName: "ม.3/1",
+    classNo: GEN_NOS[i],
+    guardianName: mother ? `นาง${GEN_MOTHER[i % GEN_MOTHER.length]} ${last}` : `นาย${GEN_FATHER[i % GEN_FATHER.length]} ${last}`,
+    guardianRelation: mother ? "มารดา" : "บิดา",
+    guardianPhone: `08x-xxx-${String(1000 + ((i * 937) % 9000)).padStart(4, "0")}`,
+    address: `${10 + ((i * 13) % 90)}/${1 + (i % 9)} ต.${GEN_TAMBON[i % GEN_TAMBON.length]} อ.บางพลี จ.สมุทรปราการ`,
+    sourceSystem: "team_b_registry",
+  };
+});
+
+/** ยังไม่คัดกรอง 6 คน · ที่เหลือ 21 คน: มีปัญหา 2 · เสี่ยง 5 · ปกติ 14 */
+const GEN_UNSCREENED = new Set([3, 9, 14, 19, 23, 26]);
+const GEN_RED = new Set([4, 13]);
+const GEN_AMBER: Record<number, [ScreeningDim, string]> = {
+  1: ["academic", "ac3"],
+  6: ["economic", "ec1"],
+  10: ["welfare", "wf2"],
+  12: ["behavior", "bh1"],
+  17: ["academic", "ac2"],
+};
+type ScreeningDim = "academic" | "economic" | "welfare" | "behavior";
+const GEN_DIMS = ["academic", "physical", "economic", "welfare", "behavior", "mental"] as const;
+const genDay = (i: number) => `2570-02-${String(9 + (i % 4)).padStart(2, "0")}`;
+
+const genScreened = genStudents.map((s, i) => ({ s, i })).filter(({ i }) => !GEN_UNSCREENED.has(i));
+const genScreenings: Screening[] = genScreened.map(({ s, i }, n) => ({
+  screeningId: `SC-G${String(n + 1).padStart(2, "0")}`,
+  studentId: s.studentId,
+  termId: CURRENT_TERM.termId,
+  screenedBy: CURRENT_TEACHER.name,
+  screenedAt: genDay(i),
+  results: GEN_DIMS.map((dimension) => {
+    if (GEN_RED.has(i) && dimension === "academic") return { dimension, group: "red" as const, checkedItemIds: ["ac1", "ac4"] };
+    if (GEN_RED.has(i) && dimension === "economic") return { dimension, group: "amber" as const, checkedItemIds: ["ec1"] };
+    const a = GEN_AMBER[i];
+    if (a && a[0] === dimension) return { dimension, group: "amber" as const, checkedItemIds: [a[1]] };
+    return { dimension, group: "green" as const, checkedItemIds: [] };
+  }),
+}));
+const genRedFlags: RedFlagAssessment[] = genScreened.map(({ s, i }, n) => ({
+  id: `RF-G${n + 1}`,
+  studentId: s.studentId,
+  termId: CURRENT_TERM.termId,
+  answers: { rf1: false, rf2: false, rf3: false },
+  result: "normal",
+  assessedBy: CURRENT_TEACHER.name,
+  assessedAt: `${genDay(i)}T10:30:00`,
+}));
+const genNineS: NineSAssessment[] = genScreened.map(({ s, i }, n) => ({
+  id: `NS-G${n + 1}`,
+  studentId: s.studentId,
+  termId: CURRENT_TERM.termId,
+  clusterScores: { adhd: 1, depression: 0, social: 1 },
+  clusterResults: { adhd: "normal", depression: "normal", social: "normal" },
+  result: "normal",
+  assessedBy: CURRENT_TEACHER.name,
+  assessedAt: `${genDay(i)}T10:50:00`,
+}));
+/** คนที่อยู่กลุ่มมีปัญหาคนแรกมีกรณีช่วยเหลือแล้ว คนที่สองยังไม่เปิด (ให้เห็นงานที่ครูต้องทำ) */
+const genCases: CareCase[] = [
+  {
+    caseId: "CASE-2570-G01",
+    studentId: genStudents[4].studentId,
+    triggerSource: "ผลคัดกรอง 6 มิติ (การเรียน)",
+    status: "active",
+    openedAt: "2570-02-12",
+    closedAt: null,
+    careMethods: ["counseling"],
+    goal: "ช่วยเหลือด้านการเรียนวิชาหลัก โดยติวเพิ่มเติมสัปดาห์ละ 1 ครั้งและติดตามการส่งงาน",
+    targetDate: "2570-03-31",
+    urgency: "normal",
+    nextFollowupDate: "2570-02-27",
+    followups: [],
+  },
+];
+/** เยี่ยมบ้านแล้ว 13 คน · นัดรอผู้ปกครองยืนยัน 2 คน · ยืนยันแล้ว 2 คน · ที่เหลือยังไม่ได้นัด */
+const GEN_VISITED = new Set([0, 2, 5, 6, 8, 10, 12, 13, 15, 17, 20, 21, 24]);
+const GEN_PENDING_VISIT = new Set([1, 4]);
+const GEN_CONFIRMED_VISIT = new Set([7, 11]);
+const genAppointments: HomeVisitAppointment[] = genStudents.flatMap((s, i): HomeVisitAppointment[] => {
+  const base = { appointmentId: `HV-G${String(i + 1).padStart(2, "0")}`, studentId: s.studentId, teacherName: CURRENT_TEACHER.name, guardianPhone: s.guardianPhone };
+  if (GEN_VISITED.has(i)) return [{ ...base, proposedDate: `2569-11-${String(3 + (i % 20)).padStart(2, "0")}T15:30:00`, status: "completed" }];
+  if (GEN_PENDING_VISIT.has(i)) return [{ ...base, proposedDate: "2570-02-24T15:30:00", status: "pending" }];
+  if (GEN_CONFIRMED_VISIT.has(i)) return [{ ...base, proposedDate: "2570-02-19T16:00:00", status: "confirmed" }];
+  return [];
+});
+const genVisitRecords: HomeVisitRecord[] = genStudents.flatMap((s, i): HomeVisitRecord[] =>
+  GEN_VISITED.has(i)
+    ? [
+        {
+          recordId: `HVR-G${String(i + 1).padStart(2, "0")}`,
+          appointmentId: `HV-G${String(i + 1).padStart(2, "0")}`,
+          studentId: s.studentId,
+          householdMembers: [
+            { memberId: "M1", relation: s.guardianRelation, age: 38 + (i % 12), occupation: "รับจ้างทั่วไป", monthlyIncome: 9000 + (i % 5) * 2500 },
+            { memberId: "M2", relation: "นักเรียน", age: 14, occupation: "-", monthlyIncome: 0 },
+          ],
+          riskFindings: [],
+          informantName: s.guardianName,
+          informantRelation: s.guardianRelation,
+          photoLabels: ["ภาพภายนอกบ้าน"],
+          signedBy: CURRENT_TEACHER.name,
+          signedAt: `2569-11-${String(3 + (i % 20)).padStart(2, "0")}`,
+        },
+      ]
+    : []
+);
+/** EQ: ทำแล้ว 6 คน · เลือกไม่ทำ 3 คน · ที่เหลือยังไม่ได้ทำ */
+const genEqKind = (i: number): "done" | "declined" | "pending" => (i % 5 === 1 ? "done" : i % 9 === 4 ? "declined" : "pending");
+const genBehavior: BehaviorRecord[] = [
+  [0, "BR-06", "ช่วยจัดบอร์ดหน้าห้อง", "2570-01-20T14:00:00"],
+  [2, "BR-01", "มาถึงโรงเรียนหลังเวลาเข้าแถว", "2570-01-27T07:50:00"],
+  [5, "BR-07", "ช่วยครูถือหนังสือไปห้องสมุด", "2570-02-03T10:10:00"],
+  [8, "BR-03", "ไม่ส่งงานวิชาสังคมศึกษา", "2570-02-04T09:00:00"],
+  [11, "BR-06", "ช่วยกิจกรรมจิตอาสาวันเด็ก", "2570-01-13T13:30:00"],
+  [15, "BR-02", "แต่งกายไม่ถูกระเบียบ (ไม่ใส่เสื้อพละ)", "2570-02-05T08:20:00"],
+  [18, "BR-07", "ช่วยเพื่อนติวเลข", "2570-02-09T12:30:00"],
+  [22, "BR-01", "มาถึงโรงเรียนหลังเวลาเข้าแถว", "2570-02-11T07:55:00"],
+].map(([i, ruleId, description, occurredAt], n) => ({
+  recordId: `BH-G${n + 1}`,
+  studentId: genStudents[i as number].studentId,
+  ruleId: ruleId as string,
+  description: description as string,
+  occurredAt: occurredAt as string,
+  recordedByName: CURRENT_TEACHER.name,
+  source: "manual" as const,
+}));
+const genCards: StudentCard[] = genStudents.map((s, i) => ({
+  cardId: `CARD-G${i + 1}`,
+  code: `${s.studentId}-1`,
+  studentId: s.studentId,
+  type: "new",
+  issuedAt: "2569-05-20",
+  expiresAt: "2570-03-31",
+  status: "active",
+  physical: "handed",
+}));
+
+export const students: Student[] = [...baseStudents, ...genStudents];
+
+/**
  * นักเรียนห้องอื่นที่ครูในตัวอย่างสอน (ม.3/2) และห้องที่ไม่ได้สอน (ม.1/3) ใช้สาธิตขอบเขตตามการมอบหมาย (UC8 ข้อ 6, Alt-B)
  * ไม่อยู่ในรายชื่อห้องของครูประจำชั้น จึงไม่ปรากฏในภาพรวม คัดกรอง หรือหน้าข้อมูลรายคน
  */
@@ -222,6 +395,7 @@ export const otherStudents: Student[] = [
  */
 const rfAnswers = (yes: string[]) => ({ rf1: yes.includes("rf1"), rf2: yes.includes("rf2"), rf3: yes.includes("rf3") });
 export const redFlagSeeds: RedFlagAssessment[] = [
+  ...genRedFlags,
   { id: "RF-S1", studentId: "30118", termId: "T2569-2", answers: rfAnswers(["rf2"]), result: "needs_care", assessedBy: CURRENT_TEACHER.name, assessedAt: "2570-02-12T10:40:00" },
   { id: "RF-S2", studentId: "30125", termId: "T2569-2", answers: rfAnswers([]), result: "normal", assessedBy: CURRENT_TEACHER.name, assessedAt: "2570-02-12T10:20:00" },
   { id: "RF-S3", studentId: "30152", termId: "T2569-2", answers: rfAnswers([]), result: "normal", assessedBy: CURRENT_TEACHER.name, assessedAt: "2570-02-10T14:05:00" },
@@ -239,11 +413,13 @@ const nineSNormal = (id: string, studentId: string, at: string): NineSAssessment
   assessedAt: at,
 });
 export const nineSSeeds: NineSAssessment[] = [
+  ...genNineS,
   nineSNormal("NS-S1", "30152", "2570-02-10T14:15:00"),
   nineSNormal("NS-S2", "30160", "2570-02-10T14:40:00"),
 ];
 
 export const screenings: Screening[] = [
+  ...genScreenings,
   {
     screeningId: "SC-001",
     studentId: "30125",
@@ -382,7 +558,7 @@ export const screenings: Screening[] = [
   },
 ];
 
-/** SDQ รอบ 1 (ม.ค.) และรอบ 2 (ก.พ.) ตามช่วงเวลาในหน้าตั้งค่า ด.ญ. แพรวา มีผลรอบ 1 ครบแล้ว ใช้ดูประวัติ */
+/** SDQ รอบ 1 (ม.ค.) และรอบ 2 (ก.พ.) ตามช่วงเวลาในหน้าตั้งค่า ด.ญ. พิชสินีย์ มีผลรอบ 1 ครบแล้ว ใช้ดูประวัติ */
 export const sdqAssessments: SdqAssessment[] = [
   {
     id: "SDQ-R1-1",
@@ -404,7 +580,7 @@ export const sdqAssessments: SdqAssessment[] = [
     termId: CURRENT_TERM.termId,
     round: 1,
     rater: "student",
-    raterName: "ด.ญ. แพรวา สายใจ",
+    raterName: "ด.ญ. พิชสินีย์ เพรี่ยงพร้อม",
     answers: {},
     totalDifficulties: 11,
     scaleScores: { emotional: 4, conduct: 2, hyperactivity: 3, peer: 2, prosocial: 8 },
@@ -418,7 +594,7 @@ export const sdqAssessments: SdqAssessment[] = [
     termId: CURRENT_TERM.termId,
     round: 1,
     rater: "parent",
-    raterName: "นางสาวรัตนา สายใจ",
+    raterName: "นางสาวภัคคินีย์ เพรี่ยงพร้อม",
     answers: {},
     totalDifficulties: 14,
     scaleScores: { emotional: 5, conduct: 3, hyperactivity: 3, peer: 3, prosocial: 7 },
@@ -446,7 +622,7 @@ export const sdqAssessments: SdqAssessment[] = [
     termId: CURRENT_TERM.termId,
     round: 2,
     rater: "student",
-    raterName: "ด.ญ. แพรวา สายใจ",
+    raterName: "ด.ญ. พิชสินีย์ เพรี่ยงพร้อม",
     answers: {},
     totalDifficulties: 13,
     scaleScores: { emotional: 5, conduct: 2, hyperactivity: 4, peer: 2, prosocial: 8 },
@@ -460,7 +636,7 @@ export const sdqAssessments: SdqAssessment[] = [
     termId: CURRENT_TERM.termId,
     round: 2,
     rater: "parent",
-    raterName: "นางสาวรัตนา สายใจ",
+    raterName: "นางสาวภัคคินีย์ เพรี่ยงพร้อม",
     answers: {},
     totalDifficulties: null,
     scaleScores: null,
@@ -532,7 +708,7 @@ export const sdqAssessments: SdqAssessment[] = [
     termId: "T2569-1",
     round: 1,
     rater: "student",
-    raterName: "ด.ญ. แพรวา สายใจ",
+    raterName: "ด.ญ. พิชสินีย์ เพรี่ยงพร้อม",
     answers: {},
     totalDifficulties: 7,
     scaleScores: { emotional: 2, conduct: 1, hyperactivity: 2, peer: 1, prosocial: 7 },
@@ -546,7 +722,7 @@ export const sdqAssessments: SdqAssessment[] = [
     termId: "T2569-1",
     round: 1,
     rater: "parent",
-    raterName: "นางสาวรัตนา สายใจ",
+    raterName: "นางสาวภัคคินีย์ เพรี่ยงพร้อม",
     answers: {},
     totalDifficulties: 9,
     scaleScores: { emotional: 2, conduct: 2, hyperactivity: 2, peer: 2, prosocial: 7 },
@@ -600,7 +776,7 @@ export const sdqAssessments: SdqAssessment[] = [
 
 /**
  * EQ ภาคเรียนนี้: นักเรียนมัธยมประเมินตนเองทุกคน (UC10 Pre-condition 2)
- * ด.ญ. แพรวา (นักเรียนในพอร์ทัล) ยังไม่ได้ทำ ใช้ทดลองทำ EQ หรือเลือกไม่ทำ
+ * ด.ญ. พิชสินีย์ (นักเรียนในพอร์ทัล) ยังไม่ได้ทำ ใช้ทดลองทำ EQ หรือเลือกไม่ทำ
  */
 const eqAnswers = (values: number[]) =>
   Object.fromEntries(values.map((v, i) => [i + 1, v])) as Record<number, EqAnswer>;
@@ -613,14 +789,18 @@ const eqDone = (studentId: string, values: number[], at: string): EqAssessment =
   ...scoreEq(eqAnswers(values)),
   assessedAt: at,
 });
-export const eqAssessments: EqAssessment[] = students.map((st) =>
+export const eqAssessments: EqAssessment[] = students.map((st, idx) =>
   st.studentId === "30131"
     ? eqDone("30131", [3, 4, 3, 3, 2, 2, 3, 3, 2, 3, 1, 2], "2570-02-14")
     : st.studentId === "30140"
       ? eqDone("30140", [4, 3, 4, 4, 3, 4, 3, 4, 4, 3, 3, 4], "2570-02-12")
       : st.studentId === "30171"
         ? { id: "EQ-30171", studentId: "30171", termId: CURRENT_TERM.termId, status: "declined", answers: {}, scores: null, levels: null, assessedAt: "2570-02-13" }
-        : { id: `EQ-${st.studentId}`, studentId: st.studentId, termId: CURRENT_TERM.termId, status: "pending", answers: {}, scores: null, levels: null, assessedAt: null }
+        : idx >= baseStudents.length && genEqKind(idx - baseStudents.length) === "done"
+          ? eqDone(st.studentId, [3, 3, 4, 3, 2, 3, 3, 4, 3, 3, 2, 3], "2570-02-13")
+          : idx >= baseStudents.length && genEqKind(idx - baseStudents.length) === "declined"
+            ? { id: `EQ-${st.studentId}`, studentId: st.studentId, termId: CURRENT_TERM.termId, status: "declined", answers: {}, scores: null, levels: null, assessedAt: "2570-02-13" }
+            : { id: `EQ-${st.studentId}`, studentId: st.studentId, termId: CURRENT_TERM.termId, status: "pending", answers: {}, scores: null, levels: null, assessedAt: null }
 );
 
 /**
@@ -645,9 +825,10 @@ export const ACADEMIC_YEAR_END = "2570-03-31";
 
 /**
  * บัตรตัวอย่าง: ทุกคนมีบัตรที่ใช้งานอยู่ ยกเว้นคนที่ยังไม่มีรูป
- * ด.ญ. แพรวา เคยทำบัตรหายแล้วออกบัตรทดแทน บัตรเดิม (30125-1) จึงถูกยกเลิก ใช้สาธิตการสแกนบัตรที่ยกเลิกแล้ว
+ * ด.ญ. พิชสินีย์ เคยทำบัตรหายแล้วออกบัตรทดแทน บัตรเดิม (30125-1) จึงถูกยกเลิก ใช้สาธิตการสแกนบัตรที่ยกเลิกแล้ว
  */
 export const studentCards: StudentCard[] = [
+  ...genCards,
   { cardId: "CARD-0", code: "30125-1", studentId: "30125", type: "new", issuedAt: "2569-05-20", expiresAt: ACADEMIC_YEAR_END, status: "cancelled", physical: "handed" },
   { cardId: "CARD-1", code: "30125-2", studentId: "30125", type: "replacement", reason: "บัตรหาย", issuedAt: "2569-11-10", expiresAt: ACADEMIC_YEAR_END, status: "active", physical: "handed" },
   ...["30118", "30131", "30140", "30152", "30160", "30171"].map(
@@ -660,22 +841,23 @@ export const studentCards: StudentCard[] = [
 ];
 
 export const behaviorRecords: BehaviorRecord[] = [
+  ...genBehavior,
   // ---- ภาคเรียนที่ 1 ปีการศึกษา 2569 (ประวัติย้อนหลัง): คะแนนปลายภาคเต็ม 100 ทุกคน ----
-  { recordId: "BH-P1", studentId: "30125", ruleId: "BR-06", description: "ช่วยจัดนิทรรศการวิทยาศาสตร์", occurredAt: "2569-07-22T13:30:00", recordedByName: "ครูสมหญิง ใจดี", source: "manual" },
-  { recordId: "BH-P2", studentId: "30118", ruleId: "BR-01", description: "มาถึงโรงเรียนหลังเวลาเข้าแถว", occurredAt: "2569-07-14T07:55:00", recordedByName: "ครูสมหญิง ใจดี", source: "manual" },
-  { recordId: "BH-P3", studentId: "30118", ruleId: "BR-07", description: "ช่วยครูยกอุปกรณ์การเรียน", occurredAt: "2569-08-25T10:15:00", recordedByName: "ครูสมหญิง ใจดี", source: "manual" },
-  { recordId: "BH-P4", studentId: "30140", ruleId: "BR-03", description: "ไม่ส่งการบ้านวิชาภาษาไทย", occurredAt: "2569-09-03T09:00:00", recordedByName: "ครูสมหญิง ใจดี", source: "manual" },
-  { recordId: "BH-P5", studentId: "30140", ruleId: "BR-06", description: "ช่วยจัดสถานที่กิจกรรมวันไหว้ครู", occurredAt: "2569-09-18T14:00:00", recordedByName: "ครูสมหญิง ใจดี", source: "manual" },
+  { recordId: "BH-P1", studentId: "30125", ruleId: "BR-06", description: "ช่วยจัดนิทรรศการวิทยาศาสตร์", occurredAt: "2569-07-22T13:30:00", recordedByName: "ครูมาลีฮัน จันทะสะรวย", source: "manual" },
+  { recordId: "BH-P2", studentId: "30118", ruleId: "BR-01", description: "มาถึงโรงเรียนหลังเวลาเข้าแถว", occurredAt: "2569-07-14T07:55:00", recordedByName: "ครูมาลีฮัน จันทะสะรวย", source: "manual" },
+  { recordId: "BH-P3", studentId: "30118", ruleId: "BR-07", description: "ช่วยครูยกอุปกรณ์การเรียน", occurredAt: "2569-08-25T10:15:00", recordedByName: "ครูมาลีฮัน จันทะสะรวย", source: "manual" },
+  { recordId: "BH-P4", studentId: "30140", ruleId: "BR-03", description: "ไม่ส่งการบ้านวิชาภาษาไทย", occurredAt: "2569-09-03T09:00:00", recordedByName: "ครูมาลีฮัน จันทะสะรวย", source: "manual" },
+  { recordId: "BH-P5", studentId: "30140", ruleId: "BR-06", description: "ช่วยจัดสถานที่กิจกรรมวันไหว้ครู", occurredAt: "2569-09-18T14:00:00", recordedByName: "ครูมาลีฮัน จันทะสะรวย", source: "manual" },
   // ด.ญ. ชลิดา: เคยเฝ้าระวังระดับ 2 (คะแนน 60) แล้วคะแนนกลับเข้าเกณฑ์วันที่ 7 ก.พ. รอครูที่ปรึกษายืนยันถอนสถานะ และเลยกำหนดยืนยันแล้ว
-  { recordId: "BH-W1", studentId: "30160", ruleId: "BR-05", description: "ทะเลาะวิวาทกับเพื่อนในห้อง", occurredAt: "2570-02-01T09:10:00", recordedByName: "ครูสมหญิง ใจดี", source: "manual" },
-  { recordId: "BH-W2", studentId: "30160", ruleId: "BR-05", description: "ทะเลาะวิวาทซ้ำหลังเลิกเรียน", occurredAt: "2570-02-02T13:20:00", recordedByName: "ครูสมหญิง ใจดี", source: "manual" },
-  { recordId: "BH-W3", studentId: "30160", ruleId: "BR-04", description: "ใช้โทรศัพท์ระหว่างเรียนวิชาคณิตศาสตร์", occurredAt: "2570-02-03T10:05:00", recordedByName: "ครูสมหญิง ใจดี", source: "manual" },
-  { recordId: "BH-W4", studentId: "30160", ruleId: "BR-06", description: "ช่วยจัดงานกีฬาสี", occurredAt: "2570-02-05T14:00:00", recordedByName: "ครูสมหญิง ใจดี", source: "manual" },
-  { recordId: "BH-W5", studentId: "30160", ruleId: "BR-06", description: "ช่วยจัดห้องสมุด", occurredAt: "2570-02-06T14:30:00", recordedByName: "ครูสมหญิง ใจดี", source: "manual" },
-  { recordId: "BH-W6", studentId: "30160", ruleId: "BR-06", description: "ช่วยกิจกรรมจิตอาสา", occurredAt: "2570-02-07T15:00:00", recordedByName: "ครูสมหญิง ใจดี", source: "manual" },
+  { recordId: "BH-W1", studentId: "30160", ruleId: "BR-05", description: "ทะเลาะวิวาทกับเพื่อนในห้อง", occurredAt: "2570-02-01T09:10:00", recordedByName: "ครูมาลีฮัน จันทะสะรวย", source: "manual" },
+  { recordId: "BH-W2", studentId: "30160", ruleId: "BR-05", description: "ทะเลาะวิวาทซ้ำหลังเลิกเรียน", occurredAt: "2570-02-02T13:20:00", recordedByName: "ครูมาลีฮัน จันทะสะรวย", source: "manual" },
+  { recordId: "BH-W3", studentId: "30160", ruleId: "BR-04", description: "ใช้โทรศัพท์ระหว่างเรียนวิชาคณิตศาสตร์", occurredAt: "2570-02-03T10:05:00", recordedByName: "ครูมาลีฮัน จันทะสะรวย", source: "manual" },
+  { recordId: "BH-W4", studentId: "30160", ruleId: "BR-06", description: "ช่วยจัดงานกีฬาสี", occurredAt: "2570-02-05T14:00:00", recordedByName: "ครูมาลีฮัน จันทะสะรวย", source: "manual" },
+  { recordId: "BH-W5", studentId: "30160", ruleId: "BR-06", description: "ช่วยจัดห้องสมุด", occurredAt: "2570-02-06T14:30:00", recordedByName: "ครูมาลีฮัน จันทะสะรวย", source: "manual" },
+  { recordId: "BH-W6", studentId: "30160", ruleId: "BR-06", description: "ช่วยกิจกรรมจิตอาสา", occurredAt: "2570-02-07T15:00:00", recordedByName: "ครูมาลีฮัน จันทะสะรวย", source: "manual" },
   // ด.ญ. ปาริชาติ: ทะเลาะวิวาท 2 ครั้ง คะแนนลงถึง 70 แล้วได้คะแนนบวกกลับมา 80 ยังอยู่ในสถานะเฝ้าระวังระดับ 1
-  { recordId: "BH-W7", studentId: "30140", ruleId: "BR-05", description: "ทะเลาะวิวาทกับเพื่อนต่างห้อง", occurredAt: "2570-02-10T09:30:00", recordedByName: "ครูสมหญิง ใจดี", source: "manual" },
-  { recordId: "BH-W8", studentId: "30140", ruleId: "BR-05", description: "ทะเลาะวิวาทซ้ำ", occurredAt: "2570-02-12T10:30:00", recordedByName: "ครูสมหญิง ใจดี", source: "manual" },
+  { recordId: "BH-W7", studentId: "30140", ruleId: "BR-05", description: "ทะเลาะวิวาทกับเพื่อนต่างห้อง", occurredAt: "2570-02-10T09:30:00", recordedByName: "ครูมาลีฮัน จันทะสะรวย", source: "manual" },
+  { recordId: "BH-W8", studentId: "30140", ruleId: "BR-05", description: "ทะเลาะวิวาทซ้ำ", occurredAt: "2570-02-12T10:30:00", recordedByName: "ครูมาลีฮัน จันทะสะรวย", source: "manual" },
   // ห้องที่สอน (ม.3/2): ครูประจำชั้น ม.3/1 บันทึกในฐานะครูผู้สอน และครูผู้สอนวิทยาศาสตร์บันทึกอีกรายการ
   {
     recordId: "BH-O1",
@@ -683,7 +865,7 @@ export const behaviorRecords: BehaviorRecord[] = [
     ruleId: "BR-04",
     description: "ใช้โทรศัพท์ระหว่างเรียนสังคมศึกษา",
     occurredAt: "2570-02-14T10:40:00",
-    recordedByName: "ครูสมหญิง ใจดี",
+    recordedByName: "ครูมาลีฮัน จันทะสะรวย",
     source: "manual",
   },
   {
@@ -752,6 +934,7 @@ export const behaviorRecords: BehaviorRecord[] = [
 ];
 
 export const appointments: HomeVisitAppointment[] = [
+  ...genAppointments,
   {
     appointmentId: "HV-001",
     studentId: "30125",
@@ -760,7 +943,7 @@ export const appointments: HomeVisitAppointment[] = [
     status: "confirmed",
     guardianPhone: "08x-xxx-4471",
     caretakerRelation: "ยาย",
-    caretakerName: "นางบุญมา สายใจ",
+    caretakerName: "นางบุญมา เพรี่ยงพร้อม",
     guardianNote: "อยากขอคำแนะนำเรื่องทุนการศึกษา และการดูแลเรื่องการใช้โทรศัพท์ของลูก",
   },
   {
@@ -791,6 +974,7 @@ export const appointments: HomeVisitAppointment[] = [
 ];
 
 export const homeVisitRecords: HomeVisitRecord[] = [
+  ...genVisitRecords,
   {
     recordId: "HVR-001",
     appointmentId: "HV-003",
@@ -810,6 +994,7 @@ export const homeVisitRecords: HomeVisitRecord[] = [
 ];
 
 export const careCases: CareCase[] = [
+  ...genCases,
   {
     caseId: "CASE-2570-014",
     studentId: "30125",
@@ -993,7 +1178,7 @@ export const previousVisitForms: Record<string, PreviousVisitForm> = {
 };
 
 /** จำนวนนักเรียนทั้งห้องตามทะเบียน (ใช้แสดงในสถิติภาพรวม) */
-export const CLASS_SIZE = 38;
+export const CLASS_SIZE = students.length;
 
 /**
  * การแจ้งเตือนเริ่มต้นของกระดิ่ง (รายการที่สร้างตอนเกิดเหตุ ข้อมูลตัวอย่างไม่เคยผ่านตอนนั้น จึงใส่ไว้ให้ตรงกับบันทึกด้านบน)
@@ -1004,7 +1189,7 @@ export const staffNotificationSeeds: StaffNotification[] = [
     id: "NT-SEED-1",
     kind: "watch_raised",
     title: "ด.ญ. ปาริชาติ ใฝ่ดี เข้าสถานะเฝ้าระวัง",
-    body: "ระดับ 1 · คะแนนคงเหลือ 70 · บันทึกโดยครูสมหญิง ใจดี",
+    body: "ระดับ 1 · คะแนนคงเหลือ 70 · บันทึกโดยครูมาลีฮัน จันทะสะรวย",
     href: "/students/30140",
     at: "2570-02-12T10:30:00",
     to: { homeroomOf: "ม.3/1" },
