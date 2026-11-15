@@ -18,6 +18,7 @@ import { CURRENT_TERM, DEMO_TODAY } from "@/lib/mock-data";
 import { ExportButton } from "@/components/shared/export-button";
 import { daysBetween, shiftDate } from "@/lib/periods";
 import { StudentId } from "@/components/shared/student-id";
+import { ReferralPaper, ReferralPdfButton } from "./referral-document";
 import {
   CARE_METHOD_LABEL,
   CASE_URGENCY_LABEL,
@@ -395,7 +396,7 @@ function CaseActions({ caseId, hasReferral }: { caseId: string; hasReferral: boo
   const store = useStore();
   const careCase = store.careCases.find((c) => c.caseId === caseId);
   const student = careCase ? store.getStudent(careCase.studentId) : undefined;
-  const [mode, setMode] = useState<"none" | "referral" | "close">("none");
+  const [mode, setMode] = useState<"none" | "referral" | "view" | "close">("none");
   const [summary, setSummary] = useState("");
   const [other, setOther] = useState("");
   const finalSummary = summary === "อื่น ๆ" ? other.trim() : summary;
@@ -407,7 +408,11 @@ function CaseActions({ caseId, hasReferral }: { caseId: string; hasReferral: boo
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-[13px] text-muted-foreground">ระบบเก็บประวัติการเปลี่ยนแปลงทุกครั้ง</p>
           <div className="flex flex-wrap gap-2">
-            {!hasReferral && (
+            {hasReferral ? (
+              <Button variant="outline" onClick={() => setMode("view")}>
+                <FileText className="size-4" /> ดูเอกสารส่งต่อ
+              </Button>
+            ) : (
               <Button variant="outline" onClick={() => setMode("referral")}>
                 <FileText className="size-4" /> เตรียมเอกสารส่งต่อ
               </Button>
@@ -419,42 +424,35 @@ function CaseActions({ caseId, hasReferral }: { caseId: string; hasReferral: boo
         </div>
       )}
 
-      {mode === "referral" && (
+      {(mode === "referral" || mode === "view") && (
         <Card>
           <CardContent className="p-6">
-            <h3 className="text-[15.5px] font-bold">ตรวจเอกสารส่งต่อก่อนส่งให้ผู้ดูแลระบบเก็บรักษา</h3>
+            <h3 className="text-[15.5px] font-bold">
+              {mode === "referral" ? "ตรวจเอกสารส่งต่อก่อนส่งให้ผู้ดูแลระบบเก็บรักษา" : "เอกสารส่งต่อ"}
+            </h3>
             <p className="mt-0.5 mb-3 text-[12px] text-muted-foreground">
-              ระบบรวบรวมจากข้อมูลในกรณีนี้ ครูนำไปดำเนินการส่งต่อภายนอกเอง ระบบไม่ส่งข้อมูลออกให้หน่วยงานภายนอกโดยตรง
+              ระบบรวบรวมจากข้อมูลในกรณีนี้เป็นรายงาน PDF ครูนำไปดำเนินการส่งต่อภายนอกเอง ระบบไม่ส่งข้อมูลออกให้หน่วยงานภายนอกโดยตรง
             </p>
-            <dl className="divide-y divide-border rounded-lg border border-border text-[13px]">
-              {[
-                ["นักเรียน", `${student.fullName} · ${student.roomName} เลขที่ ${student.classNo}`],
-                ["ที่มาของกรณี", careCase.triggerSource],
-                ["วิธีการดูแล", careCase.careMethods.map((m) => CARE_METHOD_LABEL[m]).join(", ") || "-"],
-                ["เป้าหมาย", careCase.goal || "-"],
-                ["การติดตาม", `${careCase.followups.length} ครั้ง${careCase.followups[0] ? ` · ล่าสุด: ${careCase.followups[0].actionTaken}` : ""}`],
-              ].map(([k, v]) => (
-                <div key={k} className="flex gap-3 px-3 py-2">
-                  <dt className="w-32 shrink-0 text-muted-foreground">{k}</dt>
-                  <dd className="min-w-0 flex-1">{v}</dd>
-                </div>
-              ))}
-            </dl>
+            <ReferralPaper careCase={careCase} student={student} />
             <p className="mt-3 text-[12px] text-muted-foreground">
               ผู้ดูแลระบบจะเห็นเฉพาะเลขเอกสาร ผู้ส่ง วันที่ และสถานะ ไม่เห็นชื่อนักเรียนหรือเนื้อหา
+              {" "}· ต้นแบบนี้กด “ดาวน์โหลด PDF” แล้วเลือก “บันทึกเป็น PDF” ในหน้าต่างพิมพ์
             </p>
             <div className="mt-4 flex flex-wrap justify-end gap-2">
-              <Button variant="outline" onClick={() => setMode("none")}>
-                ยกเลิก
+              <Button variant="ghost" onClick={() => setMode("none")}>
+                {mode === "referral" ? "ยกเลิก" : "ปิด"}
               </Button>
-              <Button
-                onClick={() => {
-                  store.sendReferral(caseId);
-                  setMode("none");
-                }}
-              >
-                ตรวจแล้ว ส่งให้ผู้ดูแลระบบเก็บรักษา
-              </Button>
+              <ReferralPdfButton studentId={student.studentId} caseId={caseId} />
+              {mode === "referral" && (
+                <Button
+                  onClick={() => {
+                    store.sendReferral(caseId);
+                    setMode("none");
+                  }}
+                >
+                  ตรวจแล้ว ส่งให้ผู้ดูแลระบบเก็บรักษา
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>
