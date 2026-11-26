@@ -67,7 +67,7 @@ const TEACHER_PAGES = [
  * การตั้งค่าช่วงเวลาเยี่ยมบ้าน (UC4 Scenario A) และกฎความประพฤติ (UC7) อยู่ในหน้าตั้งค่า
  * จัดทำบัตรนักเรียน (UC14) ใช้ข้อมูลทะเบียนเท่าที่บัตรต้องใช้
  */
-const ADMIN_PAGES = ["/dashboard", "/dc-summary", "/documents", "/cards", "/settings"];
+const ADMIN_PAGES = ["/dashboard", "/dc-summary", "/documents", "/cards", "/exam-rooms", "/settings"];
 
 const ALLOWED: Record<Role, string[]> = {
   admin: ADMIN_PAGES,
