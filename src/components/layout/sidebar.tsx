@@ -6,6 +6,7 @@ import { cn } from "cn";
 import {
   AlertTriangle,
   ClipboardCheck,
+  DoorOpen,
   FileText,
   Flag,
   HeartPulse,
@@ -63,6 +64,7 @@ const NAV: { title?: string; items: NavItem[] }[] = [
     items: [
       { href: "/documents", label: "เอกสาร ปพ.", icon: FileText },
       { href: "/cards", label: "บัตรนักเรียน", icon: IdCard },
+      { href: "/exam-rooms", label: "จัดห้องสอบ", icon: DoorOpen },
     ],
   },
   {
